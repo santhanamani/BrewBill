@@ -1,0 +1,78 @@
+<section class="view-head product-page-head">
+  <div><h1>Products</h1><p>Manage the shared product master and this outlet's catalogue mapping.</p></div>
+  <div class="product-tools"><span class="shared-badge"><span class="material-symbols-outlined">database</span> Tenant-scoped catalogue</span><button type="button" (click)="load()"><span class="material-symbols-outlined">sync</span>Sync</button></div>
+</section>
+
+@if (notice()) { <div class="toast"><span class="material-symbols-outlined">info</span>{{ notice() }}</div> }
+
+<section class="metric-grid four-metrics product-metrics">
+  <article class="metric"><span class="metric-icon brown"><span class="material-symbols-outlined">database</span></span><div><small>Global Products</small><h2>{{ globalProducts().length }}</h2><p>shared master definitions</p></div></article>
+  <article class="metric"><span class="metric-icon green"><span class="material-symbols-outlined">hub</span></span><div><small>Outlet Mapped</small><h2>{{ outletMappings().length }}</h2><p>current outlet only</p></div></article>
+  <article class="metric"><span class="metric-icon red"><span class="material-symbols-outlined">inventory</span></span><div><small>Out of Stock</small><h2>{{ outOfStock() }}</h2><p>current outlet</p></div></article>
+  <article class="metric"><span class="metric-icon yellow"><span class="material-symbols-outlined">warning</span></span><div><small>Low Stock</small><h2>{{ lowStock() }}</h2><p>needs attention</p></div></article>
+</section>
+
+@if (loading()) {
+  <div class="live-state">Loading global catalogue and outlet mapping...</div>
+} @else {
+  <section class="split-catalogue">
+    <article class="panel table-panel catalogue-card">
+      <div class="panel-title"><div><h2>Global Product Master</h2><p>Create once and map across outlets.</p></div><div class="mapping-actions"><span class="shared-badge">Shared across tenants</span>@if(session.isSuperAdmin()){<button class="button green" type="button" (click)="addGlobalProduct()"><span class="material-symbols-outlined">add</span>Add Global</button>}</div></div>
+      <input class="catalogue-search" placeholder="Search name, code or category..." [value]="masterSearch()" (input)="masterSearch.set($any($event.target).value)" />
+      <div class="table-scroll lazy-table"><table>
+        <thead><tr><th>Product</th><th>Category</th><th>GST</th><th>Unit</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody>
+          @for (product of visibleMasters(); track product.id) {
+            <tr>
+              <td><span class="product-cell"><img class="product-thumb" [src]="asset(product.image_path)" [alt]="product.name" /><span><b>{{ product.name }}</b><small>{{ product.code }}</small></span></span></td>
+              <td>{{ product.category_name }}</td><td>{{ product.default_gst }}%</td><td>{{ product.base_unit }}</td>
+              <td><span class="stock-pill" [class.out]="product.status !== 'ACTIVE'">{{ product.status === 'ACTIVE' ? 'Shared' : 'Inactive' }}</span></td>
+              <td><button class="icon-button" type="button" [disabled]="mappedIds().has(product.id)" [title]="mappedIds().has(product.id) ? 'Already mapped' : 'Map to outlet'" (click)="mapProduct(product)"><span class="material-symbols-outlined">{{ mappedIds().has(product.id) ? 'check' : 'add_link' }}</span></button></td>
+            </tr>
+          } @empty { <tr><td colspan="6"><div class="live-state">No matching global products.</div></td></tr> }
+        </tbody>
+      </table></div>
+    </article>
+
+    <article class="panel table-panel catalogue-card">
+      <div class="panel-title"><div><h2>Outlet Catalogue Mapping</h2><p>{{ session.context()?.outlet_name ?? 'Current outlet' }} pricing and availability.</p></div><span class="shared-badge">Current outlet</span></div>
+      <input class="catalogue-search" placeholder="Search mapped products..." [value]="mappingSearch()" (input)="mappingSearch.set($any($event.target).value)" />
+      <div class="table-scroll lazy-table"><table>
+        <thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Fav</th><th>KOT</th><th>Available</th><th>Actions</th></tr></thead>
+        <tbody>
+          @for (product of visibleMappings(); track product.id) {
+            <tr>
+              <td><span class="product-cell"><img class="product-thumb" [src]="asset(product.image_path)" [alt]="product.name" /><span><b>{{ product.name }}</b><small>{{ product.code }} · {{ product.category_name }}</small></span></span></td>
+              <td><button type="button" title="Edit outlet price" (click)="changePrice(product)">{{ money(product.selling_price) }}</button></td>
+              <td><b>{{ product.stock_quantity }} {{ product.base_unit }}</b></td>
+              <td><button class="toggle-button" [class.on]="product.favourite" type="button" (click)="toggleMapping(product, 'favourite')"></button></td>
+              <td><button class="toggle-button" [class.on]="product.kot_required" type="button" (click)="toggleMapping(product, 'kot_required')"></button></td>
+              <td><button class="toggle-button" [class.on]="product.is_available && product.is_active" type="button" (click)="toggleMapping(product, 'is_available')"></button></td>
+              <td><span class="mapping-actions"><button class="icon-button" type="button" title="Edit product" (click)="editMapping(product, productDialog)"><span class="material-symbols-outlined">edit</span></button><button class="icon-button danger" type="button" title="Unmap product" (click)="unmap(product)"><span class="material-symbols-outlined">link_off</span></button></span></td>
+            </tr>
+          } @empty { <tr><td colspan="7"><div class="live-state">No products are mapped to this outlet.</div></td></tr> }
+        </tbody>
+      </table></div>
+    </article>
+  </section>
+}
+
+<dialog #productDialog class="product-dialog">
+  <form class="product-form" (submit)="$event.preventDefault(); save(productDialog)">
+    <div class="panel-title"><div><h2>Edit Outlet Product</h2><p>Updates current operational product and stock.</p></div><button class="icon-button" type="button" (click)="productDialog.close()"><span class="material-symbols-outlined">close</span></button></div>
+    <div class="form-grid">
+      <label>Category<select [value]="draft().categoryId" (change)="patch('categoryId', $any($event.target).value)">@for (category of categories(); track category.id) { <option [value]="category.id">{{ category.name }}</option> }</select></label>
+      <label>Product Code<input readonly [value]="draft().code" /></label>
+      <label>Product Name<input [value]="draft().name" (input)="patch('name', $any($event.target).value)" /></label>
+      <label>Image Key<input [value]="draft().imagePath" (input)="patch('imagePath', $any($event.target).value)" /></label>
+      <label>Selling Price (₹)<input type="number" min="0" step="0.01" [value]="draft().sellingPrice" (input)="patch('sellingPrice', $any($event.target).value)" /></label>
+      <label>Purchase Price (₹)<input type="number" min="0" step="0.01" [value]="draft().purchasePrice" (input)="patch('purchasePrice', $any($event.target).value)" /></label>
+      <label>GST (%)<input type="number" min="0" max="100" step="0.01" [value]="draft().gstPercent" (input)="patch('gstPercent', $any($event.target).value)" /></label>
+      <label>Unit<input [value]="draft().unit" (input)="patch('unit', $any($event.target).value)" /></label>
+      <label>Current Outlet Stock<input type="number" min="0" step="0.001" [value]="draft().stockQuantity" (input)="patch('stockQuantity', $any($event.target).value)" /></label>
+      <label>Low Stock Limit<input type="number" min="0" step="0.001" [value]="draft().lowStockLimit" (input)="patch('lowStockLimit', $any($event.target).value)" /></label>
+    </div>
+    <div class="checks"><label><input type="checkbox" [checked]="draft().favourite" (change)="patch('favourite', $any($event.target).checked)" />Favourite</label><label><input type="checkbox" [checked]="draft().kotRequired" (change)="patch('kotRequired', $any($event.target).checked)" />KOT required</label><label><input type="checkbox" [checked]="draft().active" (change)="patch('active', $any($event.target).checked)" />Active</label></div>
+    <div class="dialog-actions"><button type="button" (click)="productDialog.close()">Cancel</button><button class="button green" type="submit" [disabled]="saving()"><span class="material-symbols-outlined">save</span>{{ saving() ? 'Saving...' : 'Save Changes' }}</button></div>
+  </form>
+</dialog>

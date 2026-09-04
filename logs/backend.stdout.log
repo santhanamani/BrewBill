@@ -1,0 +1,173 @@
+INFO:     127.0.0.1:59087 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61226 - "GET /api/holds HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61226 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51940 - "GET /api/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56328 - "GET /api/platform/tenants/resolve?code=DEMO HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56328 - "GET /api/platform/tenants/resolve?code=test HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61826 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:61826 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:61826 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61826 - "GET /api/platform/context HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61826 - "POST /api/platform/device/activate HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:61826 - "OPTIONS /api/platform/tenants/resolve?code=Demo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50820 - "OPTIONS /api/platform/admin/tenants HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61826 - "GET /api/platform/tenants/resolve?code=Demo HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50820 - "GET /api/platform/admin/tenants HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63742 - "OPTIONS /api/holds HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63742 - "GET /api/holds HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63742 - "OPTIONS /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56543 - "OPTIONS /api/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63742 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56543 - "GET /api/products HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:56543 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63742 - "GET /api/products HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:56543 - "GET /api/products HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:63742 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63742 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56543 - "GET /api/products HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:63742 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56543 - "GET /api/products HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:65148 - "GET /api/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65148 - "GET /api/platform/tenants/resolve?code=DEMO HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55276 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55276 - "GET /api/platform/context HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55276 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49767 - "POST /api/platform/device/activate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59283 - "GET /api/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60391 - "GET /api/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60391 - "GET /api/holds HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60391 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59283 - "GET /api/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59283 - "GET /api/holds HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61470 - "OPTIONS /api/suppliers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57932 - "OPTIONS /api/purchases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61470 - "GET /api/suppliers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57932 - "GET /api/purchases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52070 - "GET /api/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61768 - "GET /api/holds HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61768 - "OPTIONS /api/products/master HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50459 - "OPTIONS /api/products/catalogue HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54422 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61768 - "GET /api/products/master HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56479 - "GET /api/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57797 - "GET /api/products/catalogue HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57797 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61768 - "GET /api/products/master HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54422 - "GET /api/products/catalogue HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56479 - "GET /api/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65343 - "OPTIONS /api/expenses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65343 - "GET /api/expenses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49666 - "GET /api/platform/tenants/resolve?code=DEMO HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58027 - "OPTIONS /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58027 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58027 - "OPTIONS /api/platform/context HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58027 - "GET /api/platform/context HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52970 - "OPTIONS /api/platform/device/activate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58027 - "GET /api/platform/admin/tenants HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52970 - "POST /api/platform/device/activate HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:52970 - "GET /api/holds HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58027 - "GET /api/products HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:52970 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52970 - "GET /api/holds HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58027 - "GET /api/products HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:52970 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50359 - "GET /api/products/catalogue HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:57325 - "GET /api/products/master HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57325 - "OPTIONS /api/inventory/items HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50359 - "OPTIONS /api/inventory/movements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57325 - "GET /api/inventory/items HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:50359 - "GET /api/inventory/movements HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:50359 - "GET /api/expenses HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:50359 - "OPTIONS /api/orders HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50359 - "GET /api/orders HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50359 - "GET /api/platform/admin/tenants HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50359 - "GET /api/orders HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50359 - "GET /api/platform/admin/tenants HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63059 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52262 - "GET /api/products HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:63059 - "GET /api/holds HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52262 - "GET /api/products HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:60291 - "GET /api/purchases HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:63059 - "GET /api/suppliers HTTP/1.1" 403 Forbidden
+INFO:     127.0.0.1:59316 - "GET /api/products/catalogue HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:52262 - "GET /api/products/master HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63059 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60291 - "GET /api/products HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:53202 - "GET /api/platform/admin/tenants HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51709 - "GET /api/platform/tenants/resolve?code=DEMO HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51709 - "GET /api/platform/tenants/resolve?code=DEMO HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58060 - "GET /api/platform/tenants/resolve?code=DEMO HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64475 - "GET /api/platform/tenants/resolve?code=DEMO HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60985 - "GET /api/platform/tenants/resolve?code=DEMO HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60985 - "GET /api/platform/tenants/resolve?code=DEMO HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65164 - "GET /api/platform/tenants/resolve?code=DEMO HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52965 - "GET /api/platform/tenants/resolve?code=DEMO HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64370 - "OPTIONS /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64370 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64370 - "OPTIONS /api/platform/context HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64370 - "GET /api/platform/context HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64370 - "OPTIONS /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65489 - "OPTIONS /api/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55757 - "OPTIONS /api/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64839 - "OPTIONS /api/platform/device/activate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64370 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55757 - "POST /api/platform/device/activate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54750 - "GET /api/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65489 - "GET /api/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65489 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54750 - "GET /api/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54750 - "OPTIONS /api/holds HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54750 - "GET /api/holds HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54750 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:65489 - "GET /api/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63608 - "GET /api/holds HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63608 - "OPTIONS /api/holds/8e5b2321-46b2-4395-b3bf-e780c008d672/reopen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63608 - "POST /api/holds/8e5b2321-46b2-4395-b3bf-e780c008d672/reopen HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63608 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60744 - "GET /api/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53286 - "OPTIONS /api/orders HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53286 - "GET /api/orders HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53286 - "OPTIONS /api/expenses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53286 - "GET /api/expenses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53286 - "OPTIONS /api/inventory/items HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58232 - "OPTIONS /api/inventory/movements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53286 - "GET /api/inventory/items HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58232 - "GET /api/inventory/movements HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59240 - "GET /api/expenses HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59240 - "GET /api/holds HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59240 - "OPTIONS /api/suppliers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63556 - "OPTIONS /api/purchases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63556 - "GET /api/suppliers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49375 - "GET /api/purchases HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59240 - "GET /api/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52182 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59427 - "GET /api/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59741 - "GET /api/holds HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59741 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50797 - "GET /api/dashboard HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51541 - "GET /api/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51541 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50797 - "GET /api/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60411 - "OPTIONS /api/products/master HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56216 - "OPTIONS /api/products/catalogue HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55805 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60411 - "GET /api/products/master HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64630 - "GET /api/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56216 - "GET /api/products/catalogue HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56216 - "GET /api/holds HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62966 - "GET /api/platform/tenants/resolve?code=DEMO HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50411 - "POST /api/auth/login HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:55717 - "POST /api/auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55717 - "GET /api/platform/context HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55717 - "OPTIONS /api/platform/admin/tenants HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59981 - "POST /api/platform/device/activate HTTP/1.1" 409 Conflict
+INFO:     127.0.0.1:55717 - "GET /api/platform/admin/tenants HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55717 - "GET /api/orders HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55717 - "GET /api/platform/admin/tenants HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52405 - "GET /api/products HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:63006 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63006 - "GET /api/categories HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52405 - "GET /api/products HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:64024 - "GET /api/products/catalogue HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:64365 - "GET /api/products/master HTTP/1.1" 200 OK
+INFO:     127.0.0.1:64365 - "GET /api/platform/admin/tenants HTTP/1.1" 200 OK

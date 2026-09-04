@@ -1,0 +1,660 @@
+<section class="view-head">
+  <div>
+    <h1>{{ module().title }}</h1>
+    <p>{{ module().detail }}</p>
+  </div>
+  <div class="filter-row">
+    @if (key() === 'holds' || key() === 'inventory' || key() === 'reports') {
+      <input
+        class="search-box"
+        [placeholder]="
+          key() === 'holds'
+            ? 'Search hold number, cashier or items...'
+            : key() === 'inventory'
+              ? 'Search inventory item, category or status...'
+              : 'Search invoice, cashier or payment...'
+        "
+        [value]="
+          key() === 'holds'
+            ? holdSearch()
+            : key() === 'inventory'
+              ? inventorySearch()
+              : reportSearch()
+        "
+        (input)="setSearch($any($event.target).value)"
+      />
+    }
+    @if (key() === 'inventory' && session.isAdmin()) {
+      <button class="button green" type="button" (click)="addInventoryItem()">
+        <span class="material-symbols-outlined">add</span>Add Item
+      </button>
+    }
+    <button type="button" (click)="load()">
+      <span class="material-symbols-outlined">refresh</span>Refresh
+    </button>
+  </div>
+</section>
+
+@if (notice()) {
+  <div class="toast"><span class="material-symbols-outlined">check_circle</span>{{ notice() }}</div>
+}
+@if (loading()) {
+  <div class="live-state">Loading live PostgreSQL data...</div>
+} @else if (error()) {
+  <div class="live-state error-state">
+    {{ error() }}<button type="button" (click)="load()">Retry</button>
+  </div>
+} @else if (key() === 'holds') {
+  <section class="metric-grid four-metrics">
+    <article class="metric">
+      <span class="metric-icon brown"
+        ><span class="material-symbols-outlined">assignment</span></span
+      >
+      <div>
+        <small>Total Held Bills</small>
+        <h2>{{ holds().length }}</h2>
+        <p>current outlet</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon green"><span class="material-symbols-outlined">payments</span></span>
+      <div>
+        <small>Total Held Value</small>
+        <h2>{{ money(heldValue()) }}</h2>
+        <p>ready to reopen</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon yellow"><span class="material-symbols-outlined">today</span></span>
+      <div>
+        <small>Today's Held Bills</small>
+        <h2>{{ holds().length }}</h2>
+        <p>live database</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon green"
+        ><span class="material-symbols-outlined">restart_alt</span></span
+      >
+      <div>
+        <small>Selected Bill</small>
+        <h2>{{ selectedHold()?.items?.length ?? 0 }}</h2>
+        <p>line items</p>
+      </div>
+    </article>
+  </section>
+  <section class="holds-layout">
+    <section class="panel table-panel">
+      <div class="panel-title">
+        <h2>Held Orders</h2>
+        <span>{{ visibleHolds().length }} bills</span>
+      </div>
+      <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
+        <table>
+          <thead>
+            <tr>
+              <th>Hold No</th>
+              <th>Date &amp; Time</th>
+              <th>Cashier</th>
+              <th>Items</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (hold of visibleHolds(); track hold.id) {
+              <tr [class.selected-row]="selectedHold()?.id === hold.id" (click)="selectHold(hold)">
+                <td>
+                  <b>{{ hold.hold_number }}</b>
+                </td>
+                <td>{{ date(hold.held_at) }}</td>
+                <td>{{ hold.cashier_name }}</td>
+                <td>{{ hold.items.length }}</td>
+                <td>{{ money(hold.grand_total) }}</td>
+                <td><span class="status-pill">Held</span></td>
+                <td>
+                  <button
+                    class="small-button"
+                    type="button"
+                    (click)="$event.stopPropagation(); reopen(hold)"
+                  >
+                    Reopen
+                  </button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="7"><div class="live-state">No held bills found.</div></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <aside class="panel hold-preview">
+      @if (selectedHold(); as hold) {
+        <div class="panel-title">
+          <h2>Hold Preview</h2>
+          <span class="status-pill">{{ hold.hold_number }}</span>
+        </div>
+        <div class="preview-meta">
+          <span
+            ><small>Held On</small><b>{{ date(hold.held_at) }}</b></span
+          ><span
+            ><small>Cashier</small><b>{{ hold.cashier_name }}</b></span
+          >
+        </div>
+        <div class="preview-list">
+          <h3>Items ({{ hold.items.length }})</h3>
+          @for (item of hold.items; track item.product_id + item.variant_id) {
+            <div class="preview-item">
+              <span
+                ><b>{{ item.product_name }}</b
+                ><small>{{ item.variant_name || 'Regular' }}</small></span
+              ><b>× {{ item.quantity }}</b
+              ><strong>{{ money(item.line_total) }}</strong>
+            </div>
+          }
+        </div>
+        <div class="preview-totals">
+          <span
+            >Subtotal <b>{{ money(hold.subtotal) }}</b></span
+          ><span
+            >GST <b>{{ money(hold.tax) }}</b></span
+          ><strong
+            >Total Amount <b>{{ money(hold.grand_total) }}</b></strong
+          >
+        </div>
+        <div class="preview-actions">
+          <button class="button green" type="button" (click)="reopen(hold)">
+            <span class="material-symbols-outlined">exit_to_app</span>Reopen &amp; Proceed</button
+          ><button class="button red" type="button" (click)="deleteHold(hold)">
+            <span class="material-symbols-outlined">delete</span>Delete Hold
+          </button>
+        </div>
+      } @else {
+        <div class="live-state">Select a held bill to preview.</div>
+      }
+    </aside>
+  </section>
+} @else if (key() === 'kot') {
+  <div class="status-tabs">
+    <button [class.active]="kotFilter() === 'ALL'" (click)="setKotFilter('ALL')">
+      All Orders <b>{{ kots().length }}</b></button
+    ><button [class.active]="kotFilter() === 'NEW'" (click)="setKotFilter('NEW')">
+      New <b class="red-count">{{ countStatus('NEW') }}</b></button
+    ><button [class.active]="kotFilter() === 'PREPARING'" (click)="setKotFilter('PREPARING')">
+      Preparing <b class="amber-count">{{ countStatus('PREPARING') }}</b></button
+    ><button [class.active]="kotFilter() === 'READY'" (click)="setKotFilter('READY')">
+      Ready <b class="green-count">{{ countStatus('READY') }}</b></button
+    ><button [class.active]="kotFilter() === 'SERVED'" (click)="setKotFilter('SERVED')">
+      Served <b class="blue-count">{{ countStatus('SERVED') }}</b>
+    </button>
+  </div>
+  <section class="metric-grid four-metrics">
+    <article class="metric">
+      <span class="metric-icon brown"
+        ><span class="material-symbols-outlined">assignment</span></span
+      >
+      <div>
+        <small>Total Open KOTs</small>
+        <h2>{{ openKots() }}</h2>
+        <p>across this outlet</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon brown"><span class="material-symbols-outlined">timer</span></span>
+      <div>
+        <small>Kitchen Queue</small>
+        <h2>{{ countStatus('PREPARING') }}</h2>
+        <p>preparing now</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon green"
+        ><span class="material-symbols-outlined">check_circle</span></span
+      >
+      <div>
+        <small>Ready Orders</small>
+        <h2>{{ readyKots() }}</h2>
+        <p>awaiting pickup</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon red"><span class="material-symbols-outlined">warning</span></span>
+      <div>
+        <small>Delayed Orders</small>
+        <h2>{{ delayedKots() }}</h2>
+        <p>needs attention</p>
+      </div>
+    </article>
+  </section>
+  <section class="kot-board">
+    @for (kot of filteredKots(); track kot.id) {
+      <article
+        class="kot-card"
+        [class.ready]="kot.status === 'READY'"
+        [class.delayed]="kot.status === 'DELAYED'"
+      >
+        <div>
+          <h2>{{ kot.kot_number }}</h2>
+          <b class="state">{{ kot.status }}</b
+          ><time>{{ date(kot.created_at) }}</time>
+        </div>
+        <p>{{ kot.invoice_number }} · {{ kot.cashier_name }}</p>
+        <ul>
+          @for (item of kot.items; track item.product_name + item.quantity) {
+            <li>
+              <span class="food-dot">☕</span
+              ><span
+                >{{ item.product_name }}<small>{{ item.variant_name }}</small></span
+              ><b>× {{ item.quantity }}</b>
+            </li>
+          }
+        </ul>
+        <footer><span class="material-symbols-outlined">skillet</span>{{ kot.station }}</footer>
+        @if (kot.status !== 'SERVED') {
+          <button type="button" (click)="nextKotStatus(kot)">
+            {{
+              kot.status === 'NEW'
+                ? 'Start Preparing'
+                : kot.status === 'PREPARING'
+                  ? 'Mark Ready'
+                  : kot.status === 'READY'
+                    ? 'Mark as Served'
+                    : 'Resume Preparing'
+            }}
+          </button>
+        }
+      </article>
+    } @empty {
+      <div class="live-state">No kitchen tickets match this status.</div>
+    }
+  </section>
+} @else if (key() === 'reports') {
+  <section class="metric-grid four-metrics">
+    <article class="metric">
+      <span class="metric-icon brown"
+        ><span class="material-symbols-outlined">receipt_long</span></span
+      >
+      <div>
+        <small>Total Orders</small>
+        <h2>{{ orders().length }}</h2>
+        <p>PostgreSQL records</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon green"><span class="material-symbols-outlined">payments</span></span>
+      <div>
+        <small>Sales Value</small>
+        <h2>{{ money(reportTotal()) }}</h2>
+        <p>outlet scoped</p>
+      </div>
+    </article>
+  </section>
+  <section class="panel table-panel">
+    <div class="panel-title"><h2>Order List</h2></div>
+    <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
+      <table>
+        <thead>
+          <tr>
+            <th>Invoice</th>
+            <th>Date &amp; Time</th>
+            <th>Cashier</th>
+            <th>Items</th>
+            <th>Payment</th>
+            <th>Subtotal</th>
+            <th>GST</th>
+            <th>Grand Total</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (order of visibleOrders(); track order.id) {
+            <tr>
+              <td>
+                <b>{{ order.invoice_number }}</b>
+              </td>
+              <td>{{ date(order.created_at) }}</td>
+              <td>{{ order.cashier_name }}</td>
+              <td>{{ order.item_count }}</td>
+              <td>{{ order.payment_modes.join(' + ') }}</td>
+              <td>{{ money(order.subtotal) }}</td>
+              <td>{{ money(order.tax) }}</td>
+              <td>
+                <b>{{ money(order.grand_total) }}</b>
+              </td>
+              <td>
+                <span class="status-pill">{{ order.status }}</span>
+              </td>
+              <td>
+                <div class="report-actions">
+                  <button
+                    class="small-button print-row"
+                    type="button"
+                    title="Print this invoice"
+                    [disabled]="printingOrderId() === order.id"
+                    (click)="printOrder(order)"
+                  >
+                    <span class="material-symbols-outlined">print</span>Print
+                  </button>
+                  @if (session.isAdmin() && order.status === 'COMPLETED') {
+                    <button class="small-button danger" type="button" (click)="voidOrder(order)">
+                      Void
+                    </button>
+                  }
+                </div>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="10"><div class="live-state">No PostgreSQL orders yet.</div></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+} @else if (key() === 'inventory') {
+  <section class="metric-grid four-metrics">
+    <article class="metric">
+      <span class="metric-icon brown"
+        ><span class="material-symbols-outlined">inventory_2</span></span
+      >
+      <div>
+        <small>Total Stock Items</small>
+        <h2>{{ inventoryItems().length }}</h2>
+        <p>shared definitions</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon green"
+        ><span class="material-symbols-outlined">package_2</span></span
+      >
+      <div>
+        <small>Available Items</small>
+        <h2>{{ inventoryItems().length - outOfStockItems() }}</h2>
+        <p>this outlet only</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon yellow"><span class="material-symbols-outlined">warning</span></span>
+      <div>
+        <small>Low Stock Items</small>
+        <h2>{{ lowStockItems() }}</h2>
+        <p>at or below limit</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon red"
+        ><span class="material-symbols-outlined">remove_shopping_cart</span></span
+      >
+      <div>
+        <small>Out of Stock</small>
+        <h2>{{ outOfStockItems() }}</h2>
+        <p>requires attention</p>
+      </div>
+    </article>
+  </section>
+  <section class="inventory-layout">
+    <section class="panel table-panel">
+      <div class="panel-title">
+        <h2>Inventory List</h2>
+        <span>{{ inventoryItems().length }} items</span>
+      </div>
+      <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Category</th>
+              <th>Opening</th>
+              <th>Added</th>
+              <th>Used</th>
+              <th>Available</th>
+              <th>Low Limit</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of visibleInventoryItems(); track item.id) {
+              <tr
+                [class.selected-row]="selectedInventory()?.id === item.id"
+                (click)="selectedInventoryId.set(item.id)"
+              >
+                <td>
+                  <span class="inventory-product"
+                    ><img [src]="asset(item.image_path)" [alt]="item.name" /><b>{{
+                      item.name
+                    }}</b></span
+                  >
+                </td>
+                <td>{{ item.category }}</td>
+                <td>{{ quantity(item.opening_quantity, item.unit) }}</td>
+                <td>{{ quantity(item.stock_added, item.unit) }}</td>
+                <td>{{ quantity(item.stock_used, item.unit) }}</td>
+                <td>
+                  <b>{{ quantity(item.available_quantity, item.unit) }}</b>
+                </td>
+                <td>{{ quantity(item.low_stock_limit, item.unit) }}</td>
+                <td>
+                  <span
+                    class="stock-pill"
+                    [class.low]="item.status === 'LOW_STOCK'"
+                    [class.out]="item.status === 'OUT_OF_STOCK'"
+                    >{{ item.status.replaceAll('_', ' ') }}</span
+                  >
+                </td>
+                <td>
+                  <button
+                    class="icon-button"
+                    type="button"
+                    title="Edit"
+                    (click)="$event.stopPropagation(); editInventory(item)"
+                  >
+                    <span class="material-symbols-outlined">edit</span></button
+                  ><button
+                    class="icon-button"
+                    type="button"
+                    title="Stock in"
+                    (click)="$event.stopPropagation(); adjustInventory(item, 'STOCK_IN')"
+                  >
+                    <span class="material-symbols-outlined">add_box</span></button
+                  ><button
+                    class="icon-button"
+                    type="button"
+                    title="Stock out"
+                    (click)="$event.stopPropagation(); adjustInventory(item, 'STOCK_OUT')"
+                  >
+                    <span class="material-symbols-outlined">indeterminate_check_box</span>
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <aside class="inventory-side">
+      <section class="panel">
+        <div class="panel-title"><h2>Quick Stock Adjustment</h2></div>
+        @if (selectedInventory(); as selected) {
+          <label class="quick-item-select"
+            >Selected item
+            <select
+              [value]="selected.id"
+              (change)="selectedInventoryId.set($any($event.target).value)"
+            >
+              @for (item of inventoryItems(); track item.id) {
+                <option [value]="item.id">{{ item.name }}</option>
+              }
+            </select>
+          </label>
+          <div class="quick-actions">
+            <button (click)="adjustInventory(selected, 'STOCK_IN')">
+              <span class="material-symbols-outlined">local_shipping</span>Stock In</button
+            ><button (click)="adjustInventory(selected, 'STOCK_OUT')">
+              <span class="material-symbols-outlined">move_down</span>Stock Out</button
+            ><button (click)="adjustInventory(selected, 'DAMAGE')">
+              <span class="material-symbols-outlined">warning</span>Damage</button
+            ><button (click)="adjustInventory(selected, 'WASTAGE')">
+              <span class="material-symbols-outlined">delete</span>Wastage</button
+            ><button (click)="adjustInventory(selected, 'MANUAL_CORRECTION')">
+              <span class="material-symbols-outlined">edit</span>Correction
+            </button>
+          </div>
+          <small>Every adjustment is stored in PostgreSQL with an audit movement.</small>
+        }
+      </section>
+      <section class="panel movement-panel">
+        <div class="panel-title"><h2>Recent Stock Movements</h2></div>
+        @for (movement of movements(); track movement.id) {
+          <div class="movement">
+            <span class="material-symbols-outlined">{{
+              +movement.quantity_delta >= 0 ? 'arrow_upward' : 'arrow_downward'
+            }}</span
+            ><span
+              ><b>{{ movement.transaction_type.replaceAll('_', ' ') }}</b
+              ><small>{{ movement.ingredient_name }}</small></span
+            ><strong
+              >{{ +movement.quantity_delta > 0 ? '+' : ''
+              }}{{ quantity(movement.quantity_delta, movement.unit) }}</strong
+            ><time>{{ date(movement.created_at) }}</time>
+          </div>
+        } @empty {
+          <div class="live-state">No stock movements yet.</div>
+        }
+      </section>
+    </aside>
+  </section>
+}
+
+@if (inventoryDialog(); as mode) {
+  <div class="modal-backdrop" (click)="inventoryDialog.set(null)">
+    <section class="inventory-dialog" (click)="$event.stopPropagation()">
+      <div class="panel-title">
+        <h2>{{ mode === 'ADD' ? 'Add Inventory Item' : 'Edit Inventory Item' }}</h2>
+        <button type="button" (click)="inventoryDialog.set(null)">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="inventory-form">
+        <label
+          >Item Code<input
+            [disabled]="mode === 'EDIT'"
+            [value]="inventoryForm().code"
+            (input)="updateInventoryForm('code', $any($event.target).value)"
+            placeholder="MILK_WHOLE"
+        /></label>
+        <label
+          >Item Name<input
+            [value]="inventoryForm().name"
+            (input)="updateInventoryForm('name', $any($event.target).value)"
+            placeholder="Milk (Whole)"
+        /></label>
+        <label
+          >Category<input
+            [value]="inventoryForm().category"
+            (input)="updateInventoryForm('category', $any($event.target).value)"
+        /></label>
+        <label
+          >Unit<select
+            [value]="inventoryForm().unit"
+            (change)="updateInventoryForm('unit', $any($event.target).value)"
+          >
+            <option>kg</option>
+            <option>L</option>
+            <option>pcs</option>
+            <option>g</option>
+            <option>ml</option>
+          </select></label
+        >
+        @if (mode === 'ADD') {
+          <label
+            >Opening Stock<input
+              type="number"
+              min="0"
+              step="0.001"
+              [value]="inventoryForm().opening"
+              (input)="updateInventoryForm('opening', $any($event.target).value)"
+          /></label>
+        }
+        <label
+          >Low Stock Limit<input
+            type="number"
+            min="0"
+            step="0.001"
+            [value]="inventoryForm().low"
+            (input)="updateInventoryForm('low', $any($event.target).value)"
+        /></label>
+        <label class="wide"
+          >Image Path<input
+            [value]="inventoryForm().imagePath"
+            (input)="updateInventoryForm('imagePath', $any($event.target).value)"
+            placeholder="inventory/milk.png"
+        /></label>
+      </div>
+      <button class="primary-action" type="button" (click)="saveInventoryItem()">
+        {{ mode === 'ADD' ? 'Add Item' : 'Save Changes' }}
+      </button>
+    </section>
+  </div>
+}
+
+@if (adjustmentDialog()) {
+  @if (selectedInventory(); as item) {
+    <div class="modal-backdrop" (click)="adjustmentDialog.set(false)">
+      <section class="inventory-dialog adjustment-dialog" (click)="$event.stopPropagation()">
+        <div class="panel-title">
+          <div>
+            <small>{{ adjustmentType().replaceAll('_', ' ') }}</small>
+            <h2>{{ item.name }}</h2>
+          </div>
+          <button type="button" (click)="adjustmentDialog.set(false)">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div class="inventory-form">
+          <label
+            >Quantity ({{ item.unit }})<input
+              type="number"
+              min="0.001"
+              step="0.001"
+              [value]="adjustmentQuantity()"
+              (input)="adjustmentQuantity.set($any($event.target).value)"
+          /></label>
+          @if (adjustmentType() === 'MANUAL_CORRECTION') {
+            <label
+              >Direction<select
+                [value]="adjustmentDirection()"
+                (change)="adjustmentDirection.set($any($event.target).value)"
+              >
+                <option value="ADD">Add stock</option>
+                <option value="REMOVE">Remove stock</option>
+              </select></label
+            >
+          }
+          <label
+            >Reference<input
+              [value]="adjustmentReference()"
+              (input)="adjustmentReference.set($any($event.target).value)"
+              placeholder="Invoice / reason reference"
+          /></label>
+          <label class="wide"
+            >Notes<textarea
+              [value]="adjustmentNotes()"
+              (input)="adjustmentNotes.set($any($event.target).value)"
+              placeholder="Adjustment notes"
+            ></textarea>
+          </label>
+        </div>
+        <button class="primary-action" type="button" (click)="saveAdjustment()">
+          Save Stock Movement
+        </button>
+      </section>
+    </div>
+  }
+}

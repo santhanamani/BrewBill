@@ -1,0 +1,133 @@
+<section class="view-head">
+  <div>
+    <h1>Admin Dashboard</h1>
+    <p>Live overview of your café operations</p>
+  </div>
+  <div class="filter-row">
+    <button type="button">
+      <span class="material-symbols-outlined">calendar_month</span> Today</button
+    ><button type="button">Current Outlet</button>
+  </div>
+</section>
+
+@if (loading()) {
+  <div class="live-state">Loading live dashboard data...</div>
+} @else if (error()) {
+  <div class="live-state error-state">
+    {{ error() }}<button type="button" (click)="load()">Retry</button>
+  </div>
+} @else {
+  <section class="metric-grid dashboard-metrics">
+    <article class="metric">
+      <span class="metric-icon brown"><span class="material-symbols-outlined">payments</span></span>
+      <div>
+        <small>Today's Sales</small>
+        <h2>{{ money(metrics()?.sales_today ?? 0) }}</h2>
+        <p>live completed bills</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon brown"
+        ><span class="material-symbols-outlined">receipt_long</span></span
+      >
+      <div>
+        <small>Today's Orders</small>
+        <h2>{{ metrics()?.orders_today ?? 0 }}</h2>
+        <p>PostgreSQL orders</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon green"><span class="material-symbols-outlined">payments</span></span>
+      <div>
+        <small>Cash Sales</small>
+        <h2>{{ money(metrics()?.cash_sales ?? 0) }}</h2>
+        <p>cash payments</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon purple"><span class="material-symbols-outlined">qr_code</span></span>
+      <div>
+        <small>UPI Sales</small>
+        <h2>{{ money(metrics()?.upi_sales ?? 0) }}</h2>
+        <p>UPI payments</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon blue"
+        ><span class="material-symbols-outlined">credit_card</span></span
+      >
+      <div>
+        <small>Card Sales</small>
+        <h2>{{ money(metrics()?.card_sales ?? 0) }}</h2>
+        <p>card payments</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon yellow"
+        ><span class="material-symbols-outlined">inventory_2</span></span
+      >
+      <div>
+        <small>Low Stock</small>
+        <h2>{{ lowStockProducts() }}</h2>
+        <p>needs attention</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon brown"
+        ><span class="material-symbols-outlined">request_quote</span></span
+      >
+      <div>
+        <small>Average Bill Value</small>
+        <h2>{{ money(averageBill()) }}</h2>
+        <p>today's average</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon green"
+        ><span class="material-symbols-outlined">local_cafe</span></span
+      >
+      <div>
+        <small>Top Selling Product</small>
+        <h2>{{ topProducts()[0]?.product_name ?? 'No sales yet' }}</h2>
+        <p>{{ topProducts()[0]?.quantity_sold ?? 0 }} sold</p>
+      </div>
+    </article>
+  </section>
+
+  <section class="dashboard-grid">
+    <article class="panel chart-panel">
+      <div class="panel-title">
+        <h2>Daily Sales Trend</h2>
+        <button type="button">Today</button>
+      </div>
+      @if (metrics()?.hourly_sales?.length) {
+        <div echarts [options]="salesChart()" class="sales-chart"></div>
+      } @else {
+        <div class="live-state chart-empty">No completed sales today.</div>
+      }
+    </article>
+    <article class="panel categories-panel">
+      <h2>Category-wise Sales</h2>
+      @if (metrics()?.category_sales?.length) {
+        <div echarts [options]="categoryChart()" class="category-chart"></div>
+      } @else {
+        <div class="live-state chart-empty">No category sales today.</div>
+      }
+    </article>
+    <article class="panel product-rank">
+      <div class="panel-title">
+        <h2>Top Selling Products</h2>
+        <button type="button">View All</button>
+      </div>
+      @for (product of topProducts(); track product.product_name; let index = $index) {
+        <div class="rank-line">
+          <em>{{ index + 1 }}</em
+          ><span>{{ product.product_name }}</span
+          ><i [style.width.%]="100 - index * 12"></i><b>{{ product.quantity_sold }}</b>
+        </div>
+      } @empty {
+        <div class="live-state">No completed sales for today.</div>
+      }
+    </article>
+  </section>
+}

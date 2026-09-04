@@ -1,0 +1,394 @@
+import { CommonModule } from '@angular/common';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import { BrewBillApiService } from '../../core/brew-bill-api.service';
+import { CatalogService } from '../../core/catalog.service';
+import { HeldCartService } from '../../core/held-cart.service';
+import { CartLine, Category, Product, ProductVariant } from '../../core/models/api.models';
+import { RuntimeConfigService } from '../../core/runtime-config.service';
+import { SessionService } from '../../core/session.service';
+import { ReceiptPayload, ReceiptPrinterService } from '../../core/receipt-printer.service';
+
+@Component({
+  selector: 'app-pos',
+  imports: [CommonModule],
+  templateUrl: './pos.component.html',
+})
+export class PosComponent {
+  private readonly api = inject(BrewBillApiService);
+  private readonly catalog = inject(CatalogService);
+  private readonly runtime = inject(RuntimeConfigService);
+  private readonly session = inject(SessionService);
+  private readonly heldCart = inject(HeldCartService);
+  private readonly receiptPrinter = inject(ReceiptPrinterService);
+
+  readonly products = signal<Product[]>([]);
+  readonly categories = signal<Category[]>([]);
+  readonly activeCategoryId = signal<string | null>(null);
+  readonly search = signal('');
+  readonly cart = signal<CartLine[]>([]);
+  readonly loading = signal(true);
+  readonly submitting = signal(false);
+  readonly error = signal('');
+  readonly notice = signal('');
+  readonly billExpanded = signal(false);
+  readonly resumedHoldId = signal<string | null>(null);
+  readonly selectedProduct = signal<Product | null>(null);
+  readonly discountPercent = signal(0);
+  readonly orderType = signal<'DIRECT' | 'KOT' | 'TAKEAWAY'>('DIRECT');
+  readonly serviceReference = signal('');
+  readonly paymentTerminal = signal<{
+    connected: boolean;
+    provider: string;
+    message: string;
+  } | null>(null);
+  readonly showSplit = signal(false);
+  readonly splitCash = signal('0.00');
+  readonly splitUpi = signal('0.00');
+  readonly splitCard = signal('0.00');
+  readonly lastReceipt = signal<ReceiptPayload | null>(null);
+  readonly filteredProducts = computed(() =>
+    this.products().filter(
+      (product) =>
+        product.is_active &&
+        product.name.toLowerCase().includes(this.search().trim().toLowerCase()) &&
+        (!this.activeCategoryId() || product.category_id === this.activeCategoryId()),
+    ),
+  );
+  readonly subtotal = computed(() =>
+    this.cart().reduce((total, line) => total + this.price(line.selling_price) * line.quantity, 0),
+  );
+  readonly tax = computed(() =>
+    this.cart().reduce(
+      (total, line) =>
+        total +
+        (this.price(line.selling_price) * line.quantity * this.price(line.gst_percent)) / 100,
+      0,
+    ),
+  );
+  readonly discount = computed(() => (this.subtotal() * this.discountPercent()) / 100);
+  readonly beforeRounding = computed(() => this.subtotal() - this.discount() + this.tax());
+  readonly grandTotal = computed(() => Math.round(this.beforeRounding()));
+  readonly roundOff = computed(() => this.grandTotal() - this.beforeRounding());
+  readonly splitTotal = computed(
+    () => this.price(this.splitCash()) + this.price(this.splitUpi()) + this.price(this.splitCard()),
+  );
+
+  constructor() {
+    void this.loadCatalog();
+    void this.loadPaymentTerminal();
+  }
+
+  @HostListener('document:keydown.escape')
+  closeExpandedBill(): void {
+    this.billExpanded.set(false);
+  }
+
+  async loadPaymentTerminal(): Promise<void> {
+    if (!window.brewBill?.payment) return;
+    this.paymentTerminal.set(await window.brewBill.payment.status());
+  }
+
+  async loadCatalog(): Promise<void> {
+    const token = this.session.accessToken();
+    if (!token) return;
+    this.loading.set(true);
+    this.error.set('');
+    try {
+      const catalog = await this.catalog.load(token);
+      this.categories.set(catalog.categories);
+      this.products.set(catalog.products);
+      const held = this.heldCart.take();
+      if (held) {
+        const productById = new Map(catalog.products.map((product) => [product.id, product]));
+        this.cart.set(
+          held.items.flatMap((item) => {
+            const product = productById.get(item.product_id);
+            return product
+              ? [
+                  {
+                    ...product,
+                    selling_price: item.rate,
+                    quantity: item.quantity,
+                    cart_key: `${product.id}:${item.variant_id ?? 'regular'}`,
+                    selected_variant_id: item.variant_id,
+                    selected_variant_name: item.variant_name ?? 'Regular',
+                  },
+                ]
+              : [];
+          }),
+        );
+        this.resumedHoldId.set(held.id);
+        this.notify(`Held bill ${held.hold_number} reopened.`);
+      }
+    } catch (error) {
+      this.error.set(
+        error instanceof Error ? error.message : 'Unable to load the product catalogue.',
+      );
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
+  add(product: Product): void {
+    if (!product.is_available || Number(product.stock_quantity) <= 0) {
+      this.notify(`${product.name} is currently unavailable.`);
+      return;
+    }
+    const variants = product.variants.filter((variant) => variant.is_active);
+    if (variants.length > 1) {
+      this.selectedProduct.set(product);
+      return;
+    }
+    this.addVariant(product, variants[0] ?? null);
+  }
+
+  addVariant(product: Product, variant: ProductVariant | null): void {
+    const cartKey = `${product.id}:${variant?.id ?? 'regular'}`;
+    const price = this.price(product.selling_price) + this.price(variant?.price_adjustment ?? '0');
+    this.cart.update((lines) => {
+      const line = lines.find((item) => item.cart_key === cartKey);
+      return line
+        ? lines.map((item) =>
+            item.cart_key === cartKey ? { ...item, quantity: item.quantity + 1 } : item,
+          )
+        : [
+            ...lines,
+            {
+              ...product,
+              selling_price: price.toFixed(2),
+              quantity: 1,
+              cart_key: cartKey,
+              selected_variant_id: variant?.id ?? null,
+              selected_variant_name: variant?.name ?? 'Regular',
+            },
+          ];
+    });
+    this.selectedProduct.set(null);
+  }
+
+  changeQuantity(cartKey: string, amount: number): void {
+    this.cart.update((lines) =>
+      lines.flatMap((line) =>
+        line.cart_key !== cartKey
+          ? [line]
+          : line.quantity + amount > 0
+            ? [{ ...line, quantity: line.quantity + amount }]
+            : [],
+      ),
+    );
+  }
+
+  async pay(mode: 'CASH' | 'UPI' | 'CARD'): Promise<void> {
+    await this.checkout([{ mode, amount: this.grandTotal() }], mode);
+  }
+
+  openSplit(): void {
+    if (!this.cart().length) return;
+    this.splitCash.set(this.grandTotal().toFixed(2));
+    this.splitUpi.set('0.00');
+    this.splitCard.set('0.00');
+    this.showSplit.set(true);
+  }
+
+  async paySplit(): Promise<void> {
+    if (Math.abs(this.splitTotal() - this.grandTotal()) > 0.005) {
+      this.notify('Split payment total must exactly match the grand total.');
+      return;
+    }
+    const payments = [
+      { mode: 'CASH' as const, amount: this.price(this.splitCash()) },
+      { mode: 'UPI' as const, amount: this.price(this.splitUpi()) },
+      { mode: 'CARD' as const, amount: this.price(this.splitCard()) },
+    ].filter((payment) => payment.amount > 0);
+    if (payments.length < 2) {
+      this.notify('Enter at least two payment modes for a split payment.');
+      return;
+    }
+    this.showSplit.set(false);
+    await this.checkout(payments, 'SPLIT');
+  }
+
+  private async checkout(
+    payments: Array<{ mode: 'CASH' | 'UPI' | 'CARD'; amount: number }>,
+    receiptMode: 'CASH' | 'UPI' | 'CARD' | 'SPLIT',
+  ): Promise<void> {
+    if (!this.cart().length || this.submitting()) return;
+    if (!(await this.canCreateBills())) return;
+    const token = this.session.accessToken();
+    if (!token) return;
+    this.submitting.set(true);
+    try {
+      const orderId = crypto.randomUUID();
+      const capturedPayments = await Promise.all(
+        payments.map((payment) => this.capturePayment(payment, orderId)),
+      );
+      const saleLines = this.cart();
+      const saleSubtotal = this.subtotal();
+      const saleTax = this.tax();
+      const saleGrandTotal = this.grandTotal();
+      const saleDiscount = this.discount();
+      const saleRoundOff = this.roundOff();
+      const result = await this.api.createOrder(token, {
+        order_id: orderId,
+        terminal_code: this.runtime.config().terminalCode,
+        items: saleLines.map((line) => ({
+          product_id: line.id,
+          variant_id: line.selected_variant_id,
+          quantity: line.quantity,
+        })),
+        payments: capturedPayments,
+        order_type: this.orderType(),
+        service_reference: this.serviceReference().trim() || null,
+        discount_percent: this.discountPercent().toFixed(2),
+        round_to_rupee: true,
+        ...(this.resumedHoldId() ? { held_order_id: this.resumedHoldId()! } : {}),
+      });
+      const invoiceNumber = result.invoice_number;
+      const user = this.session.user();
+      this.lastReceipt.set({
+        cafeName: 'Brew Haven',
+        address: 'BrewBill POS',
+        invoiceNumber,
+        cashier: user?.display_name ?? 'Cashier',
+        paymentMode: receiptMode,
+        items: saleLines.map((line) => ({
+          name: line.name,
+          quantity: line.quantity,
+          amountMinor: Math.round(this.price(line.selling_price) * line.quantity * 100),
+        })),
+        subtotalMinor: Math.round(saleSubtotal * 100),
+        discountMinor: Math.round(saleDiscount * 100),
+        taxMinor: Math.round(saleTax * 100),
+        roundOffMinor: Math.round(saleRoundOff * 100),
+        grandTotalMinor: Math.round(saleGrandTotal * 100),
+        orderType: this.orderType(),
+        serviceReference: this.serviceReference().trim() || null,
+      });
+      this.cart.set([]);
+      this.resumedHoldId.set(null);
+      this.discountPercent.set(0);
+      this.serviceReference.set('');
+      this.notify(
+        `Payment received. Invoice ${invoiceNumber} was saved. You can now print the bill.`,
+      );
+      await this.loadCatalog();
+    } catch (error) {
+      this.notify(this.errorMessage(error, 'Unable to complete payment.'));
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
+  private async capturePayment(
+    payment: { mode: 'CASH' | 'UPI' | 'CARD'; amount: number },
+    invoiceHint: string,
+  ): Promise<{
+    mode: 'CASH' | 'UPI' | 'CARD';
+    amount: string;
+    reference?: string;
+    capture_source: 'MANUAL' | 'PAYMENT_TERMINAL';
+    provider?: string;
+  }> {
+    const manual = {
+      mode: payment.mode,
+      amount: payment.amount.toFixed(2),
+      capture_source: 'MANUAL' as const,
+    };
+    if (payment.mode === 'CASH' || !window.brewBill?.payment) return manual;
+    const result = await window.brewBill.payment.collect({
+      mode: payment.mode,
+      amountMinor: Math.round(payment.amount * 100),
+      invoiceHint,
+    });
+    if (result.status === 'DECLINED') throw new Error(result.message);
+    if (result.status === 'UNAVAILABLE') {
+      this.notify(result.message);
+      return { ...manual, provider: result.provider };
+    }
+    return {
+      mode: payment.mode,
+      amount: payment.amount.toFixed(2),
+      capture_source: 'PAYMENT_TERMINAL',
+      provider: result.provider,
+      ...(result.reference ? { reference: result.reference } : {}),
+    };
+  }
+
+  async holdBill(): Promise<void> {
+    if (!this.cart().length) return;
+    if (!(await this.canCreateBills())) return;
+    const token = this.session.accessToken();
+    if (!token) return;
+    this.submitting.set(true);
+    try {
+      const result = await this.api.createHold(token, {
+        terminal_code: this.runtime.config().terminalCode,
+        items: this.cart().map((line) => ({
+          product_id: line.id,
+          variant_id: line.selected_variant_id,
+          quantity: line.quantity,
+        })),
+      });
+      const holdNumber = result.hold_number;
+      this.cart.set([]);
+      this.resumedHoldId.set(null);
+      this.notify(`Held bill ${holdNumber} was saved.`);
+    } catch (error) {
+      this.notify(error instanceof Error ? error.message : 'Unable to hold the bill.');
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
+  private async canCreateBills(): Promise<boolean> {
+    if (!window.brewBill) return true;
+    const license = await window.brewBill.license.status();
+    if (license.canCreateBills) return true;
+    this.notify(license.message);
+    return false;
+  }
+
+  async printReceipt(): Promise<void> {
+    const receipt = this.lastReceipt();
+    if (!receipt) {
+      this.notify('Complete a payment before printing a receipt.');
+      return;
+    }
+    this.submitting.set(true);
+    try {
+      await this.receiptPrinter.print(receipt);
+      this.notify(`Print request sent for invoice ${receipt.invoiceNumber}.`);
+    } catch (error) {
+      this.notify(this.errorMessage(error, 'Unable to print the receipt.'));
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
+  asset(path: string | null): string {
+    return this.runtime.assetUrl(path);
+  }
+  price(value: string): number {
+    return Number.parseFloat(value) || 0;
+  }
+  money(value: number): string {
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value);
+  }
+
+  private notify(message: string): void {
+    this.notice.set(message);
+    window.setTimeout(() => this.notice.set(''), 3500);
+  }
+
+  private errorMessage(error: unknown, fallback: string): string {
+    if (error instanceof Error && error.message) return error.message;
+    if (error && typeof error === 'object') {
+      const response = error as { error?: { detail?: string } | string; message?: string };
+      if (typeof response.error === 'object' && response.error?.detail)
+        return response.error.detail;
+      if (typeof response.error === 'string' && response.error) return response.error;
+      if (response.message) return response.message;
+    }
+    return fallback;
+  }
+}

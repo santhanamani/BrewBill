@@ -1,0 +1,277 @@
+@if (notice()) {
+  <div class="toast"><span class="material-symbols-outlined">info</span>{{ notice() }}</div>
+}
+<section class="pos-layout" [class.bill-focus-mode]="billExpanded()">
+  <div class="catalog">
+    <div class="pos-controls">
+      <div class="order-mode-bar" role="group" aria-label="Billing method">
+        <button [class.active]="orderType() === 'DIRECT'" (click)="orderType.set('DIRECT')">
+          <span class="material-symbols-outlined">receipt_long</span><b>Direct Bill</b
+          ><small>No KOT</small>
+        </button>
+        <button [class.active]="orderType() === 'KOT'" (click)="orderType.set('KOT')">
+          <span class="material-symbols-outlined">skillet</span><b>Dine-in / KOT</b
+          ><small>Kitchen flow</small>
+        </button>
+        <button [class.active]="orderType() === 'TAKEAWAY'" (click)="orderType.set('TAKEAWAY')">
+          <span class="material-symbols-outlined">takeout_dining</span><b>Takeaway</b
+          ><small>Parcel order</small>
+        </button>
+        @if (orderType() !== 'DIRECT') {
+          <label class="service-reference">
+            <span class="material-symbols-outlined">tag</span>
+            <input
+              [placeholder]="orderType() === 'KOT' ? 'Table / token no.' : 'Takeaway token no.'"
+              [value]="serviceReference()"
+              (input)="serviceReference.set($any($event.target).value)"
+            />
+          </label>
+        }
+      </div>
+      <div class="category-strip">
+        <button
+          class="category-card"
+          [class.active]="activeCategoryId() === null"
+          (click)="activeCategoryId.set(null)"
+        >
+          <span class="material-symbols-outlined">grid_view</span><em>All</em>
+        </button>
+        @for (category of categories(); track category.id) {
+          <button
+            class="category-card"
+            [class.active]="activeCategoryId() === category.id"
+            (click)="activeCategoryId.set(category.id)"
+          >
+            <img [src]="asset(category.image_path)" [alt]="category.name" /><em>{{
+              category.name
+            }}</em>
+          </button>
+        }
+      </div>
+    </div>
+    <div class="catalog-toolbar">
+      <h1>
+        Quick Order <small>{{ filteredProducts().length }} items</small>
+      </h1>
+      <label class="search"
+        ><span class="material-symbols-outlined">search</span
+        ><input
+          placeholder="Search live products…"
+          [value]="search()"
+          (input)="search.set($any($event.target).value)"
+      /></label>
+    </div>
+    @if (loading()) {
+      <div class="live-state">Loading products from BrewBill Cloud…</div>
+    } @else if (error()) {
+      <div class="live-state error-state">
+        {{ error() }}<button type="button" (click)="loadCatalog()">Retry</button>
+      </div>
+    } @else if (!filteredProducts().length) {
+      <div class="live-state">No active products were returned for this category.</div>
+    } @else {
+      <div class="product-grid">
+        @for (product of filteredProducts(); track product.id) {
+          <button
+            class="product-card"
+            [class.unavailable]="!product.is_available || price(product.stock_quantity) <= 0"
+            (click)="add(product)"
+          >
+            <div
+              class="product-photo"
+              [style.background-image]="'url(' + asset(product.image_path) + ')'"
+            ></div>
+            <div class="product-copy">
+              <b>{{ product.name }}</b
+              ><strong>{{ money(price(product.selling_price)) }}</strong
+              ><small>{{
+                product.is_available && price(product.stock_quantity) > 0
+                  ? 'In Stock'
+                  : 'Out of Stock'
+              }}</small>
+            </div>
+          </button>
+        }
+      </div>
+    }
+  </div>
+  <aside class="bill-panel" [class.expanded]="billExpanded()">
+    <div class="bill-head">
+      <h2>Current Bill</h2>
+      <div class="bill-head-actions">
+        <span>{{
+          orderType() === 'DIRECT'
+            ? 'Direct Bill'
+            : orderType() === 'KOT'
+              ? 'Dine-in KOT'
+              : 'Takeaway'
+        }}</span>
+        <button
+          class="bill-expand"
+          type="button"
+          [attr.aria-label]="billExpanded() ? 'Exit full screen bill' : 'Open full screen bill'"
+          [title]="billExpanded() ? 'Exit full screen (Esc)' : 'Full screen bill'"
+          (click)="billExpanded.update((value) => !value)"
+        >
+          <span class="material-symbols-outlined">{{
+            billExpanded() ? 'close_fullscreen' : 'open_in_full'
+          }}</span>
+        </button>
+      </div>
+    </div>
+    <div class="bill-columns">
+      <span>Item (Variant)</span><span>Qty</span><span>Rate</span><span>Amount</span>
+    </div>
+    <div class="cart-lines">
+      @for (line of cart(); track line.cart_key) {
+        <div class="cart-line">
+          <div class="cart-product">
+            <img [src]="asset(line.image_path)" [alt]="line.name" /><span
+              ><b>{{ line.name }}</b
+              ><small>{{ line.selected_variant_name }}</small></span
+            >
+          </div>
+          <div class="qty">
+            <button (click)="changeQuantity(line.cart_key, -1)">−</button><b>{{ line.quantity }}</b
+            ><button (click)="changeQuantity(line.cart_key, 1)">+</button>
+          </div>
+          <span>{{ money(price(line.selling_price)) }}</span
+          ><b>{{ money(price(line.selling_price) * line.quantity) }}</b
+          ><button class="icon-danger" (click)="changeQuantity(line.cart_key, -line.quantity)">
+            <span class="material-symbols-outlined">delete</span>
+          </button>
+        </div>
+      } @empty {
+        <div class="empty-cart">Choose products from the live catalogue to start a bill.</div>
+      }
+    </div>
+    <div class="totals">
+      <div>
+        <span>Subtotal</span><b>{{ money(subtotal()) }}</b>
+      </div>
+      <div>
+        <span>GST</span><b>{{ money(tax()) }}</b>
+      </div>
+      <div class="bill-discount">
+        <label
+          >Discount
+          <input
+            type="number"
+            min="0"
+            max="50"
+            step="0.5"
+            [value]="discountPercent()"
+            (input)="discountPercent.set(+$any($event.target).value)"
+          />
+          %</label
+        ><b>-{{ money(discount()) }}</b>
+      </div>
+      <div>
+        <span>Round Off</span><b>{{ money(roundOff()) }}</b>
+      </div>
+      <div class="grand">
+        <span>Grand Total</span><b>{{ money(grandTotal()) }}</b>
+      </div>
+    </div>
+    <div class="payment-grid">
+      <button class="cash" [disabled]="submitting()" (click)="pay('CASH')">
+        <span class="material-symbols-outlined">payments</span>Cash<small>(F2)</small></button
+      ><button class="upi" [disabled]="submitting()" (click)="pay('UPI')">
+        <span class="material-symbols-outlined">qr_code</span>UPI<small>(F3)</small></button
+      ><button class="card" [disabled]="submitting()" (click)="pay('CARD')">
+        <span class="material-symbols-outlined">credit_card</span>Card<small>(F4)</small></button
+      ><button class="split" [disabled]="submitting() || !cart().length" (click)="openSplit()">
+        <span class="material-symbols-outlined">account_tree</span>Split<small>(F5)</small>
+      </button>
+    </div>
+    @if (paymentTerminal(); as terminal) {
+      <div class="terminal-status" [class.connected]="terminal.connected">
+        <span class="material-symbols-outlined">{{
+          terminal.connected ? 'point_of_sale' : 'cloud_off'
+        }}</span>
+        {{
+          terminal.connected ? terminal.provider + ' terminal connected' : 'Manual payment fallback'
+        }}
+      </div>
+    }
+    <div class="bill-actions">
+      <button class="hold" [disabled]="submitting() || !cart().length" (click)="holdBill()">
+        <span class="material-symbols-outlined">inventory_2</span>Hold Bill</button
+      ><button class="print" [disabled]="submitting() || !lastReceipt()" (click)="printReceipt()">
+        <span class="material-symbols-outlined">print</span>Print Bill
+      </button>
+    </div>
+  </aside>
+</section>
+@if (selectedProduct(); as product) {
+  <div class="modal-backdrop" (click)="selectedProduct.set(null)">
+    <section class="variant-dialog" (click)="$event.stopPropagation()">
+      <div class="panel-title">
+        <div>
+          <small>Select a variant</small>
+          <h2>{{ product.name }}</h2>
+        </div>
+        <button type="button" (click)="selectedProduct.set(null)">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <img [src]="asset(product.image_path)" [alt]="product.name" />
+      <div class="variant-options">
+        @for (variant of product.variants; track variant.id) {
+          @if (variant.is_active) {
+            <button type="button" (click)="addVariant(product, variant)">
+              <span>{{ variant.name }}</span
+              ><b>{{ money(price(product.selling_price) + price(variant.price_adjustment)) }}</b>
+            </button>
+          }
+        }
+      </div>
+    </section>
+  </div>
+}
+@if (showSplit()) {
+  <div class="modal-backdrop" (click)="showSplit.set(false)">
+    <section class="split-dialog" (click)="$event.stopPropagation()">
+      <div class="panel-title">
+        <h2>Split Payment</h2>
+        <button type="button" (click)="showSplit.set(false)">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <p>
+        Grand Total <b>{{ money(grandTotal()) }}</b>
+      </p>
+      <label
+        ><span class="material-symbols-outlined">payments</span>Cash<input
+          type="number"
+          min="0"
+          step="0.01"
+          [value]="splitCash()"
+          (input)="splitCash.set($any($event.target).value)"
+      /></label>
+      <label
+        ><span class="material-symbols-outlined">qr_code</span>UPI<input
+          type="number"
+          min="0"
+          step="0.01"
+          [value]="splitUpi()"
+          (input)="splitUpi.set($any($event.target).value)"
+      /></label>
+      <label
+        ><span class="material-symbols-outlined">credit_card</span>Card<input
+          type="number"
+          min="0"
+          step="0.01"
+          [value]="splitCard()"
+          (input)="splitCard.set($any($event.target).value)"
+      /></label>
+      <div class="split-summary">
+        <span>Entered</span
+        ><b [class.invalid]="splitTotal() !== grandTotal()">{{ money(splitTotal()) }}</b>
+      </div>
+      <button class="primary-action" type="button" (click)="paySplit()">
+        Complete Split Payment
+      </button>
+    </section>
+  </div>
+}

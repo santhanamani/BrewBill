@@ -1,0 +1,8 @@
+INFO:     Started server process [7996]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+D:\Project\BrewBill\backend\app\api\products.py:259: StarletteDeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
+  selected_outlet = resolve_outlet(session, user, outlet_id)
+D:\Project\BrewBill\backend\app\api\products.py:85: StarletteDeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
+  selected_outlet = resolve_outlet(session, user, outlet_id)

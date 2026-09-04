@@ -1,0 +1,30 @@
+<section class="tenant-login-screen">
+  <aside class="tenant-login-hero">
+    <div class="login-brand"><img class="brand-mark" src="/assets/images/brand/logo.svg" alt="Brew Haven" /><span><b>BREW HAVEN</b><small>COFFEE &amp; CAFÉ</small></span></div>
+    <div class="hero-copy"><h1>Good Coffee<br />Brings People<br />Together</h1><i></i><p>Simple. Smart. Local.<br />A modern POS for every café.</p><ul><li><span class="material-symbols-outlined">local_cafe</span><b>Faster Billing<small>Focus on great service</small></b></li><li><span class="material-symbols-outlined">bar_chart</span><b>Real-time Insights<small>Grow your café</small></b></li><li><span class="material-symbols-outlined">favorite</span><b>Happier Customers<small>One tap at a time</small></b></li></ul></div>
+  </aside>
+  <main class="tenant-login-main">
+    <button class="help-button" type="button"><span class="material-symbols-outlined">help</span>Need Help?</button>
+    <form class="tenant-login-card" (ngSubmit)="login()">
+      <section class="login-fields">
+        <div class="login-heading"><div><h1>Employee Login</h1><p>Sign in to your assigned café and start your shift</p></div><span class="tenant-access"><span class="material-symbols-outlined">lock</span>Tenant-scoped access</span></div>
+        @if (error()) { <p class="auth-error"><span class="material-symbols-outlined">error</span>{{ error() }}</p> }
+        <label>Café / Tenant Code<div class="input-with-icon"><span class="material-symbols-outlined">store</span><input [ngModel]="tenantCode()" (ngModelChange)="tenantCode.set($event);tenant.set(null)" (blur)="resolveTenant()" name="tenantCode" placeholder="e.g. DEMO" required /><button type="button" (click)="resolveTenant()"><span class="material-symbols-outlined">{{ tenant() ? 'check_circle' : 'arrow_forward' }}</span></button></div><small>Code identifies your café securely.</small></label>
+        <label>Username<div class="input-with-icon"><span class="material-symbols-outlined">person</span><input [(ngModel)]="username" name="username" placeholder="Enter username" autocomplete="username" required /></div></label>
+        <label>Password / PIN<div class="input-with-icon"><span class="material-symbols-outlined">lock</span><input [(ngModel)]="password" name="password" type="password" placeholder="Enter password or PIN" autocomplete="current-password" required /></div></label>
+        <div class="login-options"><label class="remember"><input type="checkbox" />Remember me on this device</label><button type="button">Forgot password?</button></div>
+        <button class="login-submit" type="submit" [disabled]="loading()"><span class="material-symbols-outlined">login</span>{{ loading() ? 'Signing in…' : 'Login to Café' }}<span class="material-symbols-outlined">arrow_forward</span></button>
+      </section>
+      <aside class="selected-tenant">
+        <div class="selected-title"><h2>Selected Café</h2><button type="button" (click)="tenant.set(null)">Change</button></div>
+        @if (tenant(); as cafe) {
+          <div class="cafe-cover" [style.background-image]="cafe.cover_image_url ? 'url(' + cafe.cover_image_url + ')' : null"><img [src]="cafe.logo_url ? cafe.logo_url : '/assets/images/brand/logo.svg'" alt="Cafe logo" /></div>
+          <h2>{{ cafe.outlet_name ?? cafe.name }}</h2><p><span class="material-symbols-outlined">location_on</span>{{ cafe.outlet_address ?? cafe.name }}</p><span class="stock-pill" [class.out]="cafe.status !== 'ACTIVE'">{{ cafe.status }}</span>
+          <div class="scope-explain"><span class="material-symbols-outlined">verified_user</span><p><b>Tenant-scoped access</b><small>After login, you can only see this café's bills, inventory, purchases and reports.</small></p></div>
+        } @else {
+          <div class="tenant-empty"><span class="material-symbols-outlined">store</span><p>Enter your café code to verify the tenant before login.</p></div>
+        }
+      </aside>
+    </form>
+  </main>
+</section>

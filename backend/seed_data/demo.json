@@ -1,0 +1,85 @@
+{
+  "tenant": { "code": "DEMO", "name": "Demo Brew Haven", "status": "ACTIVE", "tagline": "Good Coffee. Better People.", "primary_color": "#5A2D18", "secondary_color": "#C8874A" },
+  "plan": { "code": "PROFESSIONAL", "name": "Professional", "max_terminals": 3, "features": { "inventory": true, "purchases": true, "expenses": true, "reports": true } },
+  "subscription_days": 365,
+  "outlets": [
+    { "code": "MDU01", "name": "Brew Haven Madurai", "address": "Madurai, Tamil Nadu" },
+    { "code": "CHE01", "name": "Brew Haven Chennai", "address": "Chennai, Tamil Nadu" }
+  ],
+  "roles": [
+    { "code": "ADMIN", "name": "Administrator" },
+    { "code": "CASHIER", "name": "Cashier" }
+  ],
+  "users": [
+    { "role_code": "SUPER_ADMIN", "username": "superadmin", "display_name": "Platform Admin", "password": "SuperAdmin@123" },
+    { "outlet_code": "MDU01", "role_code": "ADMIN", "username": "admin", "display_name": "Admin", "password": "Admin@123" },
+    { "outlet_code": "MDU01", "role_code": "CASHIER", "username": "cashier", "display_name": "Cashier", "password": "Cashier@123" }
+  ],
+  "terminals": [
+    { "outlet_code": "MDU01", "code": "POS01", "name": "Madurai POS 01", "device_key_hash": "development-only-replace-before-production" }
+  ],
+  "categories": [
+    { "code": "COFFEE", "name": "Coffee", "image_path": "products/photos/filter-coffee.jpg" },
+    { "code": "HOT_DRINKS", "name": "Tea / Hot Drinks", "image_path": "products/photos/tea.jpg" },
+    { "code": "MILK_DRINKS", "name": "Milk Drinks", "image_path": "products/photos/milk-drink.jpg" },
+    { "code": "JUICES", "name": "Fruit Juices", "image_path": "products/photos/juice.jpg" },
+    { "code": "MILKSHAKES", "name": "Milkshakes", "image_path": "products/photos/milkshake.jpg" },
+    { "code": "MOJITOS", "name": "Mojitos", "image_path": "products/photos/mojito.jpg" },
+    { "code": "FRIES", "name": "Fries", "image_path": "products/photos/fries.jpg" },
+    { "code": "FROZEN", "name": "Frozen Foods", "image_path": "products/photos/samosa.jpg" },
+    { "code": "SANDWICHES", "name": "Sandwiches", "image_path": "products/photos/sandwich.jpg" },
+    { "code": "BURGERS", "name": "Burgers", "image_path": "products/photos/burger.jpg" }
+  ],
+  "products": [
+    { "category": "COFFEE", "name": "Filter Coffee", "code": "FILTER_COFFEE", "selling_price": "40.00", "image_path": "products/photos/filter-coffee.jpg", "favourite": true },
+    { "category": "COFFEE", "name": "Black Coffee", "code": "BLACK_COFFEE", "selling_price": "40.00", "image_path": "products/photos/black-coffee.jpg", "favourite": true },
+    { "category": "COFFEE", "name": "Cold Coffee", "code": "COLD_COFFEE", "selling_price": "80.00", "image_path": "products/photos/cold-coffee.jpg", "favourite": true, "variants": [{ "name": "Medium", "price_adjustment": "0.00" }, { "name": "Large", "price_adjustment": "20.00" }] },
+    { "category": "HOT_DRINKS", "name": "Tea", "code": "TEA", "selling_price": "30.00", "image_path": "products/photos/tea.jpg" },
+    { "category": "HOT_DRINKS", "name": "Lemon Tea", "code": "LEMON_TEA", "selling_price": "35.00", "image_path": "products/photos/lemon-tea.jpg" },
+    { "category": "HOT_DRINKS", "name": "Ginger Tea", "code": "GINGER_TEA", "selling_price": "35.00", "image_path": "products/photos/tea.jpg" },
+    { "category": "HOT_DRINKS", "name": "Horlicks", "code": "HORLICKS", "selling_price": "55.00", "image_path": "products/photos/milk-drink.jpg" },
+    { "category": "HOT_DRINKS", "name": "Boost", "code": "BOOST", "selling_price": "55.00", "image_path": "products/photos/milk-drink.jpg" },
+    { "category": "MILK_DRINKS", "name": "Paalkova Milk", "code": "PAALKOVA_MILK", "selling_price": "65.00", "image_path": "products/photos/milk-drink.jpg" },
+    { "category": "JUICES", "name": "Orange Juice", "code": "ORANGE_JUICE", "selling_price": "70.00", "image_path": "products/photos/juice.jpg" },
+    { "category": "JUICES", "name": "Apple Juice", "code": "APPLE_JUICE", "selling_price": "80.00", "image_path": "products/photos/juice.jpg" },
+    { "category": "JUICES", "name": "Watermelon Juice", "code": "WATERMELON_JUICE", "selling_price": "70.00", "image_path": "products/photos/juice.jpg" },
+    { "category": "JUICES", "name": "Lemon Juice", "code": "LEMON_JUICE", "selling_price": "45.00", "image_path": "products/photos/juice.jpg" },
+    { "category": "JUICES", "name": "Pineapple Juice", "code": "PINEAPPLE_JUICE", "selling_price": "75.00", "image_path": "products/photos/juice.jpg" },
+    { "category": "MILKSHAKES", "name": "Chocolate Milkshake", "code": "CHOCOLATE_MILKSHAKE", "selling_price": "120.00", "image_path": "products/photos/milkshake.jpg", "variants": [{ "name": "Medium", "price_adjustment": "0.00" }, { "name": "Large", "price_adjustment": "20.00" }] },
+    { "category": "MILKSHAKES", "name": "Vanilla Milkshake", "code": "VANILLA_MILKSHAKE", "selling_price": "120.00", "image_path": "products/photos/milkshake.jpg", "variants": [{ "name": "Medium", "price_adjustment": "0.00" }, { "name": "Large", "price_adjustment": "20.00" }] },
+    { "category": "MILKSHAKES", "name": "Strawberry Milkshake", "code": "STRAWBERRY_MILKSHAKE", "selling_price": "125.00", "image_path": "products/photos/milkshake.jpg", "variants": [{ "name": "Medium", "price_adjustment": "0.00" }, { "name": "Large", "price_adjustment": "20.00" }] },
+    { "category": "MILKSHAKES", "name": "Mango Milkshake", "code": "MANGO_MILKSHAKE", "selling_price": "125.00", "image_path": "products/photos/milkshake.jpg", "variants": [{ "name": "Medium", "price_adjustment": "0.00" }, { "name": "Large", "price_adjustment": "20.00" }] },
+    { "category": "MILKSHAKES", "name": "Butterscotch Milkshake", "code": "BUTTERSCOTCH_MILKSHAKE", "selling_price": "130.00", "image_path": "products/photos/milkshake.jpg", "variants": [{ "name": "Medium", "price_adjustment": "0.00" }, { "name": "Large", "price_adjustment": "20.00" }] },
+    { "category": "MOJITOS", "name": "Mint Mojito", "code": "MINT_MOJITO", "selling_price": "110.00", "image_path": "products/photos/mojito.jpg" },
+    { "category": "MOJITOS", "name": "Blue Lagoon Mojito", "code": "BLUE_LAGOON_MOJITO", "selling_price": "120.00", "image_path": "products/photos/mojito.jpg" },
+    { "category": "MOJITOS", "name": "Strawberry Mojito", "code": "STRAWBERRY_MOJITO", "selling_price": "120.00", "image_path": "products/photos/mojito.jpg" },
+    { "category": "MOJITOS", "name": "Green Apple Mojito", "code": "GREEN_APPLE_MOJITO", "selling_price": "125.00", "image_path": "products/photos/mojito.jpg" },
+    { "category": "FRIES", "name": "French Fries", "code": "FRENCH_FRIES", "selling_price": "80.00", "image_path": "products/photos/fries.jpg", "favourite": true },
+    { "category": "FRIES", "name": "Masala Fries", "code": "MASALA_FRIES", "selling_price": "95.00", "image_path": "products/photos/fries.jpg", "favourite": true },
+    { "category": "FRIES", "name": "Cheese Fries", "code": "CHEESE_FRIES", "selling_price": "110.00", "image_path": "products/photos/fries.jpg", "favourite": true },
+    { "category": "FROZEN", "name": "Nuggets", "code": "NUGGETS", "selling_price": "120.00", "image_path": "products/photos/samosa.jpg" },
+    { "category": "FROZEN", "name": "Veg Nuggets", "code": "VEG_NUGGETS", "selling_price": "110.00", "image_path": "products/photos/samosa.jpg" },
+    { "category": "FROZEN", "name": "Samosa", "code": "SAMOSA", "selling_price": "30.00", "image_path": "products/photos/samosa.jpg" },
+    { "category": "FROZEN", "name": "Spring Roll", "code": "SPRING_ROLL", "selling_price": "95.00", "image_path": "products/photos/samosa.jpg" },
+    { "category": "SANDWICHES", "name": "Veg Sandwich", "code": "VEG_SANDWICH", "selling_price": "90.00", "image_path": "products/photos/sandwich.jpg" },
+    { "category": "SANDWICHES", "name": "Cheese Sandwich", "code": "CHEESE_SANDWICH", "selling_price": "110.00", "image_path": "products/photos/sandwich.jpg" },
+    { "category": "SANDWICHES", "name": "Paneer Sandwich", "code": "PANEER_SANDWICH", "selling_price": "130.00", "image_path": "products/photos/sandwich.jpg" },
+    { "category": "SANDWICHES", "name": "Grilled Sandwich", "code": "GRILLED_SANDWICH", "selling_price": "135.00", "image_path": "products/photos/sandwich.jpg" },
+    { "category": "BURGERS", "name": "Veg Burger", "code": "VEG_BURGER", "selling_price": "150.00", "image_path": "products/photos/burger.jpg", "favourite": true },
+    { "category": "BURGERS", "name": "Cheese Burger", "code": "CHEESE_BURGER", "selling_price": "175.00", "image_path": "products/photos/burger.jpg", "favourite": true },
+    { "category": "BURGERS", "name": "Paneer Burger", "code": "PANEER_BURGER", "selling_price": "185.00", "image_path": "products/photos/burger.jpg", "favourite": true },
+    { "category": "BURGERS", "name": "Chicken Burger", "code": "CHICKEN_BURGER", "selling_price": "210.00", "image_path": "products/photos/burger.jpg", "favourite": true }
+  ],
+  "ingredients": [
+    { "code": "ARABICA_BEANS", "name": "Arabica Coffee Beans", "category": "Coffee", "unit": "kg", "opening_quantity": "25.000", "stock_added": "10.000", "stock_used": "18.000", "low_stock_limit": "5.000", "image_path": "products/photos/filter-coffee.jpg" },
+    { "code": "WHOLE_MILK", "name": "Milk (Whole)", "category": "Milk", "unit": "L", "opening_quantity": "50.000", "stock_added": "20.000", "stock_used": "45.000", "low_stock_limit": "10.000", "image_path": "products/photos/milk-drink.jpg" },
+    { "code": "SUGAR", "name": "Sugar", "category": "Sweetener", "unit": "kg", "opening_quantity": "30.000", "stock_added": "15.000", "stock_used": "20.000", "low_stock_limit": "5.000", "image_path": "products/photos/sugar.png" },
+    { "code": "FROZEN_FRIES", "name": "French Fries (Frozen)", "category": "Frozen Foods", "unit": "kg", "opening_quantity": "20.000", "stock_added": "10.000", "stock_used": "18.000", "low_stock_limit": "5.000", "image_path": "products/photos/fries.jpg" },
+    { "code": "VEG_PATTY", "name": "Veg Patty", "category": "Frozen Foods", "unit": "kg", "opening_quantity": "15.000", "stock_added": "5.000", "stock_used": "12.000", "low_stock_limit": "5.000", "image_path": "products/photos/burger.jpg" },
+    { "code": "TEA_LEAVES", "name": "Tea Leaves", "category": "Beverages", "unit": "kg", "opening_quantity": "10.000", "stock_added": "2.000", "stock_used": "8.000", "low_stock_limit": "5.000", "image_path": "products/photos/tea.jpg" },
+    { "code": "CHOCOLATE_SYRUP", "name": "Chocolate Syrup", "category": "Toppings", "unit": "L", "opening_quantity": "5.000", "stock_added": "2.000", "stock_used": "4.000", "low_stock_limit": "3.000", "image_path": "products/photos/milkshake.jpg" },
+    { "code": "PAPER_CUPS_12OZ", "name": "Paper Cups (12oz)", "category": "Disposables", "unit": "pcs", "opening_quantity": "500.000", "stock_added": "200.000", "stock_used": "550.000", "low_stock_limit": "200.000", "image_path": "products/photos/paper-cups.png" },
+    { "code": "TOMATO_KETCHUP", "name": "Tomato Ketchup", "category": "Sauces", "unit": "kg", "opening_quantity": "6.000", "stock_added": "2.000", "stock_used": "6.000", "low_stock_limit": "3.000", "image_path": "products/photos/tomato-ketchup.png" },
+    { "code": "MAYONNAISE", "name": "Mayonnaise", "category": "Sauces", "unit": "kg", "opening_quantity": "4.000", "stock_added": "0.000", "stock_used": "2.000", "low_stock_limit": "3.000", "image_path": "products/photos/mayonnaise.png" }
+  ]
+}

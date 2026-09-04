@@ -1,0 +1,562 @@
+<section class="view-head management-head">
+  <div class="title-with-icon">
+    <span class="material-symbols-outlined">{{ page().icon }}</span>
+    <div>
+      <h1>{{ page().title }}</h1>
+      <p>{{ page().detail }}</p>
+    </div>
+  </div>
+  <div class="filter-row">
+    <input
+      class="search-box"
+      placeholder="Search this table..."
+      [value]="search()"
+      (input)="setSearch($any($event.target).value)"
+    />
+    <button type="button" (click)="load()">
+      <span class="material-symbols-outlined">refresh</span> Refresh
+    </button>
+  </div>
+</section>
+
+@if (error()) {
+  <div class="notice error-state">{{ error() }}</div>
+}
+@if (success()) {
+  <div class="notice success-state">{{ success() }}</div>
+}
+@if (loading()) {
+  <div class="live-state">Loading live PostgreSQL data...</div>
+} @else if (key() === 'purchases') {
+  <div class="metric-grid four-metrics">
+    <article class="metric">
+      <span class="metric-icon purple"
+        ><span class="material-symbols-outlined">shopping_cart</span></span
+      >
+      <div>
+        <small>Purchase Value</small>
+        <h2>{{ money(purchaseTotal()) }}</h2>
+        <p>{{ purchases().length }} invoices</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon yellow"
+        ><span class="material-symbols-outlined">hourglass_top</span></span
+      >
+      <div>
+        <small>Pending Payments</small>
+        <h2>{{ money(pendingTotal()) }}</h2>
+        <p>Live supplier dues</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon green"><span class="material-symbols-outlined">groups</span></span>
+      <div>
+        <small>Total Suppliers</small>
+        <h2>{{ suppliers().length }}</h2>
+        <p>Active suppliers</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon blue"
+        ><span class="material-symbols-outlined">inventory_2</span></span
+      >
+      <div>
+        <small>Catalogue Items</small>
+        <h2>{{ products().length }}</h2>
+        <p>PostgreSQL products</p>
+      </div>
+    </article>
+  </div>
+  <div class="management-grid purchase-layout">
+    <section class="panel form-panel">
+      <div class="panel-title">
+        <h2>Purchase Entry</h2>
+      </div>
+      <div class="quick-create">
+        <input
+          [(ngModel)]="supplierName"
+          [ngModelOptions]="{ standalone: true }"
+          placeholder="New supplier name"
+        />
+        <button type="button" (click)="addSupplier()">+ Add Supplier</button>
+      </div>
+      <form class="form-grid" (ngSubmit)="addPurchase()">
+        <label
+          >Supplier *<select name="supplier" [(ngModel)]="purchaseSupplier" required>
+            @for (supplier of suppliers(); track supplier.id) {
+              <option [value]="supplier.id">{{ supplier.name }}</option>
+            }
+          </select></label
+        >
+        <label
+          >Invoice Number *<input
+            name="invoice"
+            [(ngModel)]="purchaseInvoice"
+            placeholder="Enter invoice number"
+            required
+        /></label>
+        <label
+          >Purchase Date *<input
+            name="purchaseDate"
+            type="date"
+            [(ngModel)]="purchaseDate"
+            required
+        /></label>
+        <label class="span-two"
+          >Product / Ingredient *<select name="product" [(ngModel)]="purchaseProduct" required>
+            @for (product of products(); track product.id) {
+              <option [value]="product.id">{{ product.name }}</option>
+            }
+          </select></label
+        >
+        <label
+          >Quantity *<input
+            name="quantity"
+            type="number"
+            min="0.001"
+            step="0.001"
+            [(ngModel)]="purchaseQuantity"
+            required
+        /></label>
+        <label
+          >Purchase Price (₹) *<input
+            name="cost"
+            type="number"
+            min="0"
+            step="0.01"
+            [(ngModel)]="purchaseCost"
+            required
+        /></label>
+        <label
+          >Tax (%)<input
+            name="tax"
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            [(ngModel)]="purchaseTax"
+        /></label>
+        <label
+          >Payment Status *<select name="payment" [(ngModel)]="purchaseStatus">
+            <option value="PAID">Paid</option>
+            <option value="PENDING">Pending</option>
+            <option value="PARTIAL">Partial</option>
+          </select></label
+        >
+        <div class="form-actions span-two">
+          <button class="primary-action" type="submit" [disabled]="saving()">
+            <span class="material-symbols-outlined">add</span
+            >{{ saving() ? 'Saving...' : 'Add Purchase' }}
+          </button>
+        </div>
+      </form>
+    </section>
+    <section class="panel table-panel">
+      <div class="panel-title">
+        <h2>Purchase History</h2>
+        <span>{{ purchases().length }} entries</span>
+      </div>
+      <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
+        <table>
+          <thead>
+            <tr>
+              <th>Supplier</th>
+              <th>Invoice No.</th>
+              <th>Date</th>
+              <th>Items</th>
+              <th>Amount</th>
+              <th>Payment</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of visiblePurchases(); track row.id) {
+              <tr>
+                <td>
+                  <b>{{ row.supplier_name }}</b>
+                </td>
+                <td>{{ row.invoice_number }}</td>
+                <td>{{ date(row.purchase_date) }}</td>
+                <td>{{ row.item_count }}</td>
+                <td>{{ money(row.total) }}</td>
+                <td>
+                  <span class="status-pill" [class.pending]="row.payment_status !== 'PAID'">{{
+                    row.payment_status
+                  }}</span>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="6">No purchases have been recorded.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+} @else if (key() === 'expenses') {
+  <div class="metric-grid four-metrics">
+    <article class="metric">
+      <span class="metric-icon brown"><span class="material-symbols-outlined">wallet</span></span>
+      <div>
+        <small>Today's Expenses</small>
+        <h2>{{ money(todayExpense()) }}</h2>
+        <p>Current business date</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon green"
+        ><span class="material-symbols-outlined">calendar_month</span></span
+      >
+      <div>
+        <small>Total Recorded</small>
+        <h2>{{ money(expenseTotal()) }}</h2>
+        <p>{{ expenses().length }} entries</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon purple"
+        ><span class="material-symbols-outlined">pie_chart</span></span
+      >
+      <div>
+        <small>Categories</small>
+        <h2>{{ 5 }}</h2>
+        <p>Operational categories</p>
+      </div>
+    </article>
+    <article class="metric">
+      <span class="metric-icon red"><span class="material-symbols-outlined">payments</span></span>
+      <div>
+        <small>Cash Expenses</small>
+        <h2>{{ money(cashExpense()) }}</h2>
+        <p>Included in closing</p>
+      </div>
+    </article>
+  </div>
+  <section class="panel form-panel expense-form">
+    <h2>Add New Expense</h2>
+    <form class="form-grid three-columns" (ngSubmit)="addExpense()">
+      <label
+        >Date *<input name="expenseDate" type="date" [(ngModel)]="expenseDate" required
+      /></label>
+      <label
+        >Expense Category *<select name="expenseCategory" [(ngModel)]="expenseCategory">
+          <option>Supplies</option>
+          <option>Utilities</option>
+          <option>Rent</option>
+          <option>Salaries</option>
+          <option>Other Expenses</option>
+        </select></label
+      >
+      <label
+        >Description *<input
+          name="description"
+          [(ngModel)]="expenseDescription"
+          placeholder="Enter description"
+          required
+      /></label>
+      <label
+        >Amount (₹) *<input
+          name="amount"
+          type="number"
+          min="0.01"
+          step="0.01"
+          [(ngModel)]="expenseAmount"
+          required
+      /></label>
+      <label
+        >Payment Mode *<select name="mode" [(ngModel)]="expenseMode">
+          <option value="CASH">Cash</option>
+          <option value="UPI">UPI</option>
+          <option value="CARD">Card</option>
+          <option value="BANK_TRANSFER">Bank Transfer</option>
+        </select></label
+      >
+      <label
+        >Remarks<input name="remarks" [(ngModel)]="expenseRemarks" placeholder="Optional remarks"
+      /></label>
+      <div class="form-actions">
+        <button class="primary-action" type="submit" [disabled]="saving()">
+          <span class="material-symbols-outlined">add</span>Add Expense
+        </button>
+      </div>
+    </form>
+  </section>
+  <section class="panel table-panel management-table">
+    <div class="panel-title">
+      <h2>Expense Report</h2>
+      <span>{{ expenses().length }} entries</span>
+    </div>
+    <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th>Amount</th>
+            <th>Payment Mode</th>
+            <th>Created By</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of visibleExpenses(); track row.id) {
+            <tr>
+              <td>{{ date(row.expense_date) }}</td>
+              <td>
+                <b>{{ row.category }}</b>
+              </td>
+              <td>{{ row.description }}</td>
+              <td>{{ money(row.amount) }}</td>
+              <td>{{ row.payment_mode }}</td>
+              <td>{{ row.created_by_name }}</td>
+              <td>{{ row.remarks || '—' }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="7">No expenses have been recorded.</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+} @else if (key() === 'customers') {
+  <div class="simple-management">
+    <section class="panel form-panel">
+      <h2>Add Customer</h2>
+      <form class="form-grid" (ngSubmit)="addCustomer()">
+        <label>Name *<input name="customerName" [(ngModel)]="customerName" required /></label
+        ><label>Mobile<input name="mobile" [(ngModel)]="customerMobile" /></label
+        ><label class="span-two"
+          >Email<input name="email" type="email" [(ngModel)]="customerEmail"
+        /></label>
+        <div class="form-actions">
+          <button class="primary-action" type="submit">Add Customer</button>
+        </div>
+      </form>
+    </section>
+    <section class="panel table-panel">
+      <div class="panel-title">
+        <h2>Customer Directory</h2>
+        <span>{{ customers().length }} customers</span>
+      </div>
+      <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Mobile</th>
+              <th>Email</th>
+              <th>Loyalty Points</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of visibleCustomers(); track row.id) {
+              <tr>
+                <td>
+                  <b>{{ row.name }}</b>
+                </td>
+                <td>{{ row.mobile || '—' }}</td>
+                <td>{{ row.email || '—' }}</td>
+                <td>{{ row.loyalty_points }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+} @else if (key() === 'closing') {
+  <div class="simple-management">
+    <section class="panel form-panel">
+      <h2>Close Business Day</h2>
+      <p class="muted">
+        Sales, payment totals and expenses are calculated by the server. Enter only physically
+        counted cash.
+      </p>
+      <form class="form-grid" (ngSubmit)="closeDay()">
+        <label
+          >Business Date<input name="closingDate" type="date" [(ngModel)]="closingDate" /></label
+        ><label
+          >Counted Cash (₹)<input
+            name="countedCash"
+            type="number"
+            min="0"
+            step="0.01"
+            [(ngModel)]="countedCash"
+        /></label>
+        <div class="form-actions">
+          <button class="primary-action" type="submit">Complete Closing</button>
+        </div>
+      </form>
+    </section>
+    <section class="panel table-panel">
+      <div class="panel-title"><h2>Closing History</h2></div>
+      <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Orders</th>
+              <th>Gross Sales</th>
+              <th>Expenses</th>
+              <th>Expected Cash</th>
+              <th>Counted Cash</th>
+              <th>Variance</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of visibleClosings(); track row.id) {
+              <tr>
+                <td>{{ row.business_date }}</td>
+                <td>{{ row.order_count }}</td>
+                <td>{{ money(row.gross_sales) }}</td>
+                <td>{{ money(row.expenses) }}</td>
+                <td>{{ money(row.expected_cash) }}</td>
+                <td>{{ money(row.counted_cash) }}</td>
+                <td>{{ money(row.variance) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+} @else if (key() === 'settings') {
+  <nav class="management-links">
+    <a routerLink="/management/categories"
+      ><span class="material-symbols-outlined">category</span>Categories</a
+    ><a routerLink="/management/customers"
+      ><span class="material-symbols-outlined">groups</span>Customers</a
+    ><a routerLink="/management/closing"
+      ><span class="material-symbols-outlined">task_alt</span>Daily Closing</a
+    >
+  </nav>
+  <section class="panel form-panel terminal-settings">
+    <div class="panel-title">
+      <div>
+        <small>THIS POS DEVICE</small>
+        <h2>Payment Terminal</h2>
+      </div>
+      <span>{{ terminalMessage() }}</span>
+    </div>
+    <div class="form-grid three-columns">
+      <label
+        >Provider<input [(ngModel)]="terminalProvider" placeholder="PINE_LABS / RAZORPAY_POS"
+      /></label>
+      <label
+        >Gateway URL<input [(ngModel)]="terminalEndpoint" placeholder="http://127.0.0.1:9100"
+      /></label>
+      <label
+        >API Key<input
+          type="password"
+          [(ngModel)]="terminalApiKey"
+          placeholder="Leave blank to keep saved key"
+      /></label>
+    </div>
+    <div class="form-actions">
+      <button class="primary-action" type="button" (click)="savePaymentTerminal()">
+        <span class="material-symbols-outlined">point_of_sale</span>Save &amp; Test Terminal
+      </button>
+    </div>
+  </section>
+  <div class="simple-management">
+    <section class="panel form-panel">
+      <h2>Business Setting</h2>
+      <form class="form-grid" (ngSubmit)="saveSetting()">
+        <label
+          >Setting Key<input
+            name="settingKey"
+            [(ngModel)]="settingKey"
+            placeholder="receipt_footer" /></label
+        ><label
+          >Value<input
+            name="settingValue"
+            [(ngModel)]="settingValue"
+            placeholder="Thank you for visiting"
+        /></label>
+        <div class="form-actions">
+          <button class="primary-action" type="submit">Save Setting</button>
+        </div>
+      </form>
+    </section>
+    <section class="panel table-panel">
+      <div class="panel-title"><h2>Tenant Settings</h2></div>
+      <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
+        <table>
+          <thead>
+            <tr>
+              <th>Key</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of visibleSettings(); track row.setting_key) {
+              <tr>
+                <td>
+                  <b>{{ row.setting_key }}</b>
+                </td>
+                <td>{{ row.setting_value }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+} @else {
+  <div class="simple-management">
+    <section class="panel form-panel">
+      <h2>Add Category</h2>
+      <form class="form-grid" (ngSubmit)="addCategory()">
+        <label
+          >Code<input
+            name="categoryCode"
+            [(ngModel)]="categoryCode"
+            placeholder="HOT_DRINKS" /></label
+        ><label
+          >Name<input
+            name="categoryName"
+            [(ngModel)]="categoryName"
+            placeholder="Hot Drinks" /></label
+        ><label class="span-two"
+          >Image Path<input
+            name="categoryImage"
+            [(ngModel)]="categoryImage"
+            placeholder="categories/hot-drinks.jpg"
+        /></label>
+        <div class="form-actions">
+          <button class="primary-action" type="submit">Add Category</button>
+        </div>
+      </form>
+    </section>
+    <section class="panel table-panel">
+      <div class="panel-title"><h2>Live Categories</h2></div>
+      <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Name</th>
+              <th>Display Order</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of visibleCategories(); track row.id) {
+              <tr>
+                <td>{{ row.code }}</td>
+                <td>
+                  <b>{{ row.name }}</b>
+                </td>
+                <td>{{ row.display_order }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+}

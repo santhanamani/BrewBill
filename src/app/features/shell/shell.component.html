@@ -1,0 +1,37 @@
+<div class="app-shell">
+  <header class="topbar light-topbar">
+    <a class="brand" routerLink="/dashboard">
+      <img class="brand-mark" [src]="logoAsset()" alt="BrewBill" />
+      <span><b>{{ session.context()?.branding?.display_name ?? 'BREW HAVEN' }}</b><small>COFFEE &amp; CAFÉ</small></span>
+    </a>
+    <div class="top-meta outlet-context"><span class="material-symbols-outlined">location_on</span><span><b>{{ session.context()?.outlet_name ?? 'Platform' }}</b><small>{{ session.context()?.outlet_code ?? session.context()?.tenant_code }}</small></span></div>
+    <span class="tenant-context-badge"><span class="material-symbols-outlined">database</span>Tenant-scoped data</span>
+    <div class="top-meta date-meta"><span class="material-symbols-outlined">calendar_month</span><span>{{ clock.date() }}<small>{{ clock.day() }}</small></span></div>
+    <div class="top-meta time-meta"><span class="material-symbols-outlined">schedule</span><span>{{ clock.time() }}</span></div>
+    <div class="top-meta profile"><span class="material-symbols-outlined">person</span><span>{{ session.user()?.display_name }}<small>{{ roleLabel() }}</small></span></div>
+    <div class="top-actions">
+      <a class="button green" routerLink="/pos"><span class="material-symbols-outlined">add</span>New Bill</a>
+      <a class="button held-button" routerLink="/operations/holds"><span class="material-symbols-outlined">receipt_long</span>Held Bills</a>
+      <button class="button logout-button" type="button" (click)="logout()"><span class="material-symbols-outlined">logout</span>Logout</button>
+    </div>
+  </header>
+  <main class="page-content"><router-outlet /></main>
+  <nav class="bottom-nav" aria-label="Main navigation">
+    <button type="button" [class.active]="isActive('/dashboard')" (click)="openPage('/dashboard')"><span class="material-symbols-outlined">home</span><span>Dashboard<small>(F1)</small></span></button>
+    <button type="button" [class.active]="isActive('/pos')" (click)="openPage('/pos')"><span class="material-symbols-outlined">point_of_sale</span><span>POS<small>(F2)</small></span></button>
+    <button type="button" [class.active]="isActive('/operations/holds')" (click)="openPage('/operations/holds')"><span class="material-symbols-outlined">receipt_long</span><span>Held Orders<small>(F3)</small></span></button>
+    @if (session.isAdmin()) {
+      <button type="button" [class.active]="isActive('/management/purchases')" (click)="openPage('/management/purchases')"><span class="material-symbols-outlined">shopping_cart</span><span>Purchases<small>(F4)</small></span></button>
+      <button type="button" [class.active]="isActive('/products')" (click)="openPage('/products')"><span class="material-symbols-outlined">inventory_2</span><span>Products<small>(F5)</small></span></button>
+      <button type="button" [class.active]="isActive('/operations/inventory')" (click)="openPage('/operations/inventory')"><span class="material-symbols-outlined">deployed_code</span><span>Inventory<small>(F6)</small></span></button>
+      <button type="button" [class.active]="isActive('/management/expenses')" (click)="openPage('/management/expenses')"><span class="material-symbols-outlined">account_balance_wallet</span><span>Expenses<small>(F7)</small></span></button>
+      <button type="button" [class.active]="isActive('/operations/reports')" (click)="openPage('/operations/reports')"><span class="material-symbols-outlined">bar_chart</span><span>Reports<small>(F8)</small></span></button>
+      @if (session.isSuperAdmin()) { <button type="button" [class.active]="isActive('/administration')" (click)="openPage('/administration')"><span class="material-symbols-outlined">admin_panel_settings</span><span>Administration<small>(F9)</small></span></button> }
+      <button type="button" [class.active]="isActive('/management/settings')" (click)="openPage('/management/settings')"><span class="material-symbols-outlined">settings</span><span>Settings<small>(F9)</small></span></button>
+    } @else {
+      <button type="button" [class.active]="isActive('/operations/kot')" (click)="openPage('/operations/kot')"><span class="material-symbols-outlined">skillet</span><span>KOT<small>(F7)</small></span></button>
+      <button type="button" [class.active]="isActive('/operations/reports')" (click)="openPage('/operations/reports')"><span class="material-symbols-outlined">bar_chart</span><span>Reports<small>(F8)</small></span></button>
+      <button type="button" [class.active]="isActive('/management/customers')" (click)="openPage('/management/customers')"><span class="material-symbols-outlined">groups</span><span>Customers<small>More</small></span></button>
+    }
+  </nav>
+</div>

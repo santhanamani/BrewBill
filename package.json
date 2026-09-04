@@ -1,0 +1,76 @@
+{
+  "name": "brew-bill-ui",
+  "version": "1.0.0",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "dev": "npm run desktop:dev",
+    "desktop:dev": "concurrently -k \"npm run start\" \"wait-on http://localhost:4200 && set ELECTRON_RUN_AS_NODE=&& electron .\"",
+    "desktop:package": "npm run build && electron-builder --win nsis",
+    "test:license": "node scripts/test-license.cjs"
+  },
+  "private": true,
+  "packageManager": "npm@11.17.0",
+  "dependencies": {
+    "@angular/common": "^22.1.0",
+    "@angular/compiler": "^22.1.0",
+    "@angular/core": "^22.1.0",
+    "@angular/forms": "^22.1.0",
+    "@angular/platform-browser": "^22.1.0",
+    "@angular/router": "^22.1.0",
+    "better-sqlite3": "^13.0.3",
+    "echarts": "^6.1.0",
+    "ngx-echarts": "^22.0.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "uuid": "^14.0.2",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@angular/build": "^22.1.6",
+    "@angular/cli": "^22.1.6",
+    "@angular/compiler-cli": "^22.1.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "concurrently": "^10.0.5",
+    "electron": "^44.1.1",
+    "electron-builder": "^26.15.3",
+    "postcss": "^8.5.26",
+    "prettier": "^3.8.1",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.2",
+    "wait-on": "^9.1.0"
+  },
+  "description": "BrewBill cloud-connected multi-tenant café and restaurant desktop POS",
+  "build": {
+    "appId": "com.brewbill.pos",
+    "productName": "BrewBill POS",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "artifactName": "BrewBill-POS-${version}-Setup.${ext}",
+    "win": {
+      "icon": "public/assets/images/products/photos/filter-coffee.png",
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+}
