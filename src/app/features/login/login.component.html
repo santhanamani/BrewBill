@@ -5,15 +5,24 @@
   </aside>
   <main class="tenant-login-main">
     <button class="help-button" type="button"><span class="material-symbols-outlined">help</span>Need Help?</button>
-    <form class="tenant-login-card" (ngSubmit)="login()">
+    <form class="tenant-login-card" (ngSubmit)="mfaChallenge() ? verifySecondStep() : login()">
       <section class="login-fields">
-        <div class="login-heading"><div><h1>Employee Login</h1><p>Sign in to your assigned café and start your shift</p></div><span class="tenant-access"><span class="material-symbols-outlined">lock</span>Tenant-scoped access</span></div>
+        <div class="login-heading"><div><h1>{{mfaChallenge() ? 'Two-Step Verification' : 'Employee Login'}}</h1><p>{{mfaChallenge() ? 'A second factor is required for Super Administrator access' : 'Sign in to your assigned café and start your shift'}}</p></div><span class="tenant-access"><span class="material-symbols-outlined">{{mfaChallenge() ? 'verified_user' : 'lock'}}</span>{{mfaChallenge() ? 'Super Admin protected' : 'Tenant-scoped access'}}</span></div>
         @if (error()) { <p class="auth-error"><span class="material-symbols-outlined">error</span>{{ error() }}</p> }
-        <label>Café / Tenant Code<div class="input-with-icon"><span class="material-symbols-outlined">store</span><input [ngModel]="tenantCode()" (ngModelChange)="tenantCode.set($event);tenant.set(null)" (blur)="resolveTenant()" name="tenantCode" placeholder="e.g. DEMO" required /><button type="button" (click)="resolveTenant()"><span class="material-symbols-outlined">{{ tenant() ? 'check_circle' : 'arrow_forward' }}</span></button></div><small>Code identifies your café securely.</small></label>
-        <label>Username<div class="input-with-icon"><span class="material-symbols-outlined">person</span><input [(ngModel)]="username" name="username" placeholder="Enter username" autocomplete="username" required /></div></label>
-        <label>Password / PIN<div class="input-with-icon"><span class="material-symbols-outlined">lock</span><input [(ngModel)]="password" name="password" type="password" placeholder="Enter password or PIN" autocomplete="current-password" required /></div></label>
-        <div class="login-options"><label class="remember"><input type="checkbox" />Remember me on this device</label><button type="button">Forgot password?</button></div>
-        <button class="login-submit" type="submit" [disabled]="loading()"><span class="material-symbols-outlined">login</span>{{ loading() ? 'Signing in…' : 'Login to Café' }}<span class="material-symbols-outlined">arrow_forward</span></button>
+        @if(mfaChallenge(); as mfa){
+          <div class="mfa-panel">
+            @if(mfa.setup){<p><b>Set up your authenticator</b><small>Add a setup key in Microsoft Authenticator, Google Authenticator or 1Password.</small></p><code>{{mfa.secret}}</code>}
+            <label>6-digit verification code<div class="input-with-icon"><span class="material-symbols-outlined">password</span><input [ngModel]="verificationCode()" (ngModelChange)="verificationCode.set($event)" name="verificationCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000" required /></div></label>
+            <button class="login-submit" type="submit" [disabled]="loading() || verificationCode().length !== 6"><span class="material-symbols-outlined">verified</span>{{loading()?'Verifying…':'Verify & Continue'}}<span class="material-symbols-outlined">arrow_forward</span></button>
+            <button class="mfa-back" type="button" (click)="mfaChallenge.set(null);verificationCode.set('')">Back to login</button>
+          </div>
+        } @else {
+          <label>Café / Tenant Code<div class="input-with-icon"><span class="material-symbols-outlined">store</span><input [ngModel]="tenantCode()" (ngModelChange)="tenantCode.set($event);tenant.set(null)" (blur)="resolveTenant()" name="tenantCode" placeholder="e.g. BHV-RSP" required /><button type="button" (click)="resolveTenant()"><span class="material-symbols-outlined">{{ tenant() ? 'check_circle' : 'arrow_forward' }}</span></button></div><small>Code identifies your café securely.</small></label>
+          <label>Username<div class="input-with-icon"><span class="material-symbols-outlined">person</span><input [(ngModel)]="username" name="username" placeholder="Enter username" autocomplete="username" required /></div></label>
+          <label>Password / PIN<div class="input-with-icon"><span class="material-symbols-outlined">lock</span><input [(ngModel)]="password" name="password" type="password" placeholder="Enter password or PIN" autocomplete="current-password" required /></div></label>
+          <div class="login-options"><label class="remember"><input type="checkbox" />Remember me on this device</label><button type="button">Forgot password?</button></div>
+          <button class="login-submit" type="submit" [disabled]="loading()"><span class="material-symbols-outlined">login</span>{{ loading() ? 'Signing in…' : 'Login to Café' }}<span class="material-symbols-outlined">arrow_forward</span></button>
+        }
       </section>
       <aside class="selected-tenant">
         <div class="selected-title"><h2>Selected Café</h2><button type="button" (click)="tenant.set(null)">Change</button></div>
@@ -21,9 +30,7 @@
           <div class="cafe-cover" [style.background-image]="cafe.cover_image_url ? 'url(' + cafe.cover_image_url + ')' : null"><img [src]="cafe.logo_url ? cafe.logo_url : '/assets/images/brand/logo.svg'" alt="Cafe logo" /></div>
           <h2>{{ cafe.outlet_name ?? cafe.name }}</h2><p><span class="material-symbols-outlined">location_on</span>{{ cafe.outlet_address ?? cafe.name }}</p><span class="stock-pill" [class.out]="cafe.status !== 'ACTIVE'">{{ cafe.status }}</span>
           <div class="scope-explain"><span class="material-symbols-outlined">verified_user</span><p><b>Tenant-scoped access</b><small>After login, you can only see this café's bills, inventory, purchases and reports.</small></p></div>
-        } @else {
-          <div class="tenant-empty"><span class="material-symbols-outlined">store</span><p>Enter your café code to verify the tenant before login.</p></div>
-        }
+        } @else { <div class="tenant-empty"><span class="material-symbols-outlined">store</span><p>Enter your café code to verify the tenant before login.</p></div> }
       </aside>
     </form>
   </main>

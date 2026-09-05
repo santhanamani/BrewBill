@@ -24,8 +24,8 @@ const pageDetails: Record<string, { title: string; detail: string; icon: string 
     icon: 'shopping_bag',
   },
   expenses: {
-    title: 'Expense Management',
-    detail: 'Record and review outlet expenses from PostgreSQL',
+    title: 'Expenses',
+    detail: 'Manage and track all outlet expenses',
     icon: 'account_balance_wallet',
   },
   customers: {
@@ -52,13 +52,14 @@ const pageDetails: Record<string, { title: string; detail: string; icon: string 
 
 @Component({
   selector: 'app-management',
+  host: { '[attr.data-view]': 'key()' },
   imports: [FormsModule, RouterLink],
   templateUrl: './management.component.html',
 })
 export class ManagementComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(BrewBillApiService);
-  private readonly session = inject(SessionService);
+  readonly session = inject(SessionService);
 
   readonly key = signal('purchases');
   readonly page = computed(() => pageDetails[this.key()] ?? pageDetails['purchases']);
@@ -106,6 +107,11 @@ export class ManagementComponent {
       .reduce((sum, row) => sum + Number(row.amount), 0),
   );
 
+  clearPurchase(): void {
+    this.purchaseInvoice=''; this.purchaseDate=this.localDate(); this.purchaseQuantity='1';
+    this.purchaseCost='0.00'; this.purchaseTax='5.00'; this.purchaseStatus='PENDING'; this.purchaseNotes='';
+  }
+  purchaseNotes = '';
   purchaseSupplier = '';
   supplierName = '';
   purchaseInvoice = '';
@@ -264,7 +270,7 @@ export class ManagementComponent {
         invoice_number: this.purchaseInvoice.trim(),
         purchase_date: new Date(`${this.purchaseDate}T12:00:00+05:30`).toISOString(),
         payment_status: this.purchaseStatus,
-        notes: null,
+        notes: this.purchaseNotes.trim() || null,
         items: [
           {
             product_id: this.purchaseProduct,

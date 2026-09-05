@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { BrewBillApiService } from '../../core/brew-bill-api.service';
 import { CatalogService } from '../../core/catalog.service';
@@ -12,6 +13,7 @@ import { ReceiptPayload, ReceiptPrinterService } from '../../core/receipt-printe
   selector: 'app-pos',
   imports: [CommonModule],
   templateUrl: './pos.component.html',
+  styleUrl: './pos.component.css',
 })
 export class PosComponent {
   private readonly api = inject(BrewBillApiService);
@@ -25,6 +27,8 @@ export class PosComponent {
   readonly categories = signal<Category[]>([]);
   readonly activeCategoryId = signal<string | null>(null);
   readonly search = signal('');
+  readonly favouritesOnly = signal(false);
+  readonly savingFavourites = signal<ReadonlySet<string>>(new Set());
   readonly cart = signal<CartLine[]>([]);
   readonly loading = signal(true);
   readonly submitting = signal(false);
@@ -50,6 +54,7 @@ export class PosComponent {
     this.products().filter(
       (product) =>
         product.is_active &&
+        (!this.favouritesOnly() || product.is_favourite) &&
         product.name.toLowerCase().includes(this.search().trim().toLowerCase()) &&
         (!this.activeCategoryId() || product.category_id === this.activeCategoryId()),
     ),
@@ -126,6 +131,22 @@ export class PosComponent {
       );
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  async toggleFavourite(product: Product): Promise<void> {
+    const token = this.session.accessToken();
+    if (!token || this.savingFavourites().has(product.id)) return;
+    this.savingFavourites.update(ids => new Set([...ids, product.id]));
+    try {
+      const saved = await this.api.setProductFavourite(token, product.id, !product.is_favourite);
+      this.products.update(products => products.map(row => row.id === product.id ? { ...row, is_favourite: saved.is_favourite } : row));
+      this.notify(`${product.name} ${saved.is_favourite ? 'added to' : 'removed from'} favourites.`);
+    } catch (error) {
+      this.notify(error instanceof HttpErrorResponse && typeof error.error?.detail === 'string'
+        ? error.error.detail : 'Unable to save favourite. Please try again.');
+    } finally {
+      this.savingFavourites.update(ids => { const next = new Set(ids); next.delete(product.id); return next; });
     }
   }
 

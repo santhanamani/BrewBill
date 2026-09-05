@@ -22,6 +22,8 @@ export class LoginComponent {
   readonly password = signal('');
   readonly error = signal('');
   readonly loading = signal(false);
+  readonly mfaChallenge = signal<{token:string;setup:boolean;secret:string|null;uri:string|null}|null>(null);
+  readonly verificationCode = signal('');
   readonly clock = inject(ClockService);
 
   constructor(
@@ -44,7 +46,11 @@ export class LoginComponent {
     this.error.set('');
     this.loading.set(true);
     try {
-      await this.session.login(this.username().trim(), this.password(), this.tenantCode().trim());
+      const challenge = await this.session.login(this.username().trim(), this.password(), this.tenantCode().trim());
+      if (challenge) {
+        this.mfaChallenge.set({token:challenge.challenge_token, setup:challenge.setup_required, secret:challenge.setup_secret, uri:challenge.otpauth_uri});
+        return;
+      }
       const role = this.session.user()?.role_code;
       await this.router.navigateByUrl(
         role === 'SUPER_ADMIN' ? '/administration' : role === 'CASHIER' ? '/pos' : '/dashboard',
@@ -54,5 +60,17 @@ export class LoginComponent {
     } finally {
       this.loading.set(false);
     }
+  }
+
+  async verifySecondStep(): Promise<void> {
+    const challenge = this.mfaChallenge();
+    if (!challenge || this.loading()) return;
+    this.loading.set(true); this.error.set('');
+    try {
+      await this.session.verifyMfa(challenge.token, this.verificationCode().trim());
+      await this.router.navigateByUrl('/administration');
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : 'Unable to verify this code.');
+    } finally { this.loading.set(false); }
   }
 }

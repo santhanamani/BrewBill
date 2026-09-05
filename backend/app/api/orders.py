@@ -133,13 +133,13 @@ def create_order(
         variant = variant_by_id.get(requested.variant_id) if requested.variant_id else None
         if variant is not None and (variant.product_id != product.id or not variant.is_active):
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f'Invalid variant for {product.name}.')
-        is_active = mapping.is_active if mapping else product.is_active
+        is_active = (mapping.is_active and mapping.global_product.status == 'ACTIVE') if mapping else product.is_active
         is_available = mapping.is_available if mapping else product.is_available
         if not is_active or not is_available:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'{product.name} is unavailable.')
         base_price = mapping.selling_price if mapping else product.selling_price
-        tax_percent = (mapping.tax_override if mapping.tax_override is not None else product.gst_percent) if mapping else product.gst_percent
-        product_name = (mapping.outlet_specific_name or product.name) if mapping else product.name
+        tax_percent = (mapping.tax_override if mapping.tax_override is not None else mapping.global_product.default_gst) if mapping else product.gst_percent
+        product_name = (mapping.outlet_specific_name or mapping.global_product.name) if mapping else product.name
         kot_required_by_product[product.id] = mapping.kot_required if mapping else product.kot_required
         rate = money(base_price + (variant.price_adjustment if variant else Decimal('0.00')))
         if rate < 0:

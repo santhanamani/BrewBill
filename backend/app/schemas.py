@@ -127,8 +127,14 @@ class OutletProductMappingCreate(BaseModel):
     tax_override: Decimal | None = Field(default=None, ge=0, le=100, max_digits=5, decimal_places=2)
 
 
+class ProductFavouriteUpdate(BaseModel):
+    model_config = {'extra': 'forbid'}
+    is_favourite: bool
+
+
 class OutletProductMappingUpdate(BaseModel):
     selling_price: Decimal | None = Field(default=None, ge=0, max_digits=18, decimal_places=2)
+    low_stock_limit: Decimal | None = Field(default=None, ge=0, max_digits=18, decimal_places=3)
     favourite: bool | None = None
     kot_required: bool | None = None
     is_available: bool | None = None
@@ -178,8 +184,13 @@ class TenantAdminRead(BaseModel):
     outlet_count: int
     admin_count: int
     logo_url: str | None
+    cover_image_url: str | None = None
     primary_color: str
+    secondary_color: str = '#C8874A'
     tagline: str | None
+    phone: str | None = None
+    email: str | None = None
+    website: str | None = None
 
 
 class TenantCreate(BaseModel):

@@ -13,6 +13,16 @@ const superAdmin: CanActivateFn = () => {
   return session.isSuperAdmin() || inject(Router).createUrlTree(['/dashboard']);
 };
 
+const operationalUser: CanActivateFn = () => {
+  const session = inject(SessionService);
+  return !session.isSuperAdmin() || inject(Router).createUrlTree(['/administration']);
+};
+
+const landing: CanActivateFn = () => {
+  const session = inject(SessionService);
+  return inject(Router).createUrlTree([session.isSuperAdmin() ? '/administration' : '/dashboard']);
+};
+
 export const routes: Routes = [
   {
     path: 'login',
@@ -26,6 +36,7 @@ export const routes: Routes = [
     children: [
       {
         path: 'dashboard',
+        canActivate: [operationalUser],
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then(
             (module) => module.DashboardComponent,
@@ -33,11 +44,13 @@ export const routes: Routes = [
       },
       {
         path: 'pos',
+        canActivate: [operationalUser],
         loadComponent: () =>
           import('./features/pos/pos.component').then((module) => module.PosComponent),
       },
       {
         path: 'products',
+        canActivate: [operationalUser],
         loadComponent: () =>
           import('./features/products/products.component').then(
             (module) => module.ProductsComponent,
@@ -53,6 +66,7 @@ export const routes: Routes = [
       },
       {
         path: 'operations/:module',
+        canActivate: [operationalUser],
         loadComponent: () =>
           import('./features/operations/operations.component').then(
             (module) => module.OperationsComponent,
@@ -60,12 +74,13 @@ export const routes: Routes = [
       },
       {
         path: 'management/:module',
+        canActivate: [operationalUser],
         loadComponent: () =>
           import('./features/management/management.component').then(
             (module) => module.ManagementComponent,
           ),
       },
-      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      { path: '', pathMatch: 'full', canActivate: [landing], children: [] },
     ],
   },
   { path: '**', redirectTo: '' },

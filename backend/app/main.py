@@ -56,6 +56,8 @@ def health() -> dict[str, str]:
 
 @app.post("/api/auth/login", response_model=LoginResponse | MfaChallengeResponse)
 def login(body: LoginRequest, session: Session = Depends(get_session)) -> LoginResponse | MfaChallengeResponse:
+    if not body.tenant_code:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Cafe / tenant code is required.')
     query = session.query(User).filter(User.username == body.username)
     if body.tenant_code:
         query = query.join(Tenant, Tenant.id == User.tenant_id).filter(

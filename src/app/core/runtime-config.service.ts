@@ -5,8 +5,8 @@ const defaultConfig: RuntimeConfig = {
   apiBaseUrl: 'http://127.0.0.1:8000/api',
   assetsBaseUrl: '/assets/images',
   terminalCode: 'POS01',
-  tenantName: 'Demo Brew Haven',
-  tenantCode: 'DEMO',
+  tenantName: 'Brew Haven – RS Puram',
+  tenantCode: 'BHV-RSP',
   environment: 'development',
 };
 

@@ -34,7 +34,7 @@ npm.cmd run desktop:dev
 
 ## Demo login
 
-Cafe / tenant code: `DEMO`
+Cafe / tenant code: `BHV-RSP`
 
 | Access | Username | Password |
 |---|---|---|
@@ -43,6 +43,8 @@ Cafe / tenant code: `DEMO`
 | Platform super admin | `superadmin` | `SuperAdmin@123` |
 
 Change all development passwords before a production deployment.
+
+The Super Admin account never receives application tokens after the password step alone. On first login, register the displayed setup key in an authenticator app and enter the current six-digit code. Every later Super Admin login requires the password and a fresh authenticator code. Tenant admins and cashiers continue to use the tenant-code login flow.
 
 ## First-time setup
 

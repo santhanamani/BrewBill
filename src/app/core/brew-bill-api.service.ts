@@ -75,8 +75,8 @@ export class BrewBillApiService {
     return this.get<PlatformContext>(accessToken, '/platform/context');
   }
 
-  listGlobalProducts(accessToken: string): Promise<GlobalProduct[]> {
-    return this.get<GlobalProduct[]>(accessToken, '/products/master');
+  listGlobalProducts(accessToken: string, includeInactive = false): Promise<GlobalProduct[]> {
+    return this.get<GlobalProduct[]>(accessToken, `/products/master?include_inactive=${includeInactive}`);
   }
 
   createGlobalProduct(
@@ -231,6 +231,13 @@ export class BrewBillApiService {
       }),
       5000,
     );
+  }
+
+  setProductFavourite(accessToken: string, productId: string, favourite: boolean): Promise<Product> {
+    return this.request(this.http.patch<Product>(
+      this.runtime.apiUrl(`/products/${productId}/favourite`),
+      { is_favourite: favourite }, { headers: this.authHeaders(accessToken) },
+    ), 5000);
   }
 
   updateProduct(

@@ -1,9 +1,9 @@
 {
-  "tenant": { "code": "DEMO", "name": "Demo Brew Haven", "status": "ACTIVE", "tagline": "Good Coffee. Better People.", "primary_color": "#5A2D18", "secondary_color": "#C8874A" },
+  "tenant": { "code": "BHV-RSP", "name": "Brew Haven – RS Puram", "status": "ACTIVE", "tagline": "Good Coffee. Better People.", "primary_color": "#5A2D18", "secondary_color": "#C8874A" },
   "plan": { "code": "PROFESSIONAL", "name": "Professional", "max_terminals": 3, "features": { "inventory": true, "purchases": true, "expenses": true, "reports": true } },
   "subscription_days": 365,
   "outlets": [
-    { "code": "MDU01", "name": "Brew Haven Madurai", "address": "Madurai, Tamil Nadu" },
+    { "code": "MDU01", "name": "Brew Haven – RS Puram", "address": "RS Puram, Coimbatore, Tamil Nadu" },
     { "code": "CHE01", "name": "Brew Haven Chennai", "address": "Chennai, Tamil Nadu" }
   ],
   "roles": [
@@ -16,7 +16,7 @@
     { "outlet_code": "MDU01", "role_code": "CASHIER", "username": "cashier", "display_name": "Cashier", "password": "Cashier@123" }
   ],
   "terminals": [
-    { "outlet_code": "MDU01", "code": "POS01", "name": "Madurai POS 01", "device_key_hash": "development-only-replace-before-production" }
+    { "outlet_code": "MDU01", "code": "POS01", "name": "RS Puram POS 01", "device_key_hash": "development-only-replace-before-production" }
   ],
   "categories": [
     { "code": "COFFEE", "name": "Coffee", "image_path": "products/photos/filter-coffee.jpg" },

@@ -17,7 +17,7 @@ import { ReceiptPaymentMode, ReceiptPrinterService } from '../../core/receipt-pr
 const labels: Record<string, { title: string; detail: string; icon: string }> = {
   holds: {
     title: 'Held Orders',
-    detail: 'PostgreSQL held bills for this outlet.',
+    detail: 'View and manage temporarily held bills for your outlet.',
     icon: 'assignment_late',
   },
   kot: {
@@ -32,12 +32,12 @@ const labels: Record<string, { title: string; detail: string; icon: string }> = 
   },
   reports: {
     title: 'Sales Reports',
-    detail: 'Completed order history loaded from PostgreSQL.',
+    detail: 'View and manage sales transactions for your outlet.',
     icon: 'bar_chart',
   },
 };
 
-@Component({ selector: 'app-operations', templateUrl: './operations.component.html' })
+@Component({ selector: 'app-operations', host: { '[attr.data-view]': 'key()' }, templateUrl: './operations.component.html' })
 export class OperationsComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(BrewBillApiService);
@@ -94,6 +94,11 @@ export class OperationsComponent {
         );
     return rows.slice(0, this.inventoryLimit());
   });
+  readonly completedOrders = computed(() => this.orders().filter(row => row.status === 'COMPLETED'));
+  readonly averageOrderValue = computed(() => this.completedOrders().length ? this.reportTotal() / this.completedOrders().length : 0);
+  readonly itemsSold = computed(() => this.completedOrders().reduce((sum,row)=>sum+row.item_count,0));
+  readonly todayHolds = computed(() => this.holds().filter(row => new Date(row.held_at).toDateString() === new Date().toDateString()).length);
+  readonly adjusting = signal(false);
   readonly reportSearch = signal('');
   readonly reportLimit = signal(10);
   readonly visibleOrders = computed(() => {
@@ -139,7 +144,7 @@ export class OperationsComponent {
     this.holds().reduce((sum, hold) => sum + Number(hold.grand_total), 0),
   );
   readonly reportTotal = computed(() =>
-    this.orders().reduce((sum, order) => sum + Number(order.grand_total), 0),
+    this.completedOrders().reduce((sum, order) => sum + Number(order.grand_total), 0),
   );
   readonly lowStockItems = computed(
     () => this.inventoryItems().filter((item) => item.status === 'LOW_STOCK').length,
@@ -299,12 +304,14 @@ export class OperationsComponent {
   }
 
   async saveAdjustment(): Promise<void> {
+    if(this.adjusting()) return;
     const item = this.selectedInventory();
     const quantity = Number(this.adjustmentQuantity());
     if (!item || !Number.isFinite(quantity) || quantity <= 0) {
       this.error.set('Select an item and enter a valid quantity.');
       return;
     }
+    this.adjusting.set(true);
     try {
       await this.api.adjustInventoryItem(this.requireToken(), item.id, {
         transaction_type: this.adjustmentType(),
@@ -318,7 +325,7 @@ export class OperationsComponent {
       await this.load();
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to adjust inventory.');
-    }
+    } finally { this.adjusting.set(false); }
   }
 
   setSearch(value: string): void {

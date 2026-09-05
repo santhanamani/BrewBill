@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 
 import { BrewBillApiService } from '../../core/brew-bill-api.service';
@@ -261,7 +262,7 @@ export class ProductsComponent {
     try {
       const [result, globalProducts, outletMappings] = await Promise.all([
         this.catalog.load(token),
-        this.api.listGlobalProducts(token),
+        this.api.listGlobalProducts(token, true),
         this.api.listOutletCatalogue(token),
       ]);
       this.categories.set(result.categories);
@@ -277,27 +278,8 @@ export class ProductsComponent {
     }
   }
 
-  async mapProduct(product: GlobalProduct): Promise<void> {
-    const price = window.prompt(`Selling price for ${product.name}`, '0');
-    if (price === null || Number(price) < 0) return;
-    const openingStock = window.prompt(`Opening stock (${product.base_unit})`, '0');
-    if (openingStock === null || Number(openingStock) < 0) return;
-    const lowLimit = window.prompt(`Low stock limit (${product.base_unit})`, '5');
-    if (lowLimit === null || Number(lowLimit) < 0) return;
-    try {
-      await this.api.mapOutletProduct(this.requireToken(), product.id, {
-        selling_price: Number(price).toFixed(2),
-        opening_stock: Number(openingStock).toFixed(3),
-        low_stock_limit: Number(lowLimit).toFixed(3),
-        favourite: false, kot_required: true, is_available: true, is_active: true,
-        display_order: this.outletMappings().length,
-      });
-      this.notice.set(`${product.name} mapped to the current outlet.`);
-      await this.load();
-    } catch (error) {
-      this.notice.set(error instanceof Error ? error.message : 'Unable to map product.');
-    }
-  }
+  readonly mappingTarget = signal<{ productId: string; mappingId: string | null } | null>(null);
+  readonly mappingError = signal('');
 
   async addGlobalProduct(): Promise<void> {
     const name = window.prompt('Global product name')?.trim(); if (!name) return;
@@ -325,29 +307,59 @@ export class ProductsComponent {
     }
   }
 
-  async changePrice(mapping: OutletProductMapping): Promise<void> {
-    const price = window.prompt(`Selling price for ${mapping.name}`, mapping.selling_price);
-    if (price === null || Number(price) < 0) return;
-    await this.api.updateOutletProduct(this.requireToken(), mapping.id, {
-      selling_price: Number(price).toFixed(2),
-    });
-    await this.load();
+  mapProduct(product: GlobalProduct, dialog: HTMLDialogElement): void {
+    const mapping = this.outletMappings().find(row => row.global_product_id === product.id);
+    if (!mapping && product.status !== 'ACTIVE') {
+      this.notice.set('Activate this global product before mapping it to an outlet.');
+      return;
+    }
+    this.mappingTarget.set({ productId: product.id, mappingId: mapping?.id ?? null });
+    this.mappingError.set('');
+    this.draft.set({ ...emptyDraft(), code: product.code, name: product.name, unit: product.base_unit,
+      sellingPrice: mapping?.selling_price ?? '0', stockQuantity: mapping?.stock_quantity ?? '0',
+      lowStockLimit: mapping?.low_stock_limit ?? '5', favourite: mapping?.favourite ?? false,
+      kotRequired: mapping?.kot_required ?? true, available: mapping?.is_available ?? true, active: mapping?.is_active ?? true });
+    dialog.showModal();
   }
 
   editMapping(mapping: OutletProductMapping, dialog: HTMLDialogElement): void {
-    const product = this.products().find((item) => item.id === mapping.legacy_product_id);
-    if (!product) {
-      this.notice.set('The operational product record could not be found. Refresh and try again.');
-      return;
+    const master = this.globalProducts().find(row => row.id === mapping.global_product_id);
+    if (!master) { this.notice.set('Product details could not be loaded. Refresh the catalogue and try again.'); return; }
+    this.mapProduct(master, dialog);
+  }
+
+  async saveMapping(dialog: HTMLDialogElement): Promise<void> {
+    const target = this.mappingTarget(), draft = this.draft();
+    if (!target || this.saving()) return;
+    if ([draft.sellingPrice, draft.stockQuantity, draft.lowStockLimit].some(value => !value.trim() || !Number.isFinite(Number(value)) || Number(value) < 0)) {
+      this.mappingError.set('Enter valid, non-negative price and stock values.'); return;
     }
-    this.openEdit(product, dialog);
+    this.saving.set(true); this.mappingError.set('');
+    const body = { selling_price: Number(draft.sellingPrice).toFixed(2), low_stock_limit: Number(draft.lowStockLimit).toFixed(3),
+      favourite: draft.favourite, kot_required: draft.kotRequired, is_available: draft.available, is_active: draft.active };
+    try {
+      if (target.mappingId) await this.api.updateOutletProduct(this.requireToken(), target.mappingId, body);
+      else await this.api.mapOutletProduct(this.requireToken(), target.productId, { ...body,
+        opening_stock: Number(draft.stockQuantity).toFixed(3), display_order: this.outletMappings().length });
+      dialog.close(); await this.load(); this.notice.set(draft.name + ' outlet mapping saved.');
+    } catch (error) {
+      this.mappingError.set(error instanceof HttpErrorResponse && typeof error.error?.detail === 'string'
+        ? error.error.detail : 'Unable to save outlet mapping. Please try again.');
+    } finally { this.saving.set(false); }
   }
 
   async unmap(mapping: OutletProductMapping): Promise<void> {
+    if (this.saving()) return;
     if (!window.confirm(`Remove ${mapping.name} from this outlet catalogue? Existing invoices are preserved.`)) return;
-    await this.api.unmapOutletProduct(this.requireToken(), mapping.id);
-    this.notice.set(`${mapping.name} removed from this outlet catalogue.`);
-    await this.load();
+    this.saving.set(true);
+    try {
+      await this.api.unmapOutletProduct(this.requireToken(), mapping.id);
+      this.notice.set(`${mapping.name} removed from this outlet catalogue.`);
+      await this.load();
+    } catch (error) {
+      this.notice.set(error instanceof HttpErrorResponse && typeof error.error?.detail === 'string'
+        ? error.error.detail : 'Unable to remove this outlet mapping. Please try again.');
+    } finally { this.saving.set(false); }
   }
 
   openAdd(dialog: HTMLDialogElement): void {

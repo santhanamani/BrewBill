@@ -109,8 +109,13 @@ export interface TenantAdmin {
   outlet_count: number;
   admin_count: number;
   logo_url: string | null;
+  cover_image_url: string | null;
   primary_color: string;
+  secondary_color: string;
   tagline: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
 }
 
 export interface AdminOutlet {

@@ -53,6 +53,7 @@
       <h1>
         Quick Order <small>{{ filteredProducts().length }} items</small>
       </h1>
+      <button class="favourites-filter" type="button" [class.active]="favouritesOnly()" [attr.aria-pressed]="favouritesOnly()" (click)="favouritesOnly.set(!favouritesOnly())"><span class="material-symbols-outlined">favorite</span>Favourites</button>
       <label class="search"
         ><span class="material-symbols-outlined">search</span
         ><input
@@ -68,12 +69,14 @@
         {{ error() }}<button type="button" (click)="loadCatalog()">Retry</button>
       </div>
     } @else if (!filteredProducts().length) {
-      <div class="live-state">No active products were returned for this category.</div>
+      <div class="live-state">{{ favouritesOnly() ? 'No favourites match. Tap a product’s heart to save it.' : 'No active products were returned for this category.' }}</div>
     } @else {
       <div class="product-grid">
         @for (product of filteredProducts(); track product.id) {
+          <article class="pos-product-tile">
           <button
             class="product-card"
+            type="button"
             [class.unavailable]="!product.is_available || price(product.stock_quantity) <= 0"
             (click)="add(product)"
           >
@@ -91,6 +94,8 @@
               }}</small>
             </div>
           </button>
+          <button class="product-favourite" type="button" [class.active]="product.is_favourite" [attr.aria-pressed]="product.is_favourite" [attr.aria-label]="(product.is_favourite ? 'Remove ' : 'Add ') + product.name + (product.is_favourite ? ' from favourites' : ' to favourites')" [title]="product.is_favourite ? 'Remove from favourites' : 'Add to favourites'" [disabled]="savingFavourites().has(product.id)" (click)="toggleFavourite(product)"><span class="material-symbols-outlined">favorite</span></button>
+          </article>
         }
       </div>
     }

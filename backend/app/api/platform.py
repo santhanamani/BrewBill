@@ -109,17 +109,7 @@ def list_tenants(
     session: Session = Depends(get_session),
 ) -> list[TenantAdminRead]:
     tenants = session.scalars(select(Tenant).order_by(Tenant.name)).all()
-    return [TenantAdminRead(
-        id=tenant.id, code=tenant.code, name=tenant.name, status=tenant.status,
-        outlet_count=session.scalar(select(func.count(Outlet.id)).where(Outlet.tenant_id == tenant.id)) or 0,
-        admin_count=session.scalar(
-            select(func.count(User.id)).join(User.role).where(
-                User.tenant_id == tenant.id,
-                User.role.has(code='ADMIN') | User.role.has(code='TENANT_ADMIN'),
-            )
-        ) or 0,
-        logo_url=tenant.logo_url, primary_color=tenant.primary_color, tagline=tenant.tagline,
-    ) for tenant in tenants]
+    return [tenant_read(tenant, session) for tenant in tenants]
 
 
 @router.post('/admin/tenants', response_model=TenantAdminRead, status_code=status.HTTP_201_CREATED)
@@ -157,11 +147,7 @@ def create_tenant(
     except IntegrityError as error:
         session.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Tenant code, name, or admin username already exists.') from error
-    return TenantAdminRead(
-        id=tenant.id, code=tenant.code, name=tenant.name, status=tenant.status,
-        outlet_count=1, admin_count=1, logo_url=tenant.logo_url,
-        primary_color=tenant.primary_color, tagline=tenant.tagline,
-    )
+    return tenant_read(tenant, session)
 
 
 def tenant_read(tenant: Tenant, session: Session) -> TenantAdminRead:
@@ -174,7 +160,9 @@ def tenant_read(tenant: Tenant, session: Session) -> TenantAdminRead:
                 User.role.has(code='ADMIN') | User.role.has(code='TENANT_ADMIN'),
             )
         ) or 0,
-        logo_url=tenant.logo_url, primary_color=tenant.primary_color, tagline=tenant.tagline,
+        logo_url=tenant.logo_url, cover_image_url=tenant.cover_image_url,
+        primary_color=tenant.primary_color, secondary_color=tenant.secondary_color,
+        tagline=tenant.tagline, phone=tenant.phone, email=tenant.email, website=tenant.website,
     )
 
 
@@ -345,12 +333,7 @@ def update_tenant_branding(
     for field, value in body.model_dump(exclude_unset=True).items():
         setattr(tenant, field, value)
     session.commit()
-    return TenantAdminRead(
-        id=tenant.id, code=tenant.code, name=tenant.name, status=tenant.status,
-        outlet_count=session.scalar(select(func.count(Outlet.id)).where(Outlet.tenant_id == tenant.id)) or 0,
-        admin_count=session.scalar(select(func.count(User.id)).where(User.tenant_id == tenant.id)) or 0,
-        logo_url=tenant.logo_url, primary_color=tenant.primary_color, tagline=tenant.tagline,
-    )
+    return tenant_read(tenant, session)
 
 
 @router.post('/device/activate', response_model=LicenseEnvelope)

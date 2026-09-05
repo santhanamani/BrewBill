@@ -6,17 +6,7 @@
       <p>{{ page().detail }}</p>
     </div>
   </div>
-  <div class="filter-row">
-    <input
-      class="search-box"
-      placeholder="Search this table..."
-      [value]="search()"
-      (input)="setSearch($any($event.target).value)"
-    />
-    <button type="button" (click)="load()">
-      <span class="material-symbols-outlined">refresh</span> Refresh
-    </button>
-  </div>
+  <div class="scope-banner"><span class="material-symbols-outlined">location_on</span><b>{{session.context()?.outlet_name}}</b><span class="scope-badge"><span class="material-symbols-outlined">database</span>Tenant-scoped data</span></div>
 </section>
 
 @if (error()) {
@@ -71,9 +61,9 @@
   <div class="management-grid purchase-layout">
     <section class="panel form-panel">
       <div class="panel-title">
-        <h2>Purchase Entry</h2>
+        <div class="panel-heading"><span class="material-symbols-outlined">add_box</span><div><h2>New Purchase Entry</h2><p>Record a new purchase for this outlet</p></div></div>
       </div>
-      <div class="quick-create">
+      <details class="supplier-create"><summary>Add a new supplier</summary><div class="quick-create">
         <input
           [(ngModel)]="supplierName"
           [ngModelOptions]="{ standalone: true }"
@@ -81,6 +71,7 @@
         />
         <button type="button" (click)="addSupplier()">+ Add Supplier</button>
       </div>
+      </details>
       <form class="form-grid" (ngSubmit)="addPurchase()">
         <label
           >Supplier *<select name="supplier" [(ngModel)]="purchaseSupplier" required>
@@ -144,10 +135,11 @@
             <option value="PARTIAL">Partial</option>
           </select></label
         >
-        <div class="form-actions span-two">
+        <label class="purchase-notes">Notes (Optional)<input name="purchaseNotes" [(ngModel)]="purchaseNotes" placeholder="Add notes (e.g. batch, remarks)…" /></label>
+        <div class="form-actions span-two"><button type="button" class="clear-purchase" [disabled]="saving()" (click)="clearPurchase()"><span class="material-symbols-outlined">restart_alt</span>Clear</button>
           <button class="primary-action" type="submit" [disabled]="saving()">
             <span class="material-symbols-outlined">add</span
-            >{{ saving() ? 'Saving...' : 'Add Purchase' }}
+            >{{ saving() ? 'Saving...' : 'Add to Purchases' }}
           </button>
         </div>
       </form>
@@ -155,7 +147,7 @@
     <section class="panel table-panel">
       <div class="panel-title">
         <h2>Purchase History</h2>
-        <span>{{ purchases().length }} entries</span>
+        <input class="search-box" aria-label="Search purchases" placeholder="Search invoice, supplier, product…" [value]="search()" (input)="setSearch($any($event.target).value)" />
       </div>
       <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
         <table>
@@ -180,7 +172,7 @@
                 <td>{{ row.item_count }}</td>
                 <td>{{ money(row.total) }}</td>
                 <td>
-                  <span class="status-pill" [class.pending]="row.payment_status !== 'PAID'">{{
+                  <span class="status-pill" [class.pending]="row.payment_status === 'PENDING'" [class.partial]="row.payment_status === 'PARTIAL'">{{
                     row.payment_status
                   }}</span>
                 </td>
@@ -235,7 +227,7 @@
     </article>
   </div>
   <section class="panel form-panel expense-form">
-    <h2>Add New Expense</h2>
+    <h2><span class="material-symbols-outlined">post_add</span>Add New Expense</h2>
     <form class="form-grid three-columns" (ngSubmit)="addExpense()">
       <label
         >Date *<input name="expenseDate" type="date" [(ngModel)]="expenseDate" required
@@ -286,7 +278,7 @@
   <section class="panel table-panel management-table">
     <div class="panel-title">
       <h2>Expense Report</h2>
-      <span>{{ expenses().length }} entries</span>
+      <input class="search-box" aria-label="Search expenses" placeholder="Search expenses…" [value]="search()" (input)="setSearch($any($event.target).value)" />
     </div>
     <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
       <table>
@@ -310,7 +302,7 @@
               </td>
               <td>{{ row.description }}</td>
               <td>{{ money(row.amount) }}</td>
-              <td>{{ row.payment_mode }}</td>
+              <td><span class="payment-badge" [attr.data-mode]="row.payment_mode">{{ row.payment_mode }}</span></td>
               <td>{{ row.created_by_name }}</td>
               <td>{{ row.remarks || '—' }}</td>
             </tr>

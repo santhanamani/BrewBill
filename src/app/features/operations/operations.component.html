@@ -1,8 +1,8 @@
 <section class="view-head">
-  <div>
+  <div class="title-with-icon"><span class="material-symbols-outlined">{{module().icon}}</span><div>
     <h1>{{ module().title }}</h1>
     <p>{{ module().detail }}</p>
-  </div>
+  </div></div>
   <div class="filter-row">
     @if (key() === 'holds' || key() === 'inventory' || key() === 'reports') {
       <input
@@ -68,7 +68,7 @@
       <span class="metric-icon yellow"><span class="material-symbols-outlined">today</span></span>
       <div>
         <small>Today's Held Bills</small>
-        <h2>{{ holds().length }}</h2>
+        <h2>{{ todayHolds() }}</h2>
         <p>live database</p>
       </div>
     </article>
@@ -86,8 +86,7 @@
   <section class="holds-layout">
     <section class="panel table-panel">
       <div class="panel-title">
-        <h2>Held Orders</h2>
-        <span>{{ visibleHolds().length }} bills</span>
+        <input class="search-box" placeholder="Search by hold no, cashier or items…" aria-label="Search held bills" [value]="holdSearch()" (input)="setSearch($any($event.target).value)" /><span>{{ visibleHolds().length }} bills</span>
       </div>
       <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
         <table>
@@ -112,14 +111,14 @@
                 <td>{{ hold.cashier_name }}</td>
                 <td>{{ hold.items.length }}</td>
                 <td>{{ money(hold.grand_total) }}</td>
-                <td><span class="status-pill">Held</span></td>
+                <td><span class="status-pill pending">On Hold</span></td>
                 <td>
                   <button
                     class="small-button"
                     type="button"
-                    (click)="$event.stopPropagation(); reopen(hold)"
+                    title="Preview held bill" (click)="$event.stopPropagation(); selectHold(hold)"
                   >
-                    Reopen
+                    <span class="material-symbols-outlined">visibility</span>
                   </button>
                 </td>
               </tr>
@@ -138,7 +137,7 @@
           <h2>Hold Preview</h2>
           <span class="status-pill">{{ hold.hold_number }}</span>
         </div>
-        <div class="preview-meta">
+        <div class="preview-scope"><span class="material-symbols-outlined">location_on</span>{{session.context()?.outlet_name}}<span class="scope-badge">Tenant-scoped data</span></div><div class="preview-meta">
           <span
             ><small>Held On</small><b>{{ date(hold.held_at) }}</b></span
           ><span
@@ -163,14 +162,14 @@
           ><span
             >GST <b>{{ money(hold.tax) }}</b></span
           ><strong
-            >Total Amount <b>{{ money(hold.grand_total) }}</b></strong
+            >Grand Total <b>{{ money(hold.grand_total) }}</b></strong
           >
         </div>
         <div class="preview-actions">
           <button class="button green" type="button" (click)="reopen(hold)">
-            <span class="material-symbols-outlined">exit_to_app</span>Reopen &amp; Proceed</button
+            <span class="material-symbols-outlined">exit_to_app</span>Reopen Bill</button
           ><button class="button red" type="button" (click)="deleteHold(hold)">
-            <span class="material-symbols-outlined">delete</span>Delete Hold
+            <span class="material-symbols-outlined">delete</span>Discard Hold
           </button>
         </div>
       } @else {
@@ -292,9 +291,11 @@
         <p>outlet scoped</p>
       </div>
     </article>
+    <article class="metric"><span class="metric-icon brown"><span class="material-symbols-outlined">shopping_cart</span></span><div><small>Average Order Value</small><h2>{{money(averageOrderValue())}}</h2><p>Completed orders</p></div></article>
+    <article class="metric"><span class="metric-icon brown"><span class="material-symbols-outlined">groups</span></span><div><small>Items Sold</small><h2>{{itemsSold()}}</h2><p>Completed order lines</p></div></article>
   </section>
   <section class="panel table-panel">
-    <div class="panel-title"><h2>Order List</h2></div>
+    <div class="panel-title"><h2>Order List <small>({{orders().length}} orders)</small></h2><input class="search-box" aria-label="Search sales" placeholder="Search invoice, cashier or payment…" [value]="reportSearch()" (input)="setSearch($any($event.target).value)" /></div>
     <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
       <table>
         <thead>
@@ -320,14 +321,14 @@
               <td>{{ date(order.created_at) }}</td>
               <td>{{ order.cashier_name }}</td>
               <td>{{ order.item_count }}</td>
-              <td>{{ order.payment_modes.join(' + ') }}</td>
+              <td><span class="payment-badge" [attr.data-mode]="order.payment_modes[0]">{{ order.payment_modes.join(' + ') }}</span></td>
               <td>{{ money(order.subtotal) }}</td>
               <td>{{ money(order.tax) }}</td>
               <td>
                 <b>{{ money(order.grand_total) }}</b>
               </td>
               <td>
-                <span class="status-pill">{{ order.status }}</span>
+                <span class="status-pill" [class.pending]="order.status !== 'COMPLETED'">{{ order.status }}</span>
               </td>
               <td>
                 <div class="report-actions">
@@ -401,7 +402,7 @@
   <section class="inventory-layout">
     <section class="panel table-panel">
       <div class="panel-title">
-        <h2>Inventory List</h2>
+        <h2>Inventory Items <small>({{session.context()?.outlet_name}})</small></h2>
         <span>{{ inventoryItems().length }} items</span>
       </div>
       <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
@@ -479,7 +480,7 @@
       </div>
     </section>
     <aside class="inventory-side">
-      <section class="panel">
+      <section class="panel stock-panel">
         <div class="panel-title"><h2>Quick Stock Adjustment</h2></div>
         @if (selectedInventory(); as selected) {
           <label class="quick-item-select"
@@ -494,19 +495,25 @@
             </select>
           </label>
           <div class="quick-actions">
-            <button (click)="adjustInventory(selected, 'STOCK_IN')">
+            <button [class.selected]="adjustmentType()==='STOCK_IN'" (click)="adjustmentType.set('STOCK_IN')">
               <span class="material-symbols-outlined">local_shipping</span>Stock In</button
-            ><button (click)="adjustInventory(selected, 'STOCK_OUT')">
+            ><button [class.selected]="adjustmentType()==='STOCK_OUT'" (click)="adjustmentType.set('STOCK_OUT')">
               <span class="material-symbols-outlined">move_down</span>Stock Out</button
-            ><button (click)="adjustInventory(selected, 'DAMAGE')">
+            ><button [class.selected]="adjustmentType()==='DAMAGE'" (click)="adjustmentType.set('DAMAGE')">
               <span class="material-symbols-outlined">warning</span>Damage</button
-            ><button (click)="adjustInventory(selected, 'WASTAGE')">
+            ><button [class.selected]="adjustmentType()==='WASTAGE'" (click)="adjustmentType.set('WASTAGE')">
               <span class="material-symbols-outlined">delete</span>Wastage</button
-            ><button (click)="adjustInventory(selected, 'MANUAL_CORRECTION')">
+            ><button [class.selected]="adjustmentType()==='MANUAL_CORRECTION'" (click)="adjustmentType.set('MANUAL_CORRECTION')">
               <span class="material-symbols-outlined">edit</span>Correction
             </button>
           </div>
-          <small>Every adjustment is stored in PostgreSQL with an audit movement.</small>
+          <div class="stock-current"><img [src]="asset(selected.image_path)" [alt]="selected.name" /><div><b>{{selected.name}}</b><small>SKU: {{selected.code}}</small><small>Current Stock: <strong>{{quantity(selected.available_quantity,selected.unit)}}</strong></small></div></div>
+          <form class="quick-adjust-form" (submit)="$event.preventDefault();saveAdjustment()">
+            <label>Quantity ({{selected.unit}})<input type="number" min="0.001" step="0.001" required [value]="adjustmentQuantity()" (input)="adjustmentQuantity.set($any($event.target).value)" /></label>
+            <label>Remarks (Optional)<textarea [value]="adjustmentNotes()" (input)="adjustmentNotes.set($any($event.target).value)" placeholder="Add remarks…"></textarea></label>
+            @if(adjustmentType()==='MANUAL_CORRECTION'){<label>Direction<select [value]="adjustmentDirection()" (change)="adjustmentDirection.set($any($event.target).value)"><option value="ADD">Add stock</option><option value="REMOVE">Remove stock</option></select></label>}
+            <button type="submit" class="primary-action" [disabled]="adjusting()"><span class="material-symbols-outlined">save</span>{{adjusting()?'Updating…':'Update Stock'}}</button>
+          </form>
         }
       </section>
       <section class="panel movement-panel">

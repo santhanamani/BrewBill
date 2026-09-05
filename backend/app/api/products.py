@@ -14,7 +14,7 @@ from ..models import (
 from ..schemas import (
     GlobalProductCreate, GlobalProductRead, GlobalProductUpdate, OutletProductMappingCreate,
     OutletProductMappingRead, OutletProductMappingUpdate, ProductCreate, ProductRead,
-    ProductUpdate, ProductVariantCreate, ProductVariantRead,
+    ProductUpdate, ProductVariantCreate, ProductVariantRead, ProductFavouriteUpdate,
 )
 
 router = APIRouter(prefix='/api/products', tags=['products'])
@@ -191,7 +191,13 @@ def update_outlet_mapping(
     ))
     if mapping is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Outlet product mapping not found.')
-    for field, value in body.model_dump(exclude_unset=True).items():
+    changes = body.model_dump(exclude_unset=True)
+    if 'low_stock_limit' in changes:
+        low_stock_limit = changes.pop('low_stock_limit')
+        if low_stock_limit is None:
+            raise HTTPException(status_code=422, detail='Low stock limit cannot be empty.')
+        inventory_for(session, user.tenant_id, mapping.outlet_id, mapping.legacy_product).low_stock_limit = low_stock_limit
+    for field, value in changes.items():
         setattr(mapping, field, value)
     session.commit()
     return mapping_view(session, mapping)
@@ -249,18 +255,20 @@ def product_view(
 ) -> ProductRead:
     return ProductRead(
         id=product.id, code=product.code,
-        name=(mapping.outlet_specific_name or product.name) if mapping else product.name,
+        name=(mapping.outlet_specific_name or mapping.global_product.name) if mapping else product.name,
         selling_price=mapping.selling_price if mapping else product.selling_price,
         purchase_price=product.purchase_price,
-        gst_percent=(mapping.tax_override if mapping.tax_override is not None else product.gst_percent) if mapping else product.gst_percent,
+        gst_percent=(mapping.tax_override if mapping.tax_override is not None else mapping.global_product.default_gst) if mapping else product.gst_percent,
         outlet_id=product.outlet_id,
-        category_id=product.category_id, category_name=product.category_name,
-        description=product.description, image_path=product.image_path, unit=product.unit,
+        category_id=product.category_id, category_name=mapping.global_product.category_name if mapping else product.category_name,
+        description=mapping.global_product.description if mapping else product.description,
+        image_path=mapping.global_product.image_path if mapping else product.image_path,
+        unit=mapping.global_product.base_unit if mapping else product.unit,
         stock_quantity=inventory.available_quantity, low_stock_limit=inventory.low_stock_limit,
         is_favourite=mapping.favourite if mapping else product.is_favourite,
         kot_required=mapping.kot_required if mapping else product.kot_required,
         is_available=mapping.is_available if mapping else product.is_available,
-        is_active=mapping.is_active if mapping else product.is_active,
+        is_active=(mapping.is_active and mapping.global_product.status == 'ACTIVE') if mapping else product.is_active,
         shared_across_outlets=product.outlet_id is None,
         variants=[ProductVariantRead.model_validate(row) for row in product.variants],
     )
@@ -383,6 +391,30 @@ def create_variant(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='This variant name already exists for the product.') from error
     session.refresh(variant)
     return variant
+
+
+@router.patch('/{product_id}/favourite', response_model=ProductRead)
+def update_product_favourite(
+    product_id: str,
+    body: ProductFavouriteUpdate,
+    user: User = Depends(require_role('ADMIN', 'CASHIER')),
+    session: Session = Depends(get_session),
+) -> ProductRead:
+    outlet_id = resolve_outlet(session, user)
+    mapping = session.scalar(select(OutletProductMapping).options(
+        selectinload(OutletProductMapping.global_product),
+        selectinload(OutletProductMapping.legacy_product),
+    ).where(
+        OutletProductMapping.tenant_id == user.tenant_id,
+        OutletProductMapping.outlet_id == outlet_id,
+        OutletProductMapping.legacy_product_id == product_id,
+    ))
+    if mapping is None:
+        raise HTTPException(status_code=404, detail='Product is not mapped to this outlet.')
+    mapping.favourite = body.is_favourite
+    inventory = inventory_for(session, user.tenant_id, outlet_id, mapping.legacy_product)
+    session.commit()
+    return product_view(mapping.legacy_product, inventory, mapping)
 
 
 @router.patch('/{product_id}', response_model=ProductRead)

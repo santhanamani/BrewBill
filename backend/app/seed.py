@@ -56,8 +56,12 @@ def load_fixture(path: Path) -> dict:
 
 def import_fixture(session, fixture: dict) -> tuple[str, int, int]:
     tenant_data = fixture['tenant']
-    tenant = get_or_create(
-        session, Tenant, {
+    tenant = session.scalar(select(Tenant).where(Tenant.code == tenant_data.get('code')))
+    if tenant is None and tenant_data.get('code') == 'BHV-RSP':
+        tenant = session.scalar(select(Tenant).where(Tenant.code == 'DEMO'))
+    if tenant is None:
+        tenant = get_or_create(
+            session, Tenant, {
             'code': tenant_data.get('code'),
             'status': tenant_data.get('status', 'ACTIVE'),
             'logo_url': tenant_data.get('logo_url'),
@@ -65,9 +69,10 @@ def import_fixture(session, fixture: dict) -> tuple[str, int, int]:
             'primary_color': tenant_data.get('primary_color', '#5A2D18'),
             'secondary_color': tenant_data.get('secondary_color', '#C8874A'),
             'tagline': tenant_data.get('tagline'),
-        }, name=tenant_data['name']
-    )
+            }, name=tenant_data['name']
+        )
     tenant.code = tenant_data.get('code') or tenant.code
+    tenant.name = tenant_data['name']
     plan_data = fixture['plan']
     plan = get_or_create(
         session,
@@ -93,6 +98,8 @@ def import_fixture(session, fixture: dict) -> tuple[str, int, int]:
             {'name': row['name'], 'address': row.get('address')},
             tenant_id=tenant.id, code=row['code'],
         )
+        outlet.name = row['name']
+        outlet.address = row.get('address')
         outlets[row['code']] = outlet
 
     roles: dict[str, Role] = {}
