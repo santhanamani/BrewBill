@@ -1,5 +1,6 @@
-import { Component, inject } from '@angular/core';
-import { Router, RouterLink, RouterOutlet } from '@angular/router';
+import { Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NavigationCancel, NavigationEnd, NavigationError, NavigationStart, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { SessionService } from '../../core/session.service';
 import { ClockService } from '../../core/clock.service';
 import { RuntimeConfigService } from '../../core/runtime-config.service';
@@ -14,6 +15,24 @@ export class ShellComponent {
   readonly clock = inject(ClockService);
   private readonly runtime = inject(RuntimeConfigService);
   private readonly router = inject(Router);
+  readonly navigationError = signal('');
+  readonly navigating = signal(false);
+  private failedPath = '';
+
+  constructor() {
+    this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
+      if (event instanceof NavigationStart) {
+        this.navigating.set(true);
+        this.navigationError.set('');
+      } else if (event instanceof NavigationError) {
+        this.navigating.set(false);
+        this.failedPath = event.url;
+        this.navigationError.set('Unable to open this page. Retry, or reload the app to load the latest version.');
+      } else if (event instanceof NavigationEnd || event instanceof NavigationCancel) {
+        this.navigating.set(false);
+      }
+    });
+  }
 
   async logout(): Promise<void> {
     this.session.clear();
@@ -21,8 +40,21 @@ export class ShellComponent {
   }
 
   async openPage(path: string): Promise<void> {
-    if (this.router.url === path) return;
-    await this.router.navigateByUrl(path);
+    try {
+      await this.router.navigateByUrl(path, { onSameUrlNavigation: 'reload' });
+    } catch {
+      this.failedPath = path;
+      this.navigating.set(false);
+      this.navigationError.set('Unable to open this page. Retry, or reload the app to load the latest version.');
+    }
+  }
+
+  retryPage(): Promise<void> {
+    return this.openPage(this.failedPath || this.router.url);
+  }
+
+  reloadApp(): void {
+    window.location.reload();
   }
 
   isActive(path: string): boolean {

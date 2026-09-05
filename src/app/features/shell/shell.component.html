@@ -17,7 +17,20 @@
       <button class="button logout-button" type="button" (click)="logout()"><span class="material-symbols-outlined">logout</span>Logout</button>
     </div>
   </header>
-  <main class="page-content"><router-outlet /></main>
+  <main class="page-content" [attr.aria-busy]="navigating()">
+    @if (navigating()) {
+      <div class="live-state" role="status">Opening page...</div>
+    }
+    @if (navigationError()) {
+      <div class="live-state error-state" role="alert">
+        {{ navigationError() }}
+        <button type="button" (click)="retryPage()">Retry</button>
+        <button type="button" (click)="reloadApp()">Reload app</button>
+        <small>Reloading requires signing in again and clears any unsaved bill.</small>
+      </div>
+    }
+    <router-outlet />
+  </main>
   <nav class="bottom-nav" aria-label="Main navigation">
     @if(session.isSuperAdmin()){
       <button type="button" class="active admin-only-nav" (click)="openPage('/administration')"><span class="material-symbols-outlined">admin_panel_settings</span><span>Multi-Tenant Administration<small>Protected platform access</small></span></button>

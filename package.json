@@ -4,12 +4,12 @@
   "main": "electron/main.cjs",
   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
+    "start": "ng serve --host 127.0.0.1 --hmr=false",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "dev": "npm run desktop:dev",
-    "desktop:dev": "concurrently -k \"npm run start\" \"wait-on http://localhost:4200 && set ELECTRON_RUN_AS_NODE=&& electron .\"",
+    "desktop:dev": "concurrently -k \"npm run start\" \"wait-on http://127.0.0.1:4200 && set ELECTRON_RUN_AS_NODE=&& electron .\"",
     "desktop:package": "npm run build && electron-builder --win nsis",
     "test:license": "node scripts/test-license.cjs"
   },

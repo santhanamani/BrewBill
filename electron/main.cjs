@@ -45,7 +45,7 @@ function createWindow() {
     mainWindow.loadFile(
       path.join(__dirname, '..', 'dist', 'brew-bill-ui', 'browser', 'index.html'),
     );
-  else mainWindow.loadURL('http://localhost:4200');
+  else mainWindow.loadURL('http://127.0.0.1:4200');
 }
 
 function registerIpc() {

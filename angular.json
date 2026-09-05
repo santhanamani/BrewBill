@@ -83,6 +83,11 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "host": "127.0.0.1",
+            "hmr": false,
+            "prebundle": false
+          },
           "configurations": {
             "production": {
               "buildTarget": "brew-bill-ui:build:production"

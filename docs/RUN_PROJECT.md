@@ -21,16 +21,22 @@ cd D:\Project\BrewBill
 npm.cmd run start
 ```
 
-Open `http://localhost:4200`.
+Open `http://127.0.0.1:4200`.
 
 ### Angular + Electron desktop UI
 
-Keep the backend running, then use:
+Keep the backend running, then use the following **instead of** the browser UI command above. It starts its own Angular server; do not run both UI commands together.
 
 ```powershell
 cd D:\Project\BrewBill
 npm.cmd run desktop:dev
 ```
+
+### Blank page / NG0203 followed by StandaloneService NG0200
+
+Stop the existing Angular/desktop development commands with Ctrl+C, close the old Electron window, and run only one UI command again. Sign in again after restarting. Unsaved bills are not retained by a full reload.
+
+The development server and Electron now both use `127.0.0.1:4200`. HMR and dependency prebundling are disabled to avoid retaining or mixing Angular injector/module state while investigating this runtime failure. Source edits use full-page live reload instead; save or hold a bill before editing source files. No database reset or reseed is needed. If it recurs after a clean restart, capture the complete first NG0203 stack trace (not only the subsequent NG0200 messages).
 
 ## Demo login
 
