@@ -85,8 +85,9 @@
   </section>
   <section class="holds-layout">
     <section class="panel table-panel">
-      <div class="panel-title">
-        <input class="search-box" placeholder="Search by hold no, cashier or items…" aria-label="Search held bills" [value]="holdSearch()" (input)="setSearch($any($event.target).value)" /><span>{{ visibleHolds().length }} bills</span>
+      <div class="panel-title held-list-title">
+        <div><h2>Held Orders List</h2><p>Shows all temporarily held bills for this outlet.</p></div>
+        <input class="search-box" placeholder="Search by hold no, cashier or items…" aria-label="Search held bills" [value]="holdSearch()" (input)="setSearch($any($event.target).value)" /><strong>{{ visibleHolds().length }} bills</strong>
       </div>
       <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
         <table>
@@ -116,7 +117,7 @@
                   <button
                     class="small-button"
                     type="button"
-                    title="Preview held bill" (click)="$event.stopPropagation(); selectHold(hold)"
+                    title="Preview held bill" [attr.aria-label]="'Preview ' + hold.hold_number" [attr.aria-pressed]="selectedHold()?.id === hold.id" (click)="$event.stopPropagation(); selectHold(hold)"
                   >
                     <span class="material-symbols-outlined">visibility</span>
                   </button>
@@ -147,7 +148,7 @@
         <div class="preview-list">
           <h3>Items ({{ hold.items.length }})</h3>
           @for (item of hold.items; track item.product_id + item.variant_id) {
-            <div class="preview-item">
+            <div class="preview-item"><img class="held-item-image" [src]="holdImage(item.product_id)" [alt]="item.product_name" (error)="holdImageError($event)" />
               <span
                 ><b>{{ item.product_name }}</b
                 ><small>{{ item.variant_name || 'Regular' }}</small></span
@@ -294,9 +295,12 @@
     <article class="metric"><span class="metric-icon brown"><span class="material-symbols-outlined">shopping_cart</span></span><div><small>Average Order Value</small><h2>{{money(averageOrderValue())}}</h2><p>Completed orders</p></div></article>
     <article class="metric"><span class="metric-icon brown"><span class="material-symbols-outlined">groups</span></span><div><small>Items Sold</small><h2>{{itemsSold()}}</h2><p>Completed order lines</p></div></article>
   </section>
-  <section class="panel table-panel">
-    <div class="panel-title"><h2>Order List <small>({{orders().length}} orders)</small></h2><input class="search-box" aria-label="Search sales" placeholder="Search invoice, cashier or payment…" [value]="reportSearch()" (input)="setSearch($any($event.target).value)" /></div>
-    <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
+  <section class="panel table-panel reports-table">
+    <div class="panel-title report-list-title"><div class="panel-heading"><span class="material-symbols-outlined">receipt_long</span><div><h2>Order List <small>({{orders().length}} orders)</small></h2><p>View all invoices, payments and order details for your outlet.</p></div></div><input class="search-box" aria-label="Search sales" placeholder="Search invoice, cashier or payment…" [value]="reportSearch()" (input)="setSearch($any($event.target).value)" /><details #reportPicker class="report-picker" (keydown.escape)="reportPicker.open=false" (focusout)="!reportPicker.contains($any($event.relatedTarget)) && (reportPicker.open=false)">
+<summary aria-label="Filter sales reports"><span class="material-symbols-outlined">filter_alt</span>Filter {{reportStatus() || reportPayment() ? '•' : ''}}<span class="material-symbols-outlined">expand_more</span></summary>
+<div class="report-filter-menu"><label>Status<select [value]="reportStatus()" (change)="filterReports('status',$any($event.target).value)"><option value="">All statuses</option><option value="COMPLETED">Completed</option><option value="VOID">Void</option></select></label><label>Payment<select [value]="reportPayment()" (change)="filterReports('payment',$any($event.target).value)"><option value="">All payments</option><option value="CASH">Cash</option><option value="UPI">UPI</option><option value="CARD">Card</option></select></label><button type="button" (click)="filterReports('status','');filterReports('payment','')">Clear filters</button></div>
+</details></div>
+    <div class="table-scroll lazy-table">
       <table>
         <thead>
           <tr>
@@ -351,12 +355,13 @@
             </tr>
           } @empty {
             <tr>
-              <td colspan="10"><div class="live-state">No PostgreSQL orders yet.</div></td>
+              <td colspan="10"><div class="live-state">No orders match the current search or filters.</div></td>
             </tr>
           }
         </tbody>
       </table>
     </div>
+    <footer class="report-pagination"><span>{{filteredOrders().length}} orders · Page {{currentReportPage()+1}} of {{reportPages()}}</span><nav aria-label="Sales report pages"><button type="button" aria-label="Previous sales page" [disabled]="currentReportPage()===0" (click)="pageReports(-1)">‹</button><span>{{currentReportPage()+1}}</span><button type="button" aria-label="Next sales page" [disabled]="currentReportPage()+1>=reportPages()" (click)="pageReports(1)">›</button><select aria-label="Orders per page" [value]="reportPageSize()" (change)="sizeReports($any($event.target).value)"><option value="10">10 / page</option><option value="25">25 / page</option><option value="50">50 / page</option></select></nav></footer>
   </section>
 } @else if (key() === 'inventory') {
   <section class="metric-grid four-metrics">

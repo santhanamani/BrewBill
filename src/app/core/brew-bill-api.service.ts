@@ -33,6 +33,8 @@ import {
   AdminUser,
   TenantPreview,
   TenantSetting,
+  TenantPaymentPolicy,
+  TenantSubscription,
   MfaChallenge,
 } from './models/api.models';
 import { RuntimeConfigService } from './runtime-config.service';
@@ -62,6 +64,23 @@ export class BrewBillApiService {
     );
   }
 
+  uploadTenantBranding(accessToken: string, tenantId: string, kind: 'logo' | 'cover', file: File): Promise<{url:string;width:number;height:number}> {
+    const body = new FormData();
+    body.append('file', file);
+    return this.request(this.http.post<{url:string;width:number;height:number}>(
+      this.runtime.apiUrl('/platform/admin/tenants/' + encodeURIComponent(tenantId) + '/branding/' + kind + '/upload'),
+      body, {headers:this.authHeaders(accessToken)},
+    ), 30000);
+  }
+
+  uploadTenantProductImage(accessToken: string, file: File): Promise<{url:string;width:number;height:number}> {
+    const body = new FormData();
+    body.append('file', file);
+    return this.request(this.http.post<{url:string;width:number;height:number}>(
+      this.runtime.apiUrl('/products/catalogue/local/image'), body,
+      {headers:this.authHeaders(accessToken)},
+    ), 30000);
+  }
   resolveTenant(code: string): Promise<TenantPreview> {
     return this.request(
       this.http.get<TenantPreview>(
@@ -107,10 +126,17 @@ export class BrewBillApiService {
     return this.post<OutletProductMapping>(accessToken, `/products/catalogue/${globalProductId}`, body);
   }
 
+
+  createTenantCatalogueProduct(
+    accessToken: string,
+    body: ProductCreate,
+  ): Promise<OutletProductMapping> {
+    return this.post<OutletProductMapping>(accessToken, '/products/catalogue/local', body);
+  }
   updateOutletProduct(
     accessToken: string,
     mappingId: string,
-    body: Partial<OutletProductMapping>,
+    body: Partial<OutletProductMapping> & { expected_stock_quantity?: string },
   ): Promise<OutletProductMapping> {
     return this.request(
       this.http.patch<OutletProductMapping>(
@@ -481,6 +507,51 @@ export class BrewBillApiService {
       this.http.put<TenantSetting>(
         this.runtime.apiUrl(`/settings/${encodeURIComponent(key)}`),
         { setting_value: value },
+        { headers: this.authHeaders(accessToken) },
+      ),
+      5000,
+    );
+  }
+
+  getPaymentPolicy(accessToken: string): Promise<TenantPaymentPolicy> {
+    return this.get<TenantPaymentPolicy>(accessToken, '/payment-policy');
+  }
+
+  updatePaymentPolicy(accessToken: string, paymentProcessingMode: TenantPaymentPolicy['payment_processing_mode']): Promise<TenantPaymentPolicy> {
+    return this.request(
+      this.http.put<TenantPaymentPolicy>(
+        this.runtime.apiUrl('/payment-policy'),
+        { payment_processing_mode: paymentProcessingMode },
+        { headers: this.authHeaders(accessToken) },
+      ),
+      5000,
+    );
+  }
+
+  getTenantPaymentPolicy(accessToken: string, tenantId: string): Promise<TenantPaymentPolicy> {
+    return this.get<TenantPaymentPolicy>(accessToken, `/platform/admin/tenants/${tenantId}/payment-policy`);
+  }
+
+  getTenantSubscription(accessToken: string, tenantId: string): Promise<TenantSubscription> {
+    return this.get<TenantSubscription>(accessToken, `/platform/admin/tenants/${tenantId}/subscription`);
+  }
+
+  updateTenantSubscription(accessToken: string, tenantId: string, endsAt: string, graceEndsAt: string): Promise<TenantSubscription> {
+    return this.request(
+      this.http.put<TenantSubscription>(
+        this.runtime.apiUrl(`/platform/admin/tenants/${tenantId}/subscription`),
+        { ends_at: endsAt, grace_ends_at: graceEndsAt },
+        { headers: this.authHeaders(accessToken) },
+      ),
+      5000,
+    );
+  }
+
+  updateTenantPaymentPolicy(accessToken: string, tenantId: string, paymentProcessingMode: TenantPaymentPolicy['payment_processing_mode']): Promise<TenantPaymentPolicy> {
+    return this.request(
+      this.http.put<TenantPaymentPolicy>(
+        this.runtime.apiUrl(`/platform/admin/tenants/${tenantId}/payment-policy`),
+        { payment_processing_mode: paymentProcessingMode },
         { headers: this.authHeaders(accessToken) },
       ),
       5000,

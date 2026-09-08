@@ -45,6 +45,7 @@ class Subscription(Base, Timestamped):
     status: Mapped[str] = mapped_column(String(24), default='ACTIVE')
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    grace_ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
 
 
 class Outlet(Base, Timestamped):
@@ -203,7 +204,7 @@ class OutletProductMapping(Base, Timestamped):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id'), index=True)
     outlet_id: Mapped[str] = mapped_column(ForeignKey('outlets.id'), index=True)
-    global_product_id: Mapped[str] = mapped_column(ForeignKey('global_products.id'), index=True)
+    global_product_id: Mapped[str | None] = mapped_column(ForeignKey('global_products.id'), index=True)
     legacy_product_id: Mapped[str] = mapped_column(ForeignKey('products.id'), index=True)
     selling_price: Mapped[Decimal] = mapped_column(Numeric(18, 2))
     favourite: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -213,7 +214,7 @@ class OutletProductMapping(Base, Timestamped):
     display_order: Mapped[int] = mapped_column(Integer, default=0)
     outlet_specific_name: Mapped[str | None] = mapped_column(String(180))
     tax_override: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
-    global_product: Mapped[GlobalProduct] = relationship()
+    global_product: Mapped[GlobalProduct | None] = relationship()
     legacy_product: Mapped[Product] = relationship()
     __table_args__ = (
         UniqueConstraint('outlet_id', 'global_product_id', name='uq_outlet_global_product'),

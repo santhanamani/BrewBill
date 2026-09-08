@@ -14,6 +14,7 @@ import {
   Purchase,
   Supplier,
   TenantSetting,
+  TenantPaymentPolicy,
 } from '../../core/models/api.models';
 import { SessionService } from '../../core/session.service';
 
@@ -55,6 +56,7 @@ const pageDetails: Record<string, { title: string; detail: string; icon: string 
   host: { '[attr.data-view]': 'key()' },
   imports: [FormsModule, RouterLink],
   templateUrl: './management.component.html',
+  styleUrls: ['./expenses.component.css', './purchases.component.css'],
 })
 export class ManagementComponent {
   private readonly route = inject(ActivatedRoute);
@@ -77,8 +79,28 @@ export class ManagementComponent {
   readonly categories = signal<Category[]>([]);
   readonly search = signal('');
   readonly visibleLimit = signal(10);
-  readonly visiblePurchases = computed(() => this.filtered(this.purchases()));
-  readonly visibleExpenses = computed(() => this.filtered(this.expenses()));
+  readonly purchaseFilter = signal('');
+  readonly visiblePurchases = computed(() => this.filtered(this.purchases().filter(row => !this.purchaseFilter() || row.payment_status === this.purchaseFilter())));
+  readonly expenseCategoryFilter = signal('');
+  readonly expenseDateFilter = signal('');
+  readonly expensePage = signal(0);
+  readonly expensePageSize = 8;
+  readonly expenseFilterCategories = computed(() => [...new Set(this.expenses().map(row => row.category))].sort());
+  readonly filteredExpenses = computed(() => {
+    const query=this.search().trim().toLowerCase();
+    return this.expenses().filter(row =>
+      (!query || JSON.stringify(row).toLowerCase().includes(query)) &&
+      (!this.expenseCategoryFilter() || row.category===this.expenseCategoryFilter()) &&
+      (!this.expenseDateFilter() || row.expense_date.slice(0,10)===this.localDate()));
+  });
+  readonly expensePages = computed(() => Math.max(1,Math.ceil(this.filteredExpenses().length/this.expensePageSize)));
+  readonly currentExpensePage = computed(() => Math.min(this.expensePage(),this.expensePages()-1));
+  readonly visibleExpenses = computed(() => this.filteredExpenses().slice(this.currentExpensePage()*this.expensePageSize,(this.currentExpensePage()+1)*this.expensePageSize));
+  filterExpenses(field:'category'|'date',value:string):void {
+    (field==='category'?this.expenseCategoryFilter:this.expenseDateFilter).set(value);
+    this.expensePage.set(0);
+  }
+  pageExpenses(delta:number):void { this.expensePage.set(Math.max(0,Math.min(this.currentExpensePage()+delta,this.expensePages()-1))); }
   readonly visibleCustomers = computed(() => this.filtered(this.customers()));
   readonly visibleClosings = computed(() => this.filtered(this.closings()));
   readonly visibleSettings = computed(() => this.filtered(this.settings()));
@@ -110,6 +132,14 @@ export class ManagementComponent {
   clearPurchase(): void {
     this.purchaseInvoice=''; this.purchaseDate=this.localDate(); this.purchaseQuantity='1';
     this.purchaseCost='0.00'; this.purchaseTax='5.00'; this.purchaseStatus='PENDING'; this.purchaseNotes='';
+  }
+  resetExpense(): void {
+    this.expenseDate = this.localDate();
+    this.expenseCategory = 'Supplies';
+    this.expenseDescription = '';
+    this.expenseAmount = '';
+    this.expenseMode = 'CASH';
+    this.expenseRemarks = '';
   }
   purchaseNotes = '';
   purchaseSupplier = '';
@@ -143,6 +173,23 @@ export class ManagementComponent {
   terminalEndpoint = '';
   terminalApiKey = '';
   readonly terminalMessage = signal('');
+  readonly terminalConnected = signal(false);
+  readonly posDeviceReady = signal(false);
+  readonly posDeviceRefreshing = signal(false);
+  readonly posDeviceMessage = signal('');
+  readonly posDeviceIdentity = signal<{ installationId: string; terminalCode: string } | null>(null);
+  readonly posDeviceLicense = signal<{
+    state: string;
+    canCreateBills: boolean;
+    offlineValidUntil: string | null;
+    message: string;
+  } | null>(null);
+  readonly posDeviceIdLabel = computed(() => {
+    const id = this.posDeviceIdentity()?.installationId;
+    return id ? `•••• ${id.slice(-8)}` : 'Unavailable';
+  });
+  paymentProcessingMode: TenantPaymentPolicy['payment_processing_mode'] = 'MANUAL_ALLOWED';
+  readonly paymentPolicyMessage = signal('');
 
   constructor() {
     this.route.paramMap.subscribe((params) => {
@@ -154,6 +201,7 @@ export class ManagementComponent {
   }
 
   setSearch(value: string): void {
+    if(this.key()==='expenses')this.expensePage.set(0);
     this.search.set(value);
     this.visibleLimit.set(10);
   }
@@ -202,10 +250,16 @@ export class ManagementComponent {
         case 'closing':
           this.closings.set(await this.api.listClosings(token));
           break;
-        case 'settings':
-          this.settings.set(await this.api.listSettings(token));
+        case 'settings': {
+          const [settings, policy] = await Promise.all([
+            this.api.listSettings(token),
+            this.api.getPaymentPolicy(token),
+          ]);
+          this.settings.set(settings);
+          this.paymentProcessingMode = policy.payment_processing_mode;
           await this.loadPaymentTerminalSettings();
           break;
+        }
         case 'categories':
           this.categories.set(await this.api.listCategories(token));
           break;
@@ -218,11 +272,81 @@ export class ManagementComponent {
   }
 
   async loadPaymentTerminalSettings(): Promise<void> {
-    if (!window.brewBill) return;
-    this.terminalProvider = (await window.brewBill.settings.get('payment.terminal.provider')) ?? '';
-    this.terminalEndpoint = (await window.brewBill.settings.get('payment.terminal.endpoint')) ?? '';
-    const status = await window.brewBill.payment.status();
-    this.terminalMessage.set(status.message);
+    if (!window.brewBill) {
+      this.posDeviceMessage.set('Device registration is available in the BrewBill desktop app.');
+      this.terminalMessage.set('Payment terminal setup is available in the desktop app.');
+      return;
+    }
+    try {
+      const [provider, endpoint, identity, terminalStatus] = await Promise.all([
+        window.brewBill.settings.get('payment.terminal.provider'),
+        window.brewBill.settings.get('payment.terminal.endpoint'),
+        window.brewBill.license.identity(),
+        window.brewBill.payment.status(),
+      ]);
+      this.terminalProvider = provider ?? '';
+      this.terminalEndpoint = endpoint ?? '';
+      this.posDeviceIdentity.set(identity);
+      this.terminalConnected.set(terminalStatus.connected);
+      this.terminalMessage.set(terminalStatus.message);
+      await this.refreshPosDevice(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to load device settings.';
+      this.posDeviceMessage.set(message);
+      this.terminalMessage.set(message);
+    }
+  }
+
+  async refreshPosDevice(announce = true): Promise<void> {
+    if (!window.brewBill) {
+      this.posDeviceReady.set(false);
+      this.posDeviceMessage.set('Open Settings in the BrewBill desktop app to activate this device.');
+      return;
+    }
+    if (!this.session.context()?.outlet_id) {
+      this.posDeviceReady.set(false);
+      this.posDeviceMessage.set('An outlet must be assigned before this device can be activated.');
+      return;
+    }
+    this.posDeviceRefreshing.set(true);
+    try {
+      const activated = await this.session.ensureDesktopLicense();
+      const [identity, license] = await Promise.all([
+        window.brewBill.license.identity(),
+        window.brewBill.license.status(),
+      ]);
+      this.posDeviceIdentity.set(identity);
+      this.posDeviceLicense.set(license);
+      const ready = activated && license.canCreateBills;
+      this.posDeviceReady.set(ready);
+      this.posDeviceMessage.set(
+        ready
+          ? `Registered for ${this.session.context()?.tenant_name ?? 'this tenant'} / ${this.session.context()?.outlet_name ?? 'this outlet'}.`
+          : this.session.licenseMessage() || license.message,
+      );
+      if (announce) {
+        (ready ? this.success : this.error).set(
+          ready ? 'This POS device is active and ready for billing.' : this.posDeviceMessage(),
+        );
+      }
+    } catch (error) {
+      this.posDeviceReady.set(false);
+      this.posDeviceMessage.set(
+        error instanceof Error ? error.message : 'Unable to activate this POS device.',
+      );
+      if (announce) this.error.set(this.posDeviceMessage());
+    } finally {
+      this.posDeviceRefreshing.set(false);
+    }
+  }
+
+  posDeviceValidityLabel(): string {
+    const value = this.posDeviceLicense()?.offlineValidUntil;
+    if (!value) return 'Online verification required';
+    const date = new Date(value);
+    return Number.isNaN(date.getTime())
+      ? 'Online verification required'
+      : new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
   }
 
   async savePaymentTerminal(): Promise<void> {
@@ -238,12 +362,27 @@ export class ManagementComponent {
         this.terminalApiKey = '';
       }
       const status = await window.brewBill.payment.status();
+      this.terminalConnected.set(status.connected);
       this.terminalMessage.set(status.message);
     } catch (error) {
       this.terminalMessage.set(
         error instanceof Error ? error.message : 'Unable to save terminal settings.',
       );
     }
+  }
+
+  async savePaymentPolicy(): Promise<void> {
+    this.paymentPolicyMessage.set('');
+    await this.save('Payment collection setting saved for this tenant.', async (token) => {
+      const saved = await this.api.updatePaymentPolicy(token, this.paymentProcessingMode);
+      this.paymentProcessingMode = saved.payment_processing_mode;
+      this.settings.set(await this.api.listSettings(token));
+      this.paymentPolicyMessage.set(
+        saved.payment_processing_mode === 'TERMINAL_REQUIRED'
+          ? 'Cash/manual fallback is blocked. Only terminal-approved UPI or Card payments can complete a bill.'
+          : 'Cash can be recorded directly. UPI/Card may fall back to manual recording when the terminal is unavailable.',
+      );
+    });
   }
 
   async addSupplier(): Promise<void> {

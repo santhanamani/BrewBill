@@ -72,7 +72,7 @@
         <button type="button" (click)="addSupplier()">+ Add Supplier</button>
       </div>
       </details>
-      <form class="form-grid" (ngSubmit)="addPurchase()">
+      <form #purchaseEntry class="form-grid" (ngSubmit)="addPurchase()">
         <label
           >Supplier *<select name="supplier" [(ngModel)]="purchaseSupplier" required>
             @for (supplier of suppliers(); track supplier.id) {
@@ -136,19 +136,11 @@
           </select></label
         >
         <label class="purchase-notes">Notes (Optional)<input name="purchaseNotes" [(ngModel)]="purchaseNotes" placeholder="Add notes (e.g. batch, remarks)…" /></label>
-        <div class="form-actions span-two"><button type="button" class="clear-purchase" [disabled]="saving()" (click)="clearPurchase()"><span class="material-symbols-outlined">restart_alt</span>Clear</button>
-          <button class="primary-action" type="submit" [disabled]="saving()">
-            <span class="material-symbols-outlined">add</span
-            >{{ saving() ? 'Saving...' : 'Add to Purchases' }}
-          </button>
-        </div>
+        <div class="form-actions span-two"><button class="primary-action" type="submit" [disabled]="saving()"><span class="material-symbols-outlined">save</span>{{ saving() ? 'Saving...' : 'Add Purchase' }}</button><button type="button" class="clear-purchase" [disabled]="saving()" (click)="clearPurchase()"><span class="material-symbols-outlined">restart_alt</span>Reset</button></div>
       </form>
     </section>
     <section class="panel table-panel">
-      <div class="panel-title">
-        <h2>Purchase History</h2>
-        <input class="search-box" aria-label="Search purchases" placeholder="Search invoice, supplier, product…" [value]="search()" (input)="setSearch($any($event.target).value)" />
-      </div>
+      <div class="panel-title purchase-history-title"><div class="panel-heading"><span class="material-symbols-outlined">history</span><div><h2>Purchase History</h2><p>View and track all purchase transactions</p></div></div><input class="search-box" aria-label="Search purchases" placeholder="Search invoice, supplier, product…" [value]="search()" (input)="setSearch($any($event.target).value)" /><details #purchasePaymentPicker class="purchase-filter" (keydown.escape)="purchasePaymentPicker.open=false" (focusout)="!purchasePaymentPicker.contains($any($event.relatedTarget)) && (purchasePaymentPicker.open=false)"><summary><span class="material-symbols-outlined">filter_alt</span><span>{{ purchaseFilter() === 'PAID' ? 'Paid' : purchaseFilter() === 'PENDING' ? 'Pending' : purchaseFilter() === 'PARTIAL' ? 'Partial' : 'All payments' }}</span><span class="material-symbols-outlined chevron">expand_more</span></summary><div class="purchase-filter-menu"><button type="button" [class.selected]="!purchaseFilter()" (click)="purchaseFilter.set(''); purchasePaymentPicker.open=false">All payments</button><button type="button" [class.selected]="purchaseFilter()==='PAID'" (click)="purchaseFilter.set('PAID'); purchasePaymentPicker.open=false">Paid</button><button type="button" [class.selected]="purchaseFilter()==='PENDING'" (click)="purchaseFilter.set('PENDING'); purchasePaymentPicker.open=false">Pending</button><button type="button" [class.selected]="purchaseFilter()==='PARTIAL'" (click)="purchaseFilter.set('PARTIAL'); purchasePaymentPicker.open=false">Partial</button></div></details></div>
       <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
         <table>
           <thead>
@@ -158,8 +150,7 @@
               <th>Date</th>
               <th>Items</th>
               <th>Amount</th>
-              <th>Payment</th>
-            </tr>
+              <th>Payment</th><th>Actions</th></tr>
           </thead>
           <tbody>
             @for (row of visiblePurchases(); track row.id) {
@@ -175,11 +166,11 @@
                   <span class="status-pill" [class.pending]="row.payment_status === 'PENDING'" [class.partial]="row.payment_status === 'PARTIAL'">{{
                     row.payment_status
                   }}</span>
-                </td>
+                </td><td><button class="icon-button" type="button"><span class="material-symbols-outlined">more_horiz</span></button></td>
               </tr>
             } @empty {
               <tr>
-                <td colspan="6">No purchases have been recorded.</td>
+                <td colspan="7"><div class="reference-table-empty"><span class="material-symbols-outlined">receipt_long</span><b>{{ search() || purchaseFilter() ? 'No matching purchases.' : 'No purchases have been recorded.' }}</b><small>Add your first purchase using the form on the left.</small><button type="button" (click)="purchaseEntry.querySelector('input')?.focus()">+ &nbsp; Create Purchase Entry</button></div></td>
               </tr>
             }
           </tbody>
@@ -268,19 +259,29 @@
       <label
         >Remarks<input name="remarks" [(ngModel)]="expenseRemarks" placeholder="Optional remarks"
       /></label>
-      <div class="form-actions">
-        <button class="primary-action" type="submit" [disabled]="saving()">
-          <span class="material-symbols-outlined">add</span>Add Expense
-        </button>
-      </div>
+      <div class="form-actions expense-actions"><button type="button" class="clear-purchase" (click)="resetExpense()"><span class="material-symbols-outlined">restart_alt</span>Reset</button><button class="primary-action" type="submit" [disabled]="saving()"><span class="material-symbols-outlined">save</span>Save Expense</button></div>
     </form>
   </section>
   <section class="panel table-panel management-table">
-    <div class="panel-title">
-      <h2>Expense Report</h2>
-      <input class="search-box" aria-label="Search expenses" placeholder="Search expenses…" [value]="search()" (input)="setSearch($any($event.target).value)" />
-    </div>
-    <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
+    <div class="panel-title expense-report-title"><div class="panel-heading"><span class="material-symbols-outlined">account_balance_wallet</span><h2>Expense Report</h2></div><input class="search-box" aria-label="Search expenses" placeholder="Search expenses by description, category…" [value]="search()" (input)="setSearch($any($event.target).value)" /><details #expenseCategoryPicker class="expense-picker" (keydown.escape)="expenseCategoryPicker.open=false;expenseCategorySummary.focus()" (focusout)="!expenseCategoryPicker.contains($any($event.relatedTarget)) && (expenseCategoryPicker.open=false)" (toggle)="expenseCategoryPicker.open && (expenseDatePicker.open=false)">
+  <summary #expenseCategorySummary aria-label="Filter expense category"><span class="material-symbols-outlined">filter_alt</span><span>{{expenseCategoryFilter() || 'All Categories'}}</span><span class="material-symbols-outlined picker-chevron">expand_more</span></summary>
+  <div class="expense-picker-menu" role="group" aria-label="Expense category options">
+    <small>FILTER BY CATEGORY</small>
+    <button type="button" [class.selected]="!expenseCategoryFilter()" [attr.aria-pressed]="!expenseCategoryFilter()" (click)="filterExpenses('category','');expenseCategoryPicker.open=false;expenseCategorySummary.focus()"><span>All Categories</span>@if(!expenseCategoryFilter()){<span class="material-symbols-outlined">check</span>}</button>
+    @for(category of expenseFilterCategories();track category){
+      <button type="button" [class.selected]="expenseCategoryFilter()===category" [attr.aria-pressed]="expenseCategoryFilter()===category" (click)="filterExpenses('category',category);expenseCategoryPicker.open=false;expenseCategorySummary.focus()"><span>{{category}}</span>@if(expenseCategoryFilter()===category){<span class="material-symbols-outlined">check</span>}</button>
+    }
+  </div>
+</details>
+<details #expenseDatePicker class="expense-picker date-picker" (keydown.escape)="expenseDatePicker.open=false;expenseDateSummary.focus()" (focusout)="!expenseDatePicker.contains($any($event.relatedTarget)) && (expenseDatePicker.open=false)" (toggle)="expenseDatePicker.open && (expenseCategoryPicker.open=false)">
+  <summary #expenseDateSummary aria-label="Filter expense date"><span class="material-symbols-outlined">calendar_month</span><span>{{expenseDateFilter() ? 'Today' : 'All Dates'}}</span><span class="material-symbols-outlined picker-chevron">expand_more</span></summary>
+  <div class="expense-picker-menu" role="group" aria-label="Expense date options">
+    <small>FILTER BY DATE</small>
+    <button type="button" [class.selected]="!expenseDateFilter()" [attr.aria-pressed]="!expenseDateFilter()" (click)="filterExpenses('date','');expenseDatePicker.open=false;expenseDateSummary.focus()"><span>All Dates</span>@if(!expenseDateFilter()){<span class="material-symbols-outlined">check</span>}</button>
+    <button type="button" [class.selected]="expenseDateFilter()==='today'" [attr.aria-pressed]="expenseDateFilter()==='today'" (click)="filterExpenses('date','today');expenseDatePicker.open=false;expenseDateSummary.focus()"><span>Today</span>@if(expenseDateFilter()==='today'){<span class="material-symbols-outlined">check</span>}</button>
+  </div>
+</details></div>
+    <div class="table-scroll lazy-table">
       <table>
         <thead>
           <tr>
@@ -290,8 +291,7 @@
             <th>Amount</th>
             <th>Payment Mode</th>
             <th>Created By</th>
-            <th>Remarks</th>
-          </tr>
+            <th>Remarks</th></tr>
         </thead>
         <tbody>
           @for (row of visibleExpenses(); track row.id) {
@@ -314,6 +314,7 @@
         </tbody>
       </table>
     </div>
+    <footer class="expense-pagination"><span>{{filteredExpenses().length}} expenses · Page {{currentExpensePage()+1}} of {{expensePages()}}</span><nav aria-label="Expense pages"><button type="button" aria-label="Previous expense page" [disabled]="currentExpensePage()===0" (click)="pageExpenses(-1)">‹</button><span>{{currentExpensePage()+1}}</span><button type="button" aria-label="Next expense page" [disabled]="currentExpensePage()+1>=expensePages()" (click)="pageExpenses(1)">›</button></nav></footer>
   </section>
 } @else if (key() === 'customers') {
   <div class="simple-management">
@@ -427,29 +428,81 @@
       ><span class="material-symbols-outlined">task_alt</span>Daily Closing</a
     >
   </nav>
-  <section class="panel form-panel terminal-settings">
-    <div class="panel-title">
+  <section class="panel form-panel payment-policy-settings">
+    <div class="panel-title payment-policy-title">
+      <div><small>THIS TENANT</small><h2>Payment Collection Mode</h2><p>Choose how bills can be completed for every outlet under this tenant.</p></div>
+      <span class="payment-policy-badge" [class.terminal-required]="paymentProcessingMode === 'TERMINAL_REQUIRED'">
+        <span class="material-symbols-outlined">{{ paymentProcessingMode === 'TERMINAL_REQUIRED' ? 'point_of_sale' : 'payments' }}</span>
+        {{ paymentProcessingMode === 'TERMINAL_REQUIRED' ? 'Terminal required' : 'Manual cash allowed' }}
+      </span>
+    </div>
+    <div class="payment-policy-options" role="radiogroup" aria-label="Payment collection mode">
+      <label [class.selected]="paymentProcessingMode === 'MANUAL_ALLOWED'">
+        <input type="radio" name="paymentProcessingMode" value="MANUAL_ALLOWED" [(ngModel)]="paymentProcessingMode" />
+        <span class="material-symbols-outlined">payments</span><b>Manual cash allowed</b>
+        <small>Cash completes and saves the bill directly. UPI/Card can use the terminal with manual fallback.</small>
+      </label>
+      <label [class.selected]="paymentProcessingMode === 'TERMINAL_REQUIRED'">
+        <input type="radio" name="paymentProcessingMode" value="TERMINAL_REQUIRED" [(ngModel)]="paymentProcessingMode" />
+        <span class="material-symbols-outlined">point_of_sale</span><b>POS terminal required</b>
+        <small>Cash and manual fallback are blocked. Only terminal-approved UPI/Card payments save the bill.</small>
+      </label>
+    </div>
+    <div class="payment-policy-actions">
+      <p role="status">{{ paymentPolicyMessage() }}</p>
+      <button class="primary-action" type="button" [disabled]="saving()" (click)="savePaymentPolicy()">
+        <span class="material-symbols-outlined">save</span>{{ saving() ? 'Saving…' : 'Save Payment Mode' }}
+      </button>
+    </div>
+  </section>
+  <section class="panel form-panel pos-device-settings">
+    <div class="panel-title pos-device-title">
       <div>
-        <small>THIS POS DEVICE</small>
-        <h2>Payment Terminal</h2>
+        <small>THIS DESKTOP &amp; OUTLET</small>
+        <h2>POS Device Registration</h2>
+        <p>Billing is audited through a separate device registration for the signed-in tenant and outlet.</p>
       </div>
-      <span>{{ terminalMessage() }}</span>
+      <span class="device-state-badge" [class.ready]="posDeviceReady()">
+        <span class="material-symbols-outlined">{{ posDeviceReady() ? 'verified' : 'error' }}</span>
+        {{ posDeviceReady() ? 'Active' : 'Action needed' }}
+      </span>
+    </div>
+    <div class="pos-device-grid">
+      <article>
+        <span class="material-symbols-outlined">point_of_sale</span>
+        <div><small>Terminal</small><b>{{ posDeviceIdentity()?.terminalCode || 'POS01' }}</b><p>Device ID {{ posDeviceIdLabel() }}</p></div>
+      </article>
+      <article>
+        <span class="material-symbols-outlined">storefront</span>
+        <div><small>Registered scope</small><b>{{ session.context()?.outlet_name || 'Outlet unavailable' }}</b><p>{{ session.context()?.tenant_name || 'Tenant unavailable' }}</p></div>
+      </article>
+      <article>
+        <span class="material-symbols-outlined">event_available</span>
+        <div><small>Offline license valid until</small><b>{{ posDeviceValidityLabel() }}</b><p>{{ posDeviceLicense()?.message || 'Checking device license…' }}</p></div>
+      </article>
+    </div>
+    <div class="pos-device-actions">
+      <p [class.ready]="posDeviceReady()"><span class="material-symbols-outlined">{{ posDeviceReady() ? 'check_circle' : 'info' }}</span>{{ posDeviceMessage() || 'Checking current device registration…' }}</p>
+      <button class="secondary-action" type="button" [disabled]="posDeviceRefreshing()" (click)="refreshPosDevice()">
+        <span class="material-symbols-outlined">sync</span>{{ posDeviceRefreshing() ? 'Activating…' : 'Activate / Refresh' }}
+      </button>
+    </div>
+  </section>
+  <section class="panel form-panel terminal-settings">
+    <div class="panel-title terminal-title">
+      <div><small>UPI / CARD HARDWARE</small><h2>Payment Terminal Gateway</h2><p>Configure external card or UPI hardware. This is separate from the POS device registration above.</p></div>
+      <div class="terminal-warning" [class.connected]="terminalConnected()">
+        <span class="material-symbols-outlined">{{ terminalConnected() ? 'check_circle' : 'info' }}</span>
+        <p><b>{{ terminalConnected() ? 'Payment terminal connected' : 'Payment terminal not configured' }}</b><small>{{ terminalMessage() || (paymentProcessingMode === 'TERMINAL_REQUIRED' ? 'Required by the selected payment mode.' : 'Optional while manual cash is allowed.') }}</small></p>
+      </div>
     </div>
     <div class="form-grid three-columns">
-      <label
-        >Provider<input [(ngModel)]="terminalProvider" placeholder="PINE_LABS / RAZORPAY_POS"
-      /></label>
-      <label
-        >Gateway URL<input [(ngModel)]="terminalEndpoint" placeholder="http://127.0.0.1:9100"
-      /></label>
-      <label
-        >API Key<input
-          type="password"
-          [(ngModel)]="terminalApiKey"
-          placeholder="Leave blank to keep saved key"
-      /></label>
+      <label>Provider<input [(ngModel)]="terminalProvider" placeholder="PINE_LABS / RAZORPAY_POS" /></label>
+      <label>Gateway URL<input [(ngModel)]="terminalEndpoint" placeholder="http://127.0.0.1:9100" /></label>
+      <label>API Key<input type="password" [(ngModel)]="terminalApiKey" placeholder="Leave blank to keep saved key" /></label>
     </div>
-    <div class="form-actions">
+    <div class="terminal-form-footer">
+      <p><span class="material-symbols-outlined">lock</span>The API key is encrypted in this desktop's secure device store.</p>
       <button class="primary-action" type="button" (click)="savePaymentTerminal()">
         <span class="material-symbols-outlined">point_of_sale</span>Save &amp; Test Terminal
       </button>

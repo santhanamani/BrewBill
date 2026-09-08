@@ -15,12 +15,16 @@ dependencies = [
   "PyJWT>=2.10",
   "cryptography>=44.0",
   "python-multipart>=0.0.20",
+  "Pillow>=12.3,<13",
   "httpx>=0.28",
   "pytest>=8.3"
 ]
 
 [project.scripts]
 brewbill-seed = "app.seed:main"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
 
 [tool.uvicorn]
 factory = false

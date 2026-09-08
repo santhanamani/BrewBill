@@ -1,9 +1,9 @@
 <section class="view-head product-page-head">
   <div><h1>Products</h1><p>Manage the shared product master and this outlet's catalogue mapping.</p></div>
-  <div class="product-tools"><span class="shared-badge"><span class="material-symbols-outlined">database</span> Tenant-scoped catalogue</span><button type="button" (click)="load()"><span class="material-symbols-outlined">sync</span>Sync</button></div>
+  <div class="product-tools"><span class="shared-badge"><span class="material-symbols-outlined">database</span> Tenant-scoped catalogue</span><button type="button" [disabled]="loading() || saving() || stockSaving()" (click)="cancelStock();load()"><span class="material-symbols-outlined">sync</span>Sync</button></div>
 </section>
 
-@if (notice()) { <div class="toast"><span class="material-symbols-outlined">info</span>{{ notice() }}</div> }
+@if (notice()) { <div class="toast" role="status" aria-live="polite"><span class="material-symbols-outlined">info</span>{{ notice() }}</div> }
 
 <section class="metric-grid four-metrics product-metrics">
   <article class="metric"><span class="metric-icon brown"><span class="material-symbols-outlined">database</span></span><div><small>Global Products</small><h2>{{ globalProducts().length }}</h2><p>shared master definitions</p></div></article>
@@ -17,56 +17,92 @@
 } @else {
   <section class="split-catalogue">
     <article class="panel table-panel catalogue-card">
-      <div class="panel-title"><div><h2>Global Product Master</h2><p>Create once and map across outlets.</p></div><div class="mapping-actions"><span class="shared-badge">Shared across tenants</span>@if(session.isSuperAdmin()){<button class="button green" type="button" (click)="addGlobalProduct()"><span class="material-symbols-outlined">add</span>Add Global</button>}</div></div>
-      <input class="catalogue-search" placeholder="Search name, code or category..." [value]="masterSearch()" (input)="masterSearch.set($any($event.target).value)" />
+      <div class="panel-title"><div class="panel-heading"><span class="material-symbols-outlined">database</span><div><h2>Global Product Master</h2><p>Read-only shared definitions. Only Super Admin can create or edit.</p></div></div><div class="mapping-actions"><span class="shared-badge">Shared across tenants</span>@if(session.isSuperAdmin()){<button class="button green" type="button" (click)="addGlobalProduct()"><span class="material-symbols-outlined">add</span>Add Global</button>}</div></div>
+      <div class="catalogue-toolbar-line"><label><span class="material-symbols-outlined">search</span><input class="catalogue-search" placeholder="Search name, code or category..." [value]="masterSearch()" (input)="filterCatalogue('master','search',$any($event.target).value)" aria-label="Search global products" /></label><details #masterPicker class="category-picker" (keydown.escape)="masterPicker.open=false" (focusout)="!masterPicker.contains($any($event.relatedTarget)) && (masterPicker.open=false)">
+        <summary aria-label="Global product category"><span class="material-symbols-outlined">filter_alt</span><span>{{masterCategory()==='ALL'?'All Categories':masterCategory()}}</span><span class="material-symbols-outlined">expand_more</span></summary>
+        <div class="category-options" role="group" aria-label="Global category choices"><button type="button" [class.selected]="masterCategory()==='ALL'" [attr.aria-pressed]="masterCategory()==='ALL'" (click)="filterCatalogue('master','category','ALL');masterPicker.open=false">All Categories</button>@for(category of masterCategories();track category){<button type="button" [class.selected]="masterCategory()===category" [attr.aria-pressed]="masterCategory()===category" (click)="filterCatalogue('master','category',category);masterPicker.open=false">{{category}}</button>}</div>
+      </details></div>
       <div class="table-scroll lazy-table"><table>
         <thead><tr><th>Product</th><th>Category</th><th>GST</th><th>Unit</th><th>Status</th><th>Action</th></tr></thead>
         <tbody>
-          @for (product of visibleMasters(); track product.id) {
+          @for (product of masterRows(); track product.id) {
             <tr>
               <td><span class="product-cell"><img class="product-thumb" [src]="asset(product.image_path)" [alt]="product.name" /><span><b>{{ product.name }}</b><small>{{ product.code }}</small></span></span></td>
               <td>{{ product.category_name }}</td><td>{{ product.default_gst }}%</td><td>{{ product.base_unit }}</td>
               <td><span class="stock-pill" [class.out]="product.status !== 'ACTIVE'">{{ product.status === 'ACTIVE' ? 'Shared' : 'Inactive' }}</span></td>
-              <td><button class="icon-button" type="button"  [title]="mappedIds().has(product.id) ? 'Edit outlet mapping' : 'Map to outlet'" (click)="mapProduct(product, productDialog)"><span class="material-symbols-outlined">{{ mappedIds().has(product.id) ? 'edit' : 'add_link' }}</span></button></td>
+              <td>
+                <span class="master-row-actions">
+                  <button class="icon-button" type="button" title="View global product" aria-label="View global product" (click)="viewMaster(product, masterDialog)"><span class="material-symbols-outlined">visibility</span></button>
+                  @if(session.isAdmin() && !session.isSuperAdmin() && !mappedIds().has(product.id)){
+                    <button class="icon-button map-icon-button" type="button" [disabled]="saving()" title="Map to outlet" [attr.aria-label]="'Map ' + product.name + ' to outlet'" (click)="mapProduct(product, productDialog)"><span class="material-symbols-outlined">add_circle</span></button>
+                  }
+                </span>
+              </td>
             </tr>
           } @empty { <tr><td colspan="6"><div class="live-state">No matching global products.</div></td></tr> }
         </tbody>
       </table></div>
+      <footer class="catalogue-pagination"><span>Showing {{pageStart(masterPage(),visibleMasters().length)}}–{{pageEnd(masterPage(),visibleMasters().length)}} of {{visibleMasters().length}} products</span><nav aria-label="Global products pages"><button type="button" aria-label="Previous global products page" [disabled]="masterPage()===0" (click)="changeCataloguePage('master',-1)"><span class="material-symbols-outlined">chevron_left</span></button><span class="page-number">{{masterPage()+1}} / {{pageCount(visibleMasters().length)}}</span><button type="button" aria-label="Next global products page" [disabled]="masterPage()+1>=pageCount(visibleMasters().length)" (click)="changeCataloguePage('master',1)"><span class="material-symbols-outlined">chevron_right</span></button></nav></footer>
     </article>
 
     <article class="panel table-panel catalogue-card">
-      <div class="panel-title"><div><h2>Outlet Catalogue Mapping</h2><p>{{ session.context()?.outlet_name ?? 'Current outlet' }} pricing and availability.</p></div><span class="shared-badge">Current outlet</span></div>
-      <input class="catalogue-search" placeholder="Search mapped products..." [value]="mappingSearch()" (input)="mappingSearch.set($any($event.target).value)" />
+      <div class="panel-title"><div class="panel-heading"><span class="material-symbols-outlined">hub</span><div><h2>Outlet Catalogue Mapping</h2><p>{{ session.context()?.outlet_name ?? 'Current outlet' }} pricing and availability.</p></div></div><div class="mapping-actions"><span class="shared-badge">Current outlet</span>@if(session.isAdmin() && !session.isSuperAdmin()){<button class="button tenant-add" type="button" [disabled]="saving()" (click)="openTenantProduct(tenantProductDialog)"><span class="material-symbols-outlined">add</span>Add Tenant Item</button>}</div></div>
+      <div class="catalogue-toolbar-line"><label><span class="material-symbols-outlined">search</span><input class="catalogue-search" placeholder="Search mapped products..." [value]="mappingSearch()" (input)="filterCatalogue('mapping','search',$any($event.target).value)" aria-label="Search outlet products" /></label><details #mappingPicker class="category-picker" (keydown.escape)="mappingPicker.open=false" (focusout)="!mappingPicker.contains($any($event.relatedTarget)) && (mappingPicker.open=false)">
+        <summary aria-label="Outlet product category"><span class="material-symbols-outlined">filter_alt</span><span>{{mappingCategory()==='ALL'?'All Categories':mappingCategory()}}</span><span class="material-symbols-outlined">expand_more</span></summary>
+        <div class="category-options" role="group" aria-label="Outlet category choices"><button type="button" [class.selected]="mappingCategory()==='ALL'" [attr.aria-pressed]="mappingCategory()==='ALL'" (click)="filterCatalogue('mapping','category','ALL');mappingPicker.open=false">All Categories</button>@for(category of mappingCategories();track category){<button type="button" [class.selected]="mappingCategory()===category" [attr.aria-pressed]="mappingCategory()===category" (click)="filterCatalogue('mapping','category',category);mappingPicker.open=false">{{category}}</button>}</div>
+      </details></div>
+
       <div class="table-scroll lazy-table"><table>
         <thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Fav</th><th>KOT</th><th>Available</th><th>Actions</th></tr></thead>
         <tbody>
-          @for (product of visibleMappings(); track product.id) {
+          @for (product of mappingRows(); track product.id) {
             <tr>
               <td><span class="product-cell"><img class="product-thumb" [src]="asset(product.image_path)" [alt]="product.name" /><span><b>{{ product.name }}</b><small>{{ product.code }} · {{ product.category_name }}</small></span></span></td>
-              <td><button type="button" title="Edit outlet price" (click)="editMapping(product, productDialog)">{{ money(product.selling_price) }}</button></td>
-              <td><b>{{ product.stock_quantity }} {{ product.base_unit }}</b></td>
-              <td><button class="toggle-button" [class.on]="product.favourite" type="button" (click)="toggleMapping(product, 'favourite')"></button></td>
-              <td><button class="toggle-button" [class.on]="product.kot_required" type="button" (click)="toggleMapping(product, 'kot_required')"></button></td>
-              <td><button class="toggle-button" [class.on]="product.is_available && product.is_active" type="button" (click)="toggleMapping(product, product.is_active ? 'is_available' : 'is_active')"></button></td>
-              <td><span class="mapping-actions"><button class="icon-button" type="button" title="Edit product" (click)="editMapping(product, productDialog)"><span class="material-symbols-outlined">edit</span></button><button class="icon-button danger" type="button" title="Unmap product" (click)="unmap(product)"><span class="material-symbols-outlined">link_off</span></button></span></td>
+              <td><button class="price-value" type="button" [disabled]="saving() || stockSaving()" title="Edit outlet price" (click)="editMapping(product, productDialog)">{{ money(product.selling_price) }}</button></td>
+              <td class="stock-cell">
+                @if(stockEditor()?.id===product.id){
+                  <form class="stock-edit" (submit)="$event.preventDefault();saveStock()">
+                    <input type="number" min="0" step="0.001" required [attr.aria-label]="'Stock for '+product.name" [value]="stockEditor()?.value" (input)="stockValue($any($event.target).value)" [disabled]="stockSaving()" (keydown.escape)="cancelStock()" />
+                    <span class="stock-edit-actions"><button type="submit" class="icon-button" [disabled]="stockSaving()" aria-label="Save stock"><span class="material-symbols-outlined">{{stockSaving()?'hourglass_top':'check'}}</span></button><button type="button" class="icon-button" [disabled]="stockSaving()" (click)="cancelStock()" aria-label="Cancel stock edit"><span class="material-symbols-outlined">close</span></button></span>
+                  </form>
+                } @else {
+                  <button class="stock-value" [class.out]="+product.stock_quantity <= 0" [class.low]="+product.stock_quantity > 0 && +product.stock_quantity <= +product.low_stock_limit" type="button" [disabled]="stockSaving() || saving()" (click)="editStock(product)" [attr.aria-label]="'Edit stock for '+product.name" title="Edit outlet stock"><b>{{ product.stock_quantity }}</b><small>{{ product.base_unit }}</small><span class="material-symbols-outlined">edit</span></button>
+                }
+              </td>
+              <td><button role="switch" [disabled]="!!mappingBusy() || saving() || stockSaving()" class="toggle-button" [class.on]="product.favourite" [attr.aria-checked]="product.favourite" [attr.aria-label]="product.name + ' favourite'" type="button" (click)="toggleMapping(product, 'favourite')"></button></td>
+              <td><button role="switch" [disabled]="!!mappingBusy() || saving() || stockSaving()" class="toggle-button" [class.on]="product.kot_required" [attr.aria-checked]="product.kot_required" [attr.aria-label]="product.name + ' KOT'" type="button" (click)="toggleMapping(product, 'kot_required')"></button></td>
+              <td><button role="switch" [disabled]="!!mappingBusy() || saving() || stockSaving()" class="toggle-button" [class.on]="product.is_available && product.is_active" [attr.aria-checked]="product.is_available && product.is_active" [attr.aria-label]="product.name + ' available'" type="button" (click)="toggleMapping(product, product.is_active ? 'is_available' : 'is_active')"></button></td>
+              <td><span class="mapping-actions"><button class="icon-button" type="button" [disabled]="saving() || stockSaving()" title="Edit outlet mapping" (click)="editMapping(product, productDialog)"><span class="material-symbols-outlined">edit</span></button><button class="icon-button danger" type="button" [disabled]="saving() || stockSaving()" title="Unmap product" (click)="unmap(product)"><span class="material-symbols-outlined">link_off</span></button></span></td>
             </tr>
           } @empty { <tr><td colspan="7"><div class="live-state">No products are mapped to this outlet.</div></td></tr> }
         </tbody>
       </table></div>
+      @if(stockError()){<p class="stock-error" role="alert">{{stockError()}}</p>}
+      <footer class="catalogue-pagination"><span>Showing {{pageStart(mappingPage(),visibleMappings().length)}}–{{pageEnd(mappingPage(),visibleMappings().length)}} of {{visibleMappings().length}} products</span><nav aria-label="Outlet products pages"><button type="button" aria-label="Previous outlet products page" [disabled]="mappingPage()===0" (click)="changeCataloguePage('mapping',-1)"><span class="material-symbols-outlined">chevron_left</span></button><span class="page-number">{{mappingPage()+1}} / {{pageCount(visibleMappings().length)}}</span><button type="button" aria-label="Next outlet products page" [disabled]="mappingPage()+1>=pageCount(visibleMappings().length)" (click)="changeCataloguePage('mapping',1)"><span class="material-symbols-outlined">chevron_right</span></button></nav></footer>
     </article>
   </section>
 }
 
-<dialog #productDialog class="product-dialog">
+<dialog #productDialog class="product-dialog" (cancel)="saving() ? $event.preventDefault() : null">
 <form class="product-form" (submit)="$event.preventDefault();saveMapping(productDialog)">
   <div class="panel-title"><div><h2>{{mappingTarget()?.mappingId?'Edit Outlet Mapping':'Map Product to Outlet'}}</h2><p>{{draft().name}} · {{draft().code}}</p></div><button type="button" aria-label="Close" [disabled]="saving()" (click)="productDialog.close()">×</button></div>
   <p class="mapping-explanation">Price and availability apply only to {{session.context()?.outlet_name??'this outlet'}}. Shared product details are managed by the platform administrator.</p>
   <div class="form-grid">
     <label>Selling Price (₹) *<input type="number" min="0" step="0.01" required [value]="draft().sellingPrice" (input)="patch('sellingPrice',$any($event.target).value)" /></label>
     <label>Low Stock Limit ({{draft().unit}})<input type="number" min="0" step="0.001" required [value]="draft().lowStockLimit" (input)="patch('lowStockLimit',$any($event.target).value)" /></label>
-    @if(!mappingTarget()?.mappingId){<label>Opening Stock ({{draft().unit}})<input type="number" min="0" step="0.001" required [value]="draft().stockQuantity" (input)="patch('stockQuantity',$any($event.target).value)" /></label>}
-    @else{<p class="mapping-explanation">Current stock: {{draft().stockQuantity}} {{draft().unit}}. Use Inventory to record stock adjustments.</p>}
+    <label>{{mappingTarget()?.mappingId?'Current Stock':'Opening Stock'}} ({{draft().unit}})<input type="number" min="0" step="0.001" required [disabled]="saving()" [value]="draft().stockQuantity" (input)="patch('stockQuantity',$any($event.target).value)" /></label>
+    <p class="mapping-explanation">Stock changes are saved to this outlet's product inventory and recorded as corrections. Ingredient stock is managed separately.</p>
   </div>
+  <section class="gst-settings" aria-label="Outlet GST settings">
+    <label class="gst-toggle"><input type="checkbox" [checked]="mappingGstEnabled()" [disabled]="saving()" (change)="mappingGstEnabled.set($any($event.target).checked)" />Enable GST for this outlet product</label>
+    @if(mappingGstEnabled()){
+      <label class="gst-toggle"><input type="checkbox" [checked]="mappingGstDefault()" [disabled]="saving()" (change)="mappingGstDefault.set($any($event.target).checked)" />Use shared master GST rate</label>
+      @if(!mappingGstDefault()){
+        <label>Custom GST (%)<input type="number" min="0" max="100" step="0.01" required [disabled]="saving()" [value]="draft().gstPercent" (input)="patch('gstPercent',$any($event.target).value)" /></label>
+      }
+    }
+    <p>{{mappingGstEnabled() ? 'GST is added to the selling price. This setting applies only to this outlet product.' : 'GST disabled: new bills for this outlet product will use 0% GST.'}} Existing completed bills are unchanged.</p>
+  </section>
   <div class="checks">
     <label><input type="checkbox" [checked]="draft().favourite" (change)="patch('favourite',$any($event.target).checked)" />Favourite</label>
     <label><input type="checkbox" [checked]="draft().kotRequired" (change)="patch('kotRequired',$any($event.target).checked)" />KOT required</label>
@@ -76,4 +112,46 @@
   @if(mappingError()){<p class="form-error" role="alert">{{mappingError()}}</p>}
   <div class="dialog-actions"><button type="button" [disabled]="saving()" (click)="productDialog.close()">Cancel</button><button class="primary-action" type="submit" [disabled]="saving()">{{saving()?'Saving…':'Save Mapping'}}</button></div>
 </form>
+</dialog>
+<dialog #tenantProductDialog class="product-dialog tenant-product-dialog" (cancel)="saving() ? $event.preventDefault() : null">
+  <form class="product-form" (submit)="$event.preventDefault();saveTenantProduct(tenantProductDialog)">
+    <div class="panel-title"><div><h2>Add Tenant Catalogue Item</h2><p>Creates a product only for this tenant and maps it to {{session.context()?.outlet_name ?? 'the current outlet'}}.</p></div><button type="button" aria-label="Close" [disabled]="saving()" (click)="tenantProductDialog.close()">×</button></div>
+    <div class="form-grid tenant-product-grid">
+      <label>Category *<select required [value]="draft().categoryId" (change)="patch('categoryId',$any($event.target).value)"><option value="">Select category</option>@for(category of categories();track category.id){<option [value]="category.id">{{category.name}}</option>}</select></label>
+      <label>Product Code *<input required maxlength="80" placeholder="e.g. HOUSE_SPECIAL" [value]="draft().code" (input)="patch('code',$any($event.target).value)" /></label>
+      <label>Product Name *<input required maxlength="180" placeholder="Enter product name" [value]="draft().name" (input)="patch('name',$any($event.target).value)" /></label>
+      <label>Selling Price (₹) *<input type="number" min="0" step="0.01" required [value]="draft().sellingPrice" (input)="patch('sellingPrice',$any($event.target).value)" /></label>
+      <label>Purchase Price (₹) *<input type="number" min="0" step="0.01" required [value]="draft().purchasePrice" (input)="patch('purchasePrice',$any($event.target).value)" /></label>
+      <label>GST (%) *<input type="number" min="0" max="100" step="0.01" required [value]="draft().gstPercent" (input)="patch('gstPercent',$any($event.target).value)" /></label>
+      <label>Unit *<input required maxlength="24" placeholder="pcs" [value]="draft().unit" (input)="patch('unit',$any($event.target).value)" /></label>
+      <label>Opening Stock *<input type="number" min="0" step="0.001" required [value]="draft().stockQuantity" (input)="patch('stockQuantity',$any($event.target).value)" /></label>
+      <label>Low Stock Limit *<input type="number" min="0" step="0.001" required [value]="draft().lowStockLimit" (input)="patch('lowStockLimit',$any($event.target).value)" /></label>
+      <label class="span-two product-image-field">Product Image
+        <input class="product-file-input" type="file" accept="image/png,image/jpeg,image/webp" [disabled]="saving()" (change)="selectTenantProductImage($event)" />
+        <small>Choose PNG, JPG or WebP · maximum 5 MB · recommended 800 × 600 px.</small>
+        @if(tenantProductImageName()){<span class="selected-image-name"><span class="material-symbols-outlined">image</span>{{tenantProductImageName()}}</span>}
+      </label>
+    </div>
+    <div class="checks">
+      <label><input type="checkbox" [checked]="draft().favourite" (change)="patch('favourite',$any($event.target).checked)" />Favourite</label>
+      <label><input type="checkbox" [checked]="draft().kotRequired" (change)="patch('kotRequired',$any($event.target).checked)" />KOT required</label>
+      <label><input type="checkbox" [checked]="draft().available" (change)="patch('available',$any($event.target).checked)" />Available</label>
+      <label><input type="checkbox" [checked]="draft().active" (change)="patch('active',$any($event.target).checked)" />Active</label>
+    </div>
+    <p class="mapping-explanation">This item is stored under the signed-in tenant and current outlet. It is not added to Global Product Master.</p>
+    @if(localProductError()){<p class="form-error" role="alert">{{localProductError()}}</p>}
+    <div class="dialog-actions"><button type="button" [disabled]="saving()" (click)="tenantProductDialog.close()">Cancel</button><button class="primary-action" type="submit" [disabled]="saving()">{{saving()?'Uploading & saving…':'Add to Catalogue'}}</button></div>
+  </form>
+</dialog>
+<dialog #masterDialog class="product-dialog">
+  @if(viewedMaster();as product){
+    <section class="product-form">
+      <div class="panel-title"><h2>Product Details</h2><button type="button" aria-label="Close product details" (click)="masterDialog.close()">×</button></div>
+      <div class="product-cell"><img class="product-thumb" [src]="asset(product.image_path)" [alt]="product.name" /><span><b>{{product.name}}</b><small>{{product.code}}</small></span></div>
+      <dl class="master-details"><dt>Category</dt><dd>{{product.category_name}}</dd><dt>Base unit</dt><dd>{{product.base_unit}}</dd><dt>Default GST</dt><dd>{{product.default_gst}}%</dd><dt>Status</dt><dd>{{product.status}}</dd></dl>
+      <p>{{product.description || 'No description available.'}}</p>
+      <p class="mapping-explanation">Shared master details are read-only here. Super Admin manages them in Administration → Shared Product Master.</p>
+      <div class="dialog-actions"><button type="button" (click)="masterDialog.close()">Close</button></div>
+    </section>
+  }
 </dialog>

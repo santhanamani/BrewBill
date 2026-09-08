@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, HostListener, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationCancel, NavigationEnd, NavigationError, NavigationStart, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { SessionService } from '../../core/session.service';
@@ -68,11 +68,38 @@ export class ShellComponent {
     return 'Cashier';
   }
 
+  brandLabel(): string {
+    if (this.session.isSuperAdmin() || this.isActive('/products')) {
+      return this.session.context()?.branding?.display_name ?? 'Brew Haven – RS Puram';
+    }
+    return 'BREW HAVEN';
+  }
+
   asset(path: string): string {
     return this.runtime.assetUrl(path);
   }
 
   logoAsset(): string {
     return this.asset(this.session.context()?.branding.logo_url ?? 'brand/logo.svg');
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onFunctionKey(event: KeyboardEvent): void {
+    if (this.session.isSuperAdmin() || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const routes: Record<string, string> = {
+      F1: '/dashboard',
+      F2: '/pos',
+      F3: '/operations/holds',
+      F4: '/management/purchases',
+      F5: '/products',
+      F6: '/operations/inventory',
+      F7: '/management/expenses',
+      F8: '/operations/reports',
+      F9: '/management/settings',
+    };
+    const route = routes[event.key];
+    if (!route || (!this.session.isAdmin() && ['F4', 'F5', 'F6', 'F7', 'F9'].includes(event.key))) return;
+    event.preventDefault();
+    void this.openPage(route);
   }
 }

@@ -3,32 +3,18 @@
 }
 <section class="pos-layout" [class.bill-focus-mode]="billExpanded()">
   <div class="catalog">
+    <div class="catalog-search">
+      <label class="search"
+        ><span class="material-symbols-outlined">search</span
+        ><input
+          placeholder="Search live products (name, code, category…)"
+          [value]="search()"
+          (input)="search.set($any($event.target).value)"
+      /><kbd>Ctrl + K</kbd></label>
+      <button class="favourites-filter" type="button" [class.active]="favouritesOnly()" [attr.aria-pressed]="favouritesOnly()" (click)="favouritesOnly.set(!favouritesOnly())"><span class="material-symbols-outlined">favorite</span>Favourites</button>
+    </div>
     <div class="pos-controls">
-      <div class="order-mode-bar" role="group" aria-label="Billing method">
-        <button [class.active]="orderType() === 'DIRECT'" (click)="orderType.set('DIRECT')">
-          <span class="material-symbols-outlined">receipt_long</span><b>Direct Bill</b
-          ><small>No KOT</small>
-        </button>
-        <button [class.active]="orderType() === 'KOT'" (click)="orderType.set('KOT')">
-          <span class="material-symbols-outlined">skillet</span><b>Dine-in / KOT</b
-          ><small>Kitchen flow</small>
-        </button>
-        <button [class.active]="orderType() === 'TAKEAWAY'" (click)="orderType.set('TAKEAWAY')">
-          <span class="material-symbols-outlined">takeout_dining</span><b>Takeaway</b
-          ><small>Parcel order</small>
-        </button>
-        @if (orderType() !== 'DIRECT') {
-          <label class="service-reference">
-            <span class="material-symbols-outlined">tag</span>
-            <input
-              [placeholder]="orderType() === 'KOT' ? 'Table / token no.' : 'Takeaway token no.'"
-              [value]="serviceReference()"
-              (input)="serviceReference.set($any($event.target).value)"
-            />
-          </label>
-        }
-      </div>
-      <div class="category-strip">
+      <div class="category-row"><div class="category-strip" #categoryStrip>
         <button
           class="category-card"
           [class.active]="activeCategoryId() === null"
@@ -48,19 +34,24 @@
           </button>
         }
       </div>
+      <button class="category-next" type="button" aria-label="More categories" (click)="categoryStrip.scrollBy({left: 300, behavior: 'smooth'})"><span class="material-symbols-outlined">chevron_right</span></button></div>
     </div>
     <div class="catalog-toolbar">
-      <h1>
-        Quick Order <small>{{ filteredProducts().length }} items</small>
-      </h1>
-      <button class="favourites-filter" type="button" [class.active]="favouritesOnly()" [attr.aria-pressed]="favouritesOnly()" (click)="favouritesOnly.set(!favouritesOnly())"><span class="material-symbols-outlined">favorite</span>Favourites</button>
-      <label class="search"
-        ><span class="material-symbols-outlined">search</span
-        ><input
-          placeholder="Search live products…"
-          [value]="search()"
-          (input)="search.set($any($event.target).value)"
-      /></label>
+      <h1>Products <small>{{ filteredProducts().length }} items</small></h1>
+      <div class="order-mode-bar" role="group" aria-label="Billing method">
+        <button [class.active]="orderType() === 'DIRECT'" [attr.aria-pressed]="orderType() === 'DIRECT'" (click)="orderType.set('DIRECT')">
+          <span class="material-symbols-outlined">receipt_long</span><b>Direct Bill</b
+          ><small>No KOT</small>
+        </button>
+        <button [class.active]="orderType() === 'KOT'" [attr.aria-pressed]="orderType() === 'KOT'" (click)="orderType.set('KOT')">
+          <span class="material-symbols-outlined">skillet</span><b>Dine-in / KOT</b
+          ><small>Kitchen flow</small>
+        </button>
+        <button [class.active]="orderType() === 'TAKEAWAY'" [attr.aria-pressed]="orderType() === 'TAKEAWAY'" (click)="orderType.set('TAKEAWAY')">
+          <span class="material-symbols-outlined">takeout_dining</span><b>Takeaway</b
+          ><small>Parcel order</small>
+        </button>
+      </div>
     </div>
     @if (loading()) {
       <div class="live-state">Loading products from BrewBill Cloud…</div>
@@ -80,18 +71,16 @@
             [class.unavailable]="!product.is_available || price(product.stock_quantity) <= 0"
             (click)="add(product)"
           >
-            <div
-              class="product-photo"
-              [style.background-image]="'url(' + asset(product.image_path) + ')'"
-            ></div>
+            <img class="product-photo" [src]="asset(product.image_path)" [alt]="product.name" />
             <div class="product-copy">
-              <b>{{ product.name }}</b
+              <b [title]="product.name">{{ product.name }}</b
               ><strong>{{ money(price(product.selling_price)) }}</strong
               ><small>{{
                 product.is_available && price(product.stock_quantity) > 0
                   ? 'In Stock'
                   : 'Out of Stock'
               }}</small>
+              <span class="product-add" aria-hidden="true"><span class="material-symbols-outlined">add</span></span>
             </div>
           </button>
           <button class="product-favourite" type="button" [class.active]="product.is_favourite" [attr.aria-pressed]="product.is_favourite" [attr.aria-label]="(product.is_favourite ? 'Remove ' : 'Add ') + product.name + (product.is_favourite ? ' from favourites' : ' to favourites')" [title]="product.is_favourite ? 'Remove from favourites' : 'Add to favourites'" [disabled]="savingFavourites().has(product.id)" (click)="toggleFavourite(product)"><span class="material-symbols-outlined">favorite</span></button>
@@ -102,15 +91,8 @@
   </div>
   <aside class="bill-panel" [class.expanded]="billExpanded()">
     <div class="bill-head">
-      <h2>Current Bill</h2>
+      <h2>Current Order</h2>
       <div class="bill-head-actions">
-        <span>{{
-          orderType() === 'DIRECT'
-            ? 'Direct Bill'
-            : orderType() === 'KOT'
-              ? 'Dine-in KOT'
-              : 'Takeaway'
-        }}</span>
         <button
           class="bill-expand"
           type="button"
@@ -125,7 +107,7 @@
       </div>
     </div>
     <div class="bill-columns">
-      <span>Item (Variant)</span><span>Qty</span><span>Rate</span><span>Amount</span>
+      <span>Item</span><span>Qty</span><span>Rate</span><span>Amount</span>
     </div>
     <div class="cart-lines">
       @for (line of cart(); track line.cart_key) {
@@ -137,17 +119,17 @@
             >
           </div>
           <div class="qty">
-            <button (click)="changeQuantity(line.cart_key, -1)">−</button><b>{{ line.quantity }}</b
-            ><button (click)="changeQuantity(line.cart_key, 1)">+</button>
+            <button [attr.aria-label]="'Decrease quantity of ' + line.name" (click)="changeQuantity(line.cart_key, -1)">−</button><b>{{ line.quantity }}</b
+            ><button [attr.aria-label]="'Increase quantity of ' + line.name" (click)="changeQuantity(line.cart_key, 1)">+</button>
           </div>
           <span>{{ money(price(line.selling_price)) }}</span
           ><b>{{ money(price(line.selling_price) * line.quantity) }}</b
-          ><button class="icon-danger" (click)="changeQuantity(line.cart_key, -line.quantity)">
+          ><button class="icon-danger" [attr.aria-label]="'Remove ' + line.name" (click)="changeQuantity(line.cart_key, -line.quantity)">
             <span class="material-symbols-outlined">delete</span>
           </button>
         </div>
       } @empty {
-        <div class="empty-cart">Choose products from the live catalogue to start a bill.</div>
+        <div class="empty-cart"><span class="material-symbols-outlined">shopping_cart</span><p>Choose products from the catalogue<br />to start a bill.</p></div>
       }
     </div>
     <div class="totals">
@@ -179,7 +161,7 @@
       </div>
     </div>
     <div class="payment-grid">
-      <button class="cash" [disabled]="submitting()" (click)="pay('CASH')">
+      <button class="cash" [class.policy-blocked]="terminalRequired()" [title]="terminalRequired() ? 'Cash disabled: POS terminal payment required' : 'Record cash payment'" [disabled]="submitting()" (click)="pay('CASH')">
         <span class="material-symbols-outlined">payments</span>Cash<small>(F2)</small></button
       ><button class="upi" [disabled]="submitting()" (click)="pay('UPI')">
         <span class="material-symbols-outlined">qr_code</span>UPI<small>(F3)</small></button
@@ -189,15 +171,18 @@
         <span class="material-symbols-outlined">account_tree</span>Split<small>(F5)</small>
       </button>
     </div>
-    @if (paymentTerminal(); as terminal) {
-      <div class="terminal-status" [class.connected]="terminal.connected">
-        <span class="material-symbols-outlined">{{
-          terminal.connected ? 'point_of_sale' : 'cloud_off'
-        }}</span>
-        {{
-          terminal.connected ? terminal.provider + ' terminal connected' : 'Manual payment fallback'
-        }}
+    @if (terminalRequired()) {
+      <div class="terminal-status required" [class.connected]="paymentTerminal()?.connected">
+        <span class="material-symbols-outlined">{{ paymentTerminal()?.connected ? 'point_of_sale' : 'cloud_off' }}</span>
+        {{ paymentTerminal()?.connected ? (paymentTerminal()?.provider + ' terminal required & connected') : 'Terminal required · Cash/manual fallback blocked' }}
       </div>
+    } @else if (paymentTerminal(); as terminal) {
+      <div class="terminal-status" [class.connected]="terminal.connected">
+        <span class="material-symbols-outlined">{{ terminal.connected ? 'point_of_sale' : 'payments' }}</span>
+        {{ terminal.connected ? terminal.provider + ' terminal connected · Manual cash allowed' : 'Manual cash allowed' }}
+      </div>
+    } @else if (!paymentProcessingMode()) {
+      <div class="terminal-status required"><span class="material-symbols-outlined">sync</span>Loading tenant payment setting…</div>
     }
     <div class="bill-actions">
       <button class="hold" [disabled]="submitting() || !cart().length" (click)="holdBill()">

@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -71,6 +71,9 @@ class PlatformContextRead(BaseModel):
     branding: dict[str, str | None]
     subscription_status: str
     subscription_end: datetime
+    subscription_state: str
+    grace_ends_at: datetime | None
+    subscription_message: str
     plan_code: str
     max_terminals: int
     features: dict[str, Any]
@@ -86,6 +89,14 @@ class TenantResolveRead(BaseModel):
     cover_image_url: str | None
     primary_color: str
     tagline: str | None
+    plan_code: str | None
+    subscription_state: str
+    subscription_end: datetime | None
+    grace_ends_at: datetime | None
+    days_remaining: int | None
+    grace_days_remaining: int | None
+    login_allowed: bool
+    subscription_message: str
 
 
 class GlobalProductCreate(BaseModel):
@@ -133,6 +144,9 @@ class ProductFavouriteUpdate(BaseModel):
 
 
 class OutletProductMappingUpdate(BaseModel):
+    model_config = {'extra': 'forbid'}
+    stock_quantity: Decimal | None = Field(default=None, ge=0, max_digits=18, decimal_places=3)
+    expected_stock_quantity: Decimal | None = Field(default=None, ge=0, max_digits=18, decimal_places=3)
     selling_price: Decimal | None = Field(default=None, ge=0, max_digits=18, decimal_places=2)
     low_stock_limit: Decimal | None = Field(default=None, ge=0, max_digits=18, decimal_places=3)
     favourite: bool | None = None
@@ -145,8 +159,9 @@ class OutletProductMappingUpdate(BaseModel):
 
 
 class OutletProductMappingRead(BaseModel):
+    tax_override: Decimal | None = None
     id: str
-    global_product_id: str
+    global_product_id: str | None
     legacy_product_id: str
     code: str
     name: str
@@ -162,6 +177,7 @@ class OutletProductMappingRead(BaseModel):
     is_available: bool
     is_active: bool
     display_order: int
+    source: str = 'GLOBAL'
 
 
 class TenantBrandingUpdate(BaseModel):
@@ -191,6 +207,33 @@ class TenantAdminRead(BaseModel):
     phone: str | None = None
     email: str | None = None
     website: str | None = None
+    plan_code: str | None = None
+    plan_name: str | None = None
+    subscription_state: str = 'EXPIRED'
+    subscription_end: datetime | None = None
+    grace_ends_at: datetime | None = None
+    login_allowed: bool = False
+
+
+class TenantSubscriptionRead(BaseModel):
+    tenant_id: str
+    subscription_id: str | None
+    plan_code: str | None
+    plan_name: str | None
+    status: str
+    starts_at: datetime | None
+    ends_at: datetime | None
+    grace_ends_at: datetime | None
+    lifecycle_state: str
+    days_remaining: int | None
+    grace_days_remaining: int | None
+    login_allowed: bool
+    message: str
+
+
+class TenantSubscriptionUpdate(BaseModel):
+    ends_at: datetime
+    grace_ends_at: datetime
 
 
 class TenantCreate(BaseModel):
@@ -664,6 +707,14 @@ class TenantSettingRead(BaseModel):
 
 class TenantSettingUpdate(BaseModel):
     setting_value: str = Field(max_length=10000)
+
+
+class TenantPaymentPolicyRead(BaseModel):
+    payment_processing_mode: Literal['MANUAL_ALLOWED', 'TERMINAL_REQUIRED']
+
+
+class TenantPaymentPolicyUpdate(BaseModel):
+    payment_processing_mode: Literal['MANUAL_ALLOWED', 'TERMINAL_REQUIRED']
 
 
 class CategoryCreate(BaseModel):

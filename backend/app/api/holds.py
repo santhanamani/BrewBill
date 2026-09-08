@@ -106,7 +106,7 @@ def create_hold(
         if not is_active or not is_available:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'{product.name} is unavailable.')
         base_price = mapping.selling_price if mapping else product.selling_price
-        tax_percent = (mapping.tax_override if mapping.tax_override is not None else product.gst_percent) if mapping else product.gst_percent
+        tax_percent = (mapping.tax_override if mapping.tax_override is not None else (mapping.global_product.default_gst if mapping.global_product else product.gst_percent)) if mapping else product.gst_percent
         product_name = (mapping.outlet_specific_name or product.name) if mapping else product.name
         rate = money(base_price + (variant.price_adjustment if variant else Decimal('0.00')))
         line_total = money(rate * requested.quantity)

@@ -1,0 +1,92 @@
+/* Purchase Management only; the shared header and navigation are untouched. */
+:host([data-view='purchases']) { color:#342c25; background:#fcfaf6; }
+:host([data-view='purchases']) .view-head { margin-bottom:18px; gap:18px; }
+:host([data-view='purchases']) h1 { font-size:30px; font-weight:750; letter-spacing:-.6px; }
+:host([data-view='purchases']) .view-head p { font-size:14px; color:#81756c; }
+:host([data-view='purchases']) .metric-grid { gap:14px; margin-bottom:18px; }
+:host([data-view='purchases']) .metric, :host([data-view='purchases']) .panel { background:#fff; border:1px solid #e8dfd4; border-radius:14px; box-shadow:0 3px 12px #65412005; }
+:host([data-view='purchases']) .metric { min-height:104px; padding:16px 18px; gap:15px; }
+:host([data-view='purchases']) .metric-icon { width:56px; height:60px; border-radius:13px; }
+:host([data-view='purchases']) .metric-icon span { font-size:32px; }
+:host([data-view='purchases']) .metric h2 { font-size:27px; font-weight:750; margin:4px 0; }
+:host([data-view='purchases']) .metric small { font-size:12px; }
+:host([data-view='purchases']) .metric p { font-size:11px; color:#75826e; }
+:host([data-view='purchases']) .purchase-layout { gap:16px; align-items:stretch; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); }
+:host([data-view='purchases']) .panel { padding:18px; min-width:0; }
+:host([data-view='purchases']) .panel-title { padding:0; min-height:0; margin:0 0 18px; gap:12px; }
+:host([data-view='purchases']) .panel-heading { gap:11px; }
+:host([data-view='purchases']) .panel-heading > span { display:grid; place-items:center; width:42px; height:42px; flex-shrink:0; background:#f5efe7; color:#835733; border-radius:10px; font-size:27px; }
+:host([data-view='purchases']) .panel-heading h2 { font-size:21px; font-weight:750; letter-spacing:-.3px; }
+:host([data-view='purchases']) .panel-heading p { font-size:12px; color:#897d72; margin:4px 0 0; }
+:host([data-view='purchases']) .supplier-create { margin:0 0 15px; font-size:12px; color:#805733; }
+:host([data-view='purchases']) .supplier-create summary { cursor:pointer; padding:4px 0; font-weight:650; }
+:host([data-view='purchases']) .quick-create { margin-top:8px; gap:8px; }
+:host([data-view='purchases']) .form-grid { gap:14px 12px; }
+:host([data-view='purchases']) .form-grid label { font-size:12px; font-weight:600; color:#645345; gap:7px; min-width:0; }
+:host([data-view='purchases']) input, :host([data-view='purchases']) select { height:42px; min-height:42px; border:1px solid #e2d8cd; border-radius:8px; background:#fff; color:#382f27; padding:9px 11px; font-size:13px; box-shadow:none; }
+:host([data-view='purchases']) input::placeholder { color:#a0968c; font-weight:400; }
+:host([data-view='purchases']) .form-actions { display:flex; gap:10px; margin-top:2px; }
+:host([data-view='purchases']) .form-actions button { height:44px; min-height:44px; border-radius:9px; padding:0 22px; font-size:13px; font-weight:650; box-shadow:none; }
+:host([data-view='purchases']) .primary-action { background:#805733; border:1px solid #805733; flex:1; }
+:host([data-view='purchases']) .clear-purchase { background:#faf7f2; color:#785336; border:1px solid #cbb69f; flex:1; }
+:host([data-view='purchases']) button:disabled { opacity:.55; cursor:not-allowed; }
+:host([data-view='purchases']) .purchase-history-title { flex-wrap:wrap; }
+:host([data-view='purchases']) .purchase-history-title .panel-heading { flex:1 1 250px; }
+:host([data-view='purchases']) .purchase-history-title .search-box { width:auto; flex:1 1 210px; min-width:150px; }
+:host([data-view='purchases']) .purchase-filter { width:135px; }
+:host([data-view='purchases']) table { width:100%; border-collapse:collapse; font-size:12px; }
+:host([data-view='purchases']) th { background:#f7f3ee; color:#6d5744; padding:13px 10px; font-size:11px; font-weight:650; white-space:nowrap; }
+:host([data-view='purchases']) td { padding:13px 10px; border-bottom:1px solid #eee7de; }
+:host([data-view='purchases']) td:nth-child(5) { font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
+:host([data-view='purchases']) .status-pill { font-size:10px; padding:6px 9px; background:#e9f6ed; color:#258147; border-radius:8px; }
+:host([data-view='purchases']) .status-pill.pending { background:#fff3d8; color:#a26b09; }
+:host([data-view='purchases']) .status-pill.partial { background:#f3ebfa; color:#8856a5; }
+:host([data-view='purchases']) .reference-table-empty { min-height:230px; padding:30px 15px; border:1px dashed #e8dacc; background:#fdfbf8; border-radius:10px; gap:12px; }
+:host([data-view='purchases']) .reference-table-empty > span { width:62px; height:62px; display:grid; place-items:center; border-radius:50%; background:#f4eee6; color:#97724f; font-size:31px; }
+:host([data-view='purchases']) .reference-table-empty b { font-size:15px; font-weight:600; }
+:host([data-view='purchases']) .reference-table-empty small { font-size:12px; color:#8b7c70; }
+:host([data-view='purchases']) .reference-table-empty button { background:#f3ece2; color:#805733; border:1px solid #e7d9c8; border-radius:8px; min-height:40px; font-size:12px; }
+:host([data-view='purchases']) input:focus-visible, :host([data-view='purchases']) select:focus-visible, :host([data-view='purchases']) button:focus-visible { outline:2px solid #b48960; outline-offset:2px; }
+@media(min-width:1200px) {
+ :host([data-view='purchases']) { display:flex; flex-direction:column; height:calc(100dvh - 208px); min-height:0; }
+ :host([data-view='purchases']) > .view-head, :host([data-view='purchases']) > .metric-grid { flex-shrink:0; }
+ :host([data-view='purchases']) .purchase-layout { min-height:0; overflow:auto; }
+}
+@media(min-width:1200px) and (max-width:1599px) {
+ :host([data-view='purchases']) { height:calc(100dvh - 174px); }
+}
+@media(max-width:1000px) {
+ :host([data-view='purchases']) .purchase-layout { grid-template-columns:1fr; }
+}
+
+/* Compact desktop refinement: keep form actions and history visible without page scrolling. */
+:host([data-view='purchases']) .view-head { margin-bottom:10px; }
+:host([data-view='purchases']) .metric-grid { gap:12px; margin-bottom:10px; }
+:host([data-view='purchases']) .metric { min-height:88px; padding:11px 15px; gap:12px; }
+:host([data-view='purchases']) .metric-icon { width:48px; height:50px; }
+:host([data-view='purchases']) .metric h2 { font-size:24px; }
+:host([data-view='purchases']) .purchase-layout { gap:13px; }
+:host([data-view='purchases']) .panel { padding:13px 15px; }
+:host([data-view='purchases']) .panel-title { margin-bottom:9px; }
+:host([data-view='purchases']) .panel-heading > span { width:38px; height:38px; font-size:24px; }
+:host([data-view='purchases']) .panel-heading h2 { font-size:19px; }
+:host([data-view='purchases']) .supplier-create { margin-bottom:7px; }
+:host([data-view='purchases']) .form-grid { gap:8px 11px; }
+:host([data-view='purchases']) .form-grid label { gap:5px; }
+:host([data-view='purchases']) input, :host([data-view='purchases']) select { height:38px; min-height:38px; padding:7px 10px; }
+:host([data-view='purchases']) .form-actions button { height:40px; min-height:40px; }
+:host([data-view='purchases']) .purchase-filter { position:relative; width:154px; flex:0 0 154px; }
+:host([data-view='purchases']) .purchase-filter summary { list-style:none; height:38px; display:flex; align-items:center; gap:7px; padding:0 10px; border:1px solid #e2d8cd; border-radius:8px; background:#faf7f2; color:#65472f; cursor:pointer; font-size:12px; font-weight:600; }
+:host([data-view='purchases']) .purchase-filter summary::-webkit-details-marker { display:none; }
+:host([data-view='purchases']) .purchase-filter summary .material-symbols-outlined { font-size:18px; }
+:host([data-view='purchases']) .purchase-filter summary .chevron { margin-left:auto; transition:transform .18s ease; }
+:host([data-view='purchases']) .purchase-filter[open] summary .chevron { transform:rotate(180deg); }
+:host([data-view='purchases']) .purchase-filter-menu { position:absolute; z-index:30; top:43px; right:0; width:100%; display:grid; gap:3px; padding:6px; border:1px solid #e2d8cd; border-radius:9px; background:#fff; box-shadow:0 10px 24px #4c321b18; }
+:host([data-view='purchases']) .purchase-filter-menu button { height:33px; padding:0 10px; border:0; border-radius:6px; background:transparent; color:#514238; text-align:left; font-size:12px; }
+:host([data-view='purchases']) .purchase-filter-menu button:hover, :host([data-view='purchases']) .purchase-filter-menu button.selected { background:#f3e9dc; color:#744a28; font-weight:650; }
+@media(min-width:1200px) {
+ :host([data-view='purchases']) .purchase-layout { overflow:visible; }
+ :host([data-view='purchases']) .form-panel, :host([data-view='purchases']) .table-panel { min-height:0; }
+ :host([data-view='purchases']) .table-panel { display:flex; flex-direction:column; }
+ :host([data-view='purchases']) .table-panel .table-scroll { min-height:0; max-height:calc(100dvh - 430px); overflow:auto; }
+}

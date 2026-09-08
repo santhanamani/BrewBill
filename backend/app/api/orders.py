@@ -9,7 +9,7 @@ from .deps import current_user, require_role
 from .platform import active_subscription
 from ..database import get_session
 from ..inventory_service import adjust_stock
-from ..models import AuditLog, HeldOrder, KotHeader, KotItem, Order, OrderItem, Outlet, OutletProductMapping, Payment, PosTerminal, Product, ProductVariant, User
+from ..models import AuditLog, HeldOrder, KotHeader, KotItem, Order, OrderItem, Outlet, OutletProductMapping, Payment, PosTerminal, Product, ProductVariant, TenantSetting, User
 from ..schemas import OrderCreate, OrderListItemRead, OrderRead, OrderVoidRequest, SyncOrderCreate
 
 router = APIRouter(prefix='/api/orders', tags=['orders'])
@@ -88,8 +88,15 @@ def create_order(
         ).with_for_update())
         if held_order is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Held order is no longer available.')
-    terminal = session.scalar(select(PosTerminal).where(
-        PosTerminal.tenant_id == user.tenant_id,
+    payment_policy = session.get(TenantSetting, (user.tenant_id, 'payment_processing_mode'))
+    terminal_required = payment_policy is not None and payment_policy.setting_value == 'TERMINAL_REQUIRED'
+    if terminal_required and any(payment.capture_source != 'PAYMENT_TERMINAL' for payment in body.payments):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail='This cafe requires POS terminal-approved payments. Manual cash or fallback payments cannot be saved.',
+        )
+
+    terminal = session.scalar(select(PosTerminal).where(        PosTerminal.tenant_id == user.tenant_id,
         PosTerminal.terminal_code == body.terminal_code,
         PosTerminal.status == 'ACTIVE',
     ))
@@ -133,13 +140,13 @@ def create_order(
         variant = variant_by_id.get(requested.variant_id) if requested.variant_id else None
         if variant is not None and (variant.product_id != product.id or not variant.is_active):
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f'Invalid variant for {product.name}.')
-        is_active = (mapping.is_active and mapping.global_product.status == 'ACTIVE') if mapping else product.is_active
+        is_active = (mapping.is_active and (mapping.global_product is None or mapping.global_product.status == 'ACTIVE')) if mapping else product.is_active
         is_available = mapping.is_available if mapping else product.is_available
         if not is_active or not is_available:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'{product.name} is unavailable.')
         base_price = mapping.selling_price if mapping else product.selling_price
-        tax_percent = (mapping.tax_override if mapping.tax_override is not None else mapping.global_product.default_gst) if mapping else product.gst_percent
-        product_name = (mapping.outlet_specific_name or mapping.global_product.name) if mapping else product.name
+        tax_percent = (mapping.tax_override if mapping.tax_override is not None else (mapping.global_product.default_gst if mapping.global_product else product.gst_percent)) if mapping else product.gst_percent
+        product_name = (mapping.outlet_specific_name or (mapping.global_product.name if mapping.global_product else product.name)) if mapping else product.name
         kot_required_by_product[product.id] = mapping.kot_required if mapping else product.kot_required
         rate = money(base_price + (variant.price_adjustment if variant else Decimal('0.00')))
         if rate < 0:

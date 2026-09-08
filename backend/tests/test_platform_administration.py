@@ -1,7 +1,7 @@
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -13,6 +13,7 @@ from app.models import Role, SubscriptionPlan, Tenant, User
 
 def test_super_admin_can_create_tenant_outlet_and_tenant_user() -> None:
     engine = create_engine('sqlite+pysqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
+    event.listen(engine, 'connect', lambda connection, _: connection.execute('PRAGMA foreign_keys=ON'))
     sessions = sessionmaker(bind=engine, expire_on_commit=False)
     Base.metadata.create_all(engine)
     with sessions() as session:
@@ -43,6 +44,31 @@ def test_super_admin_can_create_tenant_outlet_and_tenant_user() -> None:
             tenant = tenant_response.json()
             assert tenant['code'] == 'BHV-CBE'
 
+            same_username_response = client.post('/api/platform/admin/tenants', json={
+                'code':'BHV-MDU','name':'Brew Haven Madurai','outlet_code':'MAIN',
+                'outlet_name':'Anna Nagar','outlet_address':'Madurai',
+                'admin_username':'admin','admin_password':'Temporary@123',
+                'admin_display_name':'Madurai Admin','plan_code':'PROFESSIONAL',
+            })
+            assert same_username_response.status_code == 201, same_username_response.text
+
+            duplicate_code = client.post('/api/platform/admin/tenants', json={
+                'code':'bhv-cbe','name':'A Different Café','outlet_code':'MAIN',
+                'outlet_name':'Main','outlet_address':None,
+                'admin_username':'different','admin_password':'Temporary@123',
+                'admin_display_name':'Different Admin','plan_code':'PROFESSIONAL',
+            })
+            assert duplicate_code.status_code == 409
+            assert duplicate_code.json()['detail'] == 'Tenant code "BHV-CBE" already exists.'
+
+            duplicate_name = client.post('/api/platform/admin/tenants', json={
+                'code':'OTHER','name':'brew haven coimbatore','outlet_code':'MAIN',
+                'outlet_name':'Main','outlet_address':None,
+                'admin_username':'different','admin_password':'Temporary@123',
+                'admin_display_name':'Different Admin','plan_code':'PROFESSIONAL',
+            })
+            assert duplicate_name.status_code == 409
+            assert duplicate_name.json()['detail'] == 'Café name "brew haven coimbatore" already exists.'
             outlets = client.get(f"/api/platform/admin/outlets?tenant_id={tenant['id']}").json()
             assert len(outlets) == 1
             user_response = client.post('/api/platform/admin/users', json={
@@ -53,6 +79,13 @@ def test_super_admin_can_create_tenant_outlet_and_tenant_user() -> None:
             assert user_response.status_code == 201, user_response.text
             user = user_response.json()
             assert user['tenant_name'] == 'Brew Haven Coimbatore'
+            duplicate_user = client.post('/api/platform/admin/users', json={
+                'tenant_id':tenant['id'],'outlet_id':outlets[0]['id'],'role_code':'CASHIER',
+                'username':'CASHIER2','display_name':'Duplicate Cashier','email':None,'phone':None,
+                'password':'Temporary@123',
+            })
+            assert duplicate_user.status_code == 409
+            assert duplicate_user.json()['detail'] == 'Username "CASHIER2" already exists for this tenant.'
             disabled = client.patch(f"/api/platform/admin/users/{user['id']}", json={'is_active':False})
             assert disabled.status_code == 200
             assert disabled.json()['is_active'] is False

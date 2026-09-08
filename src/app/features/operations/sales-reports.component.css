@@ -1,0 +1,68 @@
+/* Scoped to Sales Reports, not other Operations views. */
+:host([data-view='reports']) { display:block; color:#382d24; background:#fcfaf6; }
+:host([data-view='reports']) .view-head { margin-bottom:20px; align-items:center; }
+:host([data-view='reports']) .view-head h1 { font-size:30px; font-weight:750; letter-spacing:-.7px; }
+:host([data-view='reports']) .view-head p { font-size:14px; color:#897b6d; margin-top:5px; }
+:host([data-view='reports']) .title-with-icon > span { display:grid; place-items:center; width:58px; height:60px; border-radius:14px; color:#805735; background:#f2eade; font-size:33px; }
+:host([data-view='reports']) .view-head .search-box { display:none; }
+:host([data-view='reports']) .filter-row button { min-height:44px; padding:0 18px; background:#fff; border:1px solid #e4d9cb; border-radius:9px; color:#795437; font-weight:650; box-shadow:none; }
+:host([data-view='reports']) .metric-grid { gap:14px; margin-bottom:20px; }
+:host([data-view='reports']) .metric { min-width:0; min-height:106px; padding:16px; gap:15px; border:1px solid #e9e0d5; border-radius:13px; background:#fff; box-shadow:0 3px 12px #60402005; }
+:host([data-view='reports']) .metric-icon { width:56px; height:58px; border-radius:13px; flex-shrink:0; color:#805735; background:#f4eee5; }
+:host([data-view='reports']) .metric-icon.green { color:#258449; background:#eaf7ee; }
+:host([data-view='reports']) .metric small { color:#67584a; font-size:13px; }
+:host([data-view='reports']) .metric h2 { margin:5px 0; font-size:27px; font-weight:750; font-variant-numeric:tabular-nums; }
+:host([data-view='reports']) .metric p { font-size:11px; color:#718669; margin:0; }
+:host([data-view='reports']) .reports-table { padding:18px; border:1px solid #e7ded2; border-radius:14px; background:white; box-shadow:0 4px 16px #60402005; }
+:host([data-view='reports']) .report-list-title { display:flex; flex-wrap:wrap; gap:12px; align-items:center; padding:0; min-height:46px; margin-bottom:18px; }
+:host([data-view='reports']) .panel-heading { margin-right:auto; min-width:0; gap:10px; }
+:host([data-view='reports']) .panel-heading > span { color:#805735; background:#f4ece0; border-radius:9px; padding:8px; font-size:25px; }
+:host([data-view='reports']) .panel-heading h2 { margin:0; font-weight:750; font-size:22px; }
+:host([data-view='reports']) .panel-heading h2 small { font-size:13px; color:#8f7e6e; font-weight:400; }
+:host([data-view='reports']) .panel-heading p { color:#8f8174; font-size:12px; margin:4px 0 0; }
+:host([data-view='reports']) .report-list-title .search-box { min-width:190px; flex:1 1 230px; max-width:370px; height:42px; padding:0 12px; border:1px solid #e4d9cc; border-radius:9px; font-size:13px; }
+:host([data-view='reports']) .report-picker { position:relative; font-size:13px; }
+:host([data-view='reports']) .report-picker summary { display:flex; align-items:center; gap:8px; min-height:42px; padding:0 14px; box-sizing:border-box; list-style:none; cursor:pointer; background:#fffdf8; color:#795437; border:1px solid #deceb9; border-radius:9px; }
+:host([data-view='reports']) .report-picker summary::-webkit-details-marker { display:none; }
+:host([data-view='reports']) .report-picker summary > span { font-size:19px; }
+:host([data-view='reports']) .report-picker[open] { z-index:30; }
+:host([data-view='reports']) .report-picker[open] summary { background:#f4eadb; }
+:host([data-view='reports']) .report-filter-menu { position:absolute; top:calc(100% + 8px); right:0; width:225px; padding:14px; display:grid; gap:12px; border:1px solid #e1d2bf; border-radius:12px; background:#fffdfa; box-shadow:0 8px 24px #6040201c; }
+:host([data-view='reports']) .report-filter-menu label { display:grid; gap:6px; color:#856a51; font-size:12px; }
+:host([data-view='reports']) .report-filter-menu select { width:100%; min-height:36px; padding:7px; background:white; border:1px solid #e4d9cb; border-radius:7px; color:#584635; }
+:host([data-view='reports']) .report-filter-menu button { min-height:34px; border:1px solid #dcc8ad; border-radius:7px; background:#f4ebdd; color:#805735; }
+:host([data-view='reports']) .table-scroll { max-height:calc(100dvh - 425px); min-height:120px; overflow:auto; border-radius:9px; }
+:host([data-view='reports']) table { width:100%; border-collapse:collapse; }
+:host([data-view='reports']) th { position:sticky; top:0; z-index:1; padding:13px 10px; background:#f6f2ed; color:#6b5441; font-size:12px; font-weight:700; white-space:nowrap; }
+:host([data-view='reports']) td { height:58px; padding:12px 10px; border-bottom:1px solid #eee7de; color:#594b3e; font-size:13px; }
+:host([data-view='reports']) td:first-child { font-size:12px; font-weight:700; color:#382c22; overflow-wrap:anywhere; min-width:170px; }
+:host([data-view='reports']) td:nth-child(2) { min-width:145px; }
+:host([data-view='reports']) th:nth-child(4),:host([data-view='reports']) td:nth-child(4) { text-align:center; }
+:host([data-view='reports']) th:nth-child(6),:host([data-view='reports']) th:nth-child(7),:host([data-view='reports']) th:nth-child(8),:host([data-view='reports']) td:nth-child(6),:host([data-view='reports']) td:nth-child(7),:host([data-view='reports']) td:nth-child(8) { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+:host([data-view='reports']) td:nth-child(8) { color:#35291f; font-weight:750; }
+:host([data-view='reports']) .status-pill,:host([data-view='reports']) .payment-badge { display:inline-flex; align-items:center; gap:5px; padding:6px 9px; font-size:10px; font-weight:650; white-space:nowrap; border-radius:7px; background:#eaf6ec; color:#327a45; }
+:host([data-view='reports']) .status-pill::before { content:''; width:6px; height:6px; background:currentColor; border-radius:50%; }
+:host([data-view='reports']) .status-pill.pending { background:#fbeeee; color:#ad6262; }
+:host([data-view='reports']) .payment-badge[data-mode='UPI'] { background:#f2eafb; color:#8855a5; }
+:host([data-view='reports']) .payment-badge[data-mode='CARD'] { background:#eaf0fa; color:#5275a7; }
+:host([data-view='reports']) .report-actions { display:flex; gap:7px; flex-wrap:nowrap; }
+:host([data-view='reports']) .report-actions button { height:34px; min-height:34px; padding:0 11px; display:flex; align-items:center; justify-content:center; gap:5px; border-radius:7px; font-size:12px; font-weight:650; box-shadow:none; white-space:nowrap; }
+:host([data-view='reports']) .print-row { color:#347747; border:1px solid #b6d4bd; background:#f9fdf9; }
+:host([data-view='reports']) .report-actions .danger { color:#b46460; border:1px solid #e2bdb7; background:#fffafa; }
+:host([data-view='reports']) .report-actions .material-symbols-outlined { font-size:18px; }
+:host([data-view='reports']) .report-pagination { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding-top:14px; font-size:12px; color:#8a7b6c; }
+:host([data-view='reports']) .report-pagination nav { display:flex; align-items:center; gap:8px; }
+:host([data-view='reports']) .report-pagination button,:host([data-view='reports']) .report-pagination select { height:34px; min-width:34px; border:1px solid #e2d7c9; border-radius:7px; background:#fffdf9; color:#795437; }
+:host([data-view='reports']) .report-pagination nav > span { padding:8px 12px; border-radius:7px; color:white; background:#805735; }
+:host([data-view='reports']) button:disabled { opacity:.45; }
+:host([data-view='reports']) button:focus-visible,:host([data-view='reports']) input:focus-visible,:host([data-view='reports']) select:focus-visible,:host([data-view='reports']) summary:focus-visible { outline:2px solid #af895e; outline-offset:2px; }
+@media(max-width:900px) { :host([data-view='reports']) .metric-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } :host([data-view='reports']) .table-scroll { max-height:480px; } }
+
+@media(min-width:1200px) {
+  :host([data-view='reports']) { height:calc(100dvh - 208px); min-height:0; display:flex; flex-direction:column; }
+  :host([data-view='reports']) > .view-head,:host([data-view='reports']) > .metric-grid { flex-shrink:0; }
+  :host([data-view='reports']) .reports-table { display:flex; flex-direction:column; flex:0 1 auto; min-height:0; }
+  :host([data-view='reports']) .report-list-title,:host([data-view='reports']) .report-pagination { flex-shrink:0; }
+  :host([data-view='reports']) .table-scroll { min-height:0; max-height:none; flex:1 1 auto; }
+}
+@media(min-width:1200px) and (max-width:1599px) { :host([data-view='reports']) { height:calc(100dvh - 174px); } }

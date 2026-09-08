@@ -40,6 +40,10 @@ def test_shared_catalogue_and_outlet_inventory_are_isolated() -> None:
     app.dependency_overrides[current_user] = lambda: active_user['value']
     try:
         with TestClient(app) as client:
+            # Legacy creation can insert a global master and is now owner-only.
+            owner = User(id=str(uuid4()), tenant_id=tenant.id, outlet_id=outlet_a.id)
+            owner.role = Role(id=str(uuid4()), code='SUPER_ADMIN', name='Owner')
+            active_user['value'] = owner
             created = client.post('/api/products', json={
                 'code': 'SHARED_FILTER', 'name': 'Shared Filter Coffee',
                 'selling_price': '40.00', 'purchase_price': '18.00', 'gst_percent': '5.00',
@@ -52,6 +56,7 @@ def test_shared_catalogue_and_outlet_inventory_are_isolated() -> None:
             assert created.json()['shared_across_outlets'] is True
             assert created.json()['stock_quantity'] == '10.000'
 
+            active_user['value'] = user_a
             ingredient = client.post('/api/inventory/items', json={
                 'code': 'WHOLE_MILK', 'name': 'Milk (Whole)', 'category': 'Milk', 'unit': 'L',
                 'opening_quantity': '50.000', 'low_stock_limit': '10.000',

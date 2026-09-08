@@ -10,6 +10,7 @@ import { routes } from './app.routes';
 import { RuntimeConfigService } from './core/runtime-config.service';
 import { provideEchartsCore } from 'ngx-echarts';
 import { authInterceptor } from './core/auth.interceptor';
+import { SessionService } from './core/session.service';
 
 async function loadEcharts() {
   const [echarts, charts, components, renderers] = await Promise.all([
@@ -35,6 +36,10 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(withInterceptors([authInterceptor])),
     provideRouter(routes),
     provideEchartsCore({ echarts: loadEcharts }),
-    provideAppInitializer(() => inject(RuntimeConfigService).load()),
+    provideAppInitializer(() => {
+      const runtime=inject(RuntimeConfigService),session=inject(SessionService);
+      // Routing starts only after credentials and current tenant/outlet are verified.
+      return runtime.load().then(()=>session.restore());
+    }),
   ],
 };

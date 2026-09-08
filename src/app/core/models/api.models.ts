@@ -34,6 +34,8 @@ export interface CurrentUser {
   role_code: 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'ADMIN' | 'CASHIER';
 }
 
+export type SubscriptionState = 'ACTIVE' | 'EXPIRING_SOON' | 'GRACE' | 'EXPIRED' | 'NOT_STARTED';
+
 export interface TenantPreview {
   code: string;
   name: string;
@@ -44,6 +46,14 @@ export interface TenantPreview {
   cover_image_url: string | null;
   primary_color: string;
   tagline: string | null;
+  plan_code: string | null;
+  subscription_state: SubscriptionState;
+  subscription_end: string | null;
+  grace_ends_at: string | null;
+  days_remaining: number | null;
+  grace_days_remaining: number | null;
+  login_allowed: boolean;
+  subscription_message: string;
 }
 
 export interface PlatformContext {
@@ -64,6 +74,9 @@ export interface PlatformContext {
   };
   subscription_status: string;
   subscription_end: string;
+  subscription_state: SubscriptionState;
+  grace_ends_at: string | null;
+  subscription_message: string;
   plan_code: string;
   max_terminals: number;
   features: Record<string, unknown>;
@@ -82,8 +95,9 @@ export interface GlobalProduct {
 }
 
 export interface OutletProductMapping {
+  tax_override?: string | null;
   id: string;
-  global_product_id: string;
+  global_product_id: string | null;
   legacy_product_id: string;
   code: string;
   name: string;
@@ -99,6 +113,7 @@ export interface OutletProductMapping {
   is_available: boolean;
   is_active: boolean;
   display_order: number;
+  source: 'GLOBAL' | 'TENANT';
 }
 
 export interface TenantAdmin {
@@ -116,6 +131,28 @@ export interface TenantAdmin {
   phone: string | null;
   email: string | null;
   website: string | null;
+  plan_code: string | null;
+  plan_name: string | null;
+  subscription_state: SubscriptionState;
+  subscription_end: string | null;
+  grace_ends_at: string | null;
+  login_allowed: boolean;
+}
+
+export interface TenantSubscription {
+  tenant_id: string;
+  subscription_id: string | null;
+  plan_code: string | null;
+  plan_name: string | null;
+  status: string;
+  starts_at: string | null;
+  ends_at: string | null;
+  grace_ends_at: string | null;
+  lifecycle_state: SubscriptionState;
+  days_remaining: number | null;
+  grace_days_remaining: number | null;
+  login_allowed: boolean;
+  message: string;
 }
 
 export interface AdminOutlet {
@@ -413,6 +450,10 @@ export interface DailyClosing {
 export interface TenantSetting {
   setting_key: string;
   setting_value: string;
+}
+
+export interface TenantPaymentPolicy {
+  payment_processing_mode: 'MANUAL_ALLOWED' | 'TERMINAL_REQUIRED';
 }
 
 export interface LicenseEnvelope {

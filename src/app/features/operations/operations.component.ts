@@ -37,7 +37,7 @@ const labels: Record<string, { title: string; detail: string; icon: string }> = 
   },
 };
 
-@Component({ selector: 'app-operations', host: { '[attr.data-view]': 'key()' }, templateUrl: './operations.component.html' })
+@Component({ selector: 'app-operations', host: { '[attr.data-view]': 'key()' }, templateUrl: './operations.component.html', styleUrls: ['./held-orders.component.css', './sales-reports.component.css', './inventory.component.css'] })
 export class OperationsComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(BrewBillApiService);
@@ -50,6 +50,28 @@ export class OperationsComponent {
   readonly key = signal('inventory');
   readonly module = computed(() => labels[this.key()] ?? labels['inventory']);
   readonly holds = signal<HeldBill[]>([]);
+  readonly holdImages = signal<Record<string, string>>({});
+  private imageRequest = 0;
+
+  private async loadHoldImages(token: string): Promise<void> {
+    const request = ++this.imageRequest;
+    this.holdImages.set({});
+    try {
+      const products = await this.api.listProducts(token);
+      if (request !== this.imageRequest || this.key() !== 'holds') return;
+      this.holdImages.set(Object.fromEntries(products.map(product => [product.id, this.asset(product.image_path)])));
+    } catch { /* Optional thumbnails must never block held bills. */ }
+  }
+
+  holdImage(productId: string): string {
+    return this.holdImages()[productId] ?? this.asset(null);
+  }
+
+  holdImageError(event: Event): void {
+    const image = event.target as HTMLImageElement;
+    const fallback = this.asset(null);
+    if (image.getAttribute('src') !== fallback) image.setAttribute('src', fallback);
+  }
   readonly selectedHoldId = signal<string | null>(null);
   readonly selectedHold = computed(
     () => this.holds().find((row) => row.id === this.selectedHoldId()) ?? this.holds()[0] ?? null,
@@ -101,17 +123,25 @@ export class OperationsComponent {
   readonly adjusting = signal(false);
   readonly reportSearch = signal('');
   readonly reportLimit = signal(10);
-  readonly visibleOrders = computed(() => {
-    const query = this.reportSearch().trim().toLowerCase();
-    const rows = !query
-      ? this.orders()
-      : this.orders().filter((order) =>
-          [order.invoice_number, order.cashier_name, order.status, ...order.payment_modes].some(
-            (value) => value.toLowerCase().includes(query),
-          ),
-        );
-    return rows.slice(0, this.reportLimit());
+  readonly reportStatus = signal('');
+  readonly reportPayment = signal('');
+  readonly reportPage = signal(0);
+  readonly reportPageSize = signal(10);
+  readonly filteredOrders = computed(() => {
+    const query=this.reportSearch().trim().toLowerCase();
+    return this.orders().filter(order =>
+      (!query || [order.invoice_number,order.cashier_name,order.status,...order.payment_modes].some(value=>value.toLowerCase().includes(query))) &&
+      (!this.reportStatus() || order.status===this.reportStatus()) &&
+      (!this.reportPayment() || order.payment_modes.includes(this.reportPayment())));
   });
+  readonly reportPages = computed(()=>Math.max(1,Math.ceil(this.filteredOrders().length/this.reportPageSize())));
+  readonly currentReportPage = computed(()=>Math.min(this.reportPage(),this.reportPages()-1));
+  readonly visibleOrders = computed(()=>this.filteredOrders().slice(this.currentReportPage()*this.reportPageSize(),(this.currentReportPage()+1)*this.reportPageSize()));
+  filterReports(field:'status'|'payment',value:string):void {
+    (field==='status'?this.reportStatus:this.reportPayment).set(value);this.reportPage.set(0);
+  }
+  pageReports(delta:number):void { this.reportPage.set(Math.max(0,Math.min(this.currentReportPage()+delta,this.reportPages()-1))); }
+  sizeReports(value:string):void { const size=Number(value);if([10,25,50].includes(size)){this.reportPageSize.set(size);this.reportPage.set(0);} }
   readonly inventoryDialog = signal<'ADD' | 'EDIT' | null>(null);
   readonly inventoryForm = signal({
     id: '',
@@ -170,6 +200,7 @@ export class OperationsComponent {
     try {
       const token = this.requireToken();
       if (this.key() === 'holds') {
+        void this.loadHoldImages(token);
         const rows = await this.api.listHolds(token);
         this.holds.set(rows);
         if (!rows.some((row) => row.id === this.selectedHoldId()))
@@ -339,6 +370,7 @@ export class OperationsComponent {
     }
     if (this.key() === 'reports') {
       this.reportSearch.set(value);
+      this.reportPage.set(0);
       this.reportLimit.set(10);
     }
   }

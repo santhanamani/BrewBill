@@ -4,7 +4,7 @@ import { Component, HostListener, computed, inject, signal } from '@angular/core
 import { BrewBillApiService } from '../../core/brew-bill-api.service';
 import { CatalogService } from '../../core/catalog.service';
 import { HeldCartService } from '../../core/held-cart.service';
-import { CartLine, Category, Product, ProductVariant } from '../../core/models/api.models';
+import { CartLine, Category, Product, ProductVariant, TenantPaymentPolicy } from '../../core/models/api.models';
 import { RuntimeConfigService } from '../../core/runtime-config.service';
 import { SessionService } from '../../core/session.service';
 import { ReceiptPayload, ReceiptPrinterService } from '../../core/receipt-printer.service';
@@ -45,6 +45,8 @@ export class PosComponent {
     provider: string;
     message: string;
   } | null>(null);
+  readonly paymentProcessingMode = signal<TenantPaymentPolicy['payment_processing_mode'] | null>(null);
+  readonly terminalRequired = computed(() => this.paymentProcessingMode() === 'TERMINAL_REQUIRED');
   readonly showSplit = signal(false);
   readonly splitCash = signal('0.00');
   readonly splitUpi = signal('0.00');
@@ -89,8 +91,23 @@ export class PosComponent {
   }
 
   async loadPaymentTerminal(): Promise<void> {
-    if (!window.brewBill?.payment) return;
-    this.paymentTerminal.set(await window.brewBill.payment.status());
+    const token = this.session.accessToken();
+    if (token) {
+      try {
+        const policy = await this.api.getPaymentPolicy(token);
+        this.paymentProcessingMode.set(policy.payment_processing_mode);
+      } catch (error) {
+        this.paymentProcessingMode.set(null);
+        this.notify(this.errorMessage(error, 'Unable to load the tenant payment setting. Payments are temporarily blocked.'));
+      }
+    }
+    if (window.brewBill?.payment) {
+      try {
+        this.paymentTerminal.set(await window.brewBill.payment.status());
+      } catch {
+        this.paymentTerminal.set({ connected:false, provider:'UNAVAILABLE', message:'Payment terminal is unavailable.' });
+      }
+    }
   }
 
   async loadCatalog(): Promise<void> {
@@ -200,18 +217,34 @@ export class PosComponent {
   }
 
   async pay(mode: 'CASH' | 'UPI' | 'CARD'): Promise<void> {
+    if (!this.paymentProcessingMode()) {
+      this.notify('Payment settings are still loading. Please try again.');
+      return;
+    }
+    if (mode === 'CASH' && this.terminalRequired()) {
+      this.notify('Cash is disabled for this tenant. Use terminal-approved UPI or Card payment.');
+      return;
+    }
     await this.checkout([{ mode, amount: this.grandTotal() }], mode);
   }
 
   openSplit(): void {
     if (!this.cart().length) return;
-    this.splitCash.set(this.grandTotal().toFixed(2));
-    this.splitUpi.set('0.00');
+    if (!this.paymentProcessingMode()) {
+      this.notify('Payment settings are still loading. Please try again.');
+      return;
+    }
+    this.splitCash.set(this.terminalRequired() ? '0.00' : this.grandTotal().toFixed(2));
+    this.splitUpi.set(this.terminalRequired() ? this.grandTotal().toFixed(2) : '0.00');
     this.splitCard.set('0.00');
     this.showSplit.set(true);
   }
 
   async paySplit(): Promise<void> {
+    if (this.terminalRequired() && this.price(this.splitCash()) > 0) {
+      this.notify('Cash is not allowed when POS terminal payment is required.');
+      return;
+    }
     if (Math.abs(this.splitTotal() - this.grandTotal()) > 0.005) {
       this.notify('Split payment total must exactly match the grand total.');
       return;
@@ -315,7 +348,15 @@ export class PosComponent {
       amount: payment.amount.toFixed(2),
       capture_source: 'MANUAL' as const,
     };
-    if (payment.mode === 'CASH' || !window.brewBill?.payment) return manual;
+    const terminalRequired = this.terminalRequired();
+    if (payment.mode === 'CASH') {
+      if (terminalRequired) throw new Error('Cash is disabled for this tenant. Use terminal-approved UPI or Card payment.');
+      return manual;
+    }
+    if (!window.brewBill?.payment) {
+      if (terminalRequired) throw new Error('POS terminal payment is required, but the desktop terminal bridge is unavailable.');
+      return manual;
+    }
     const result = await window.brewBill.payment.collect({
       mode: payment.mode,
       amountMinor: Math.round(payment.amount * 100),
@@ -323,6 +364,7 @@ export class PosComponent {
     });
     if (result.status === 'DECLINED') throw new Error(result.message);
     if (result.status === 'UNAVAILABLE') {
+      if (terminalRequired) throw new Error('POS terminal is required and currently unavailable. The bill was not saved.');
       this.notify(result.message);
       return { ...manual, provider: result.provider };
     }
@@ -363,6 +405,10 @@ export class PosComponent {
 
   private async canCreateBills(): Promise<boolean> {
     if (!window.brewBill) return true;
+    if (!(await this.session.ensureDesktopLicense())) {
+      this.notify(this.session.licenseMessage() || 'Unable to activate this POS terminal.');
+      return false;
+    }
     const license = await window.brewBill.license.status();
     if (license.canCreateBills) return true;
     this.notify(license.message);

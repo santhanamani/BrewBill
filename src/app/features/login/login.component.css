@@ -1,0 +1,15 @@
+:host .tenant-login-hero { background:#faf7f2; }
+.tenant-hero-image { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+:host .tenant-login-hero::before { content:''; position:absolute; inset:0; z-index:1; background:linear-gradient(90deg,#faf7f2f2 0%,#faf7f2b0 42%,transparent 90%); pointer-events:none; }
+:host .tenant-login-hero .login-brand,:host .tenant-login-hero .hero-copy { z-index:2; }
+:host .login-brand b { overflow-wrap:anywhere; line-height:1.15; }
+:host .login-brand .brand-mark { object-fit:contain; border-radius:50%; background:#fff; }
+.cafe-cover { position:relative; overflow:hidden; isolation:isolate; border-radius:12px; }
+:host .cafe-cover .cafe-cover-photo { position:absolute; inset:0; width:100%; height:100%; border:0; border-radius:0; object-fit:cover; box-shadow:none; }
+:host .cafe-cover .cafe-cover-logo { position:relative; z-index:1; object-fit:contain; border-radius:50%; background:#fff; }
+.tenant-code-status { display:block; margin-top:7px; color:#218145; }
+.tenant-code-status.invalid { color:#bd3540; }
+:host .login-submit:disabled { opacity:.55; cursor:not-allowed; }
+.subscription-login-alert{display:grid;grid-template-columns:auto 1fr auto;align-items:start;gap:10px;padding:11px 12px;border:1px solid #ead19b;border-radius:10px;background:#fff8e7;color:#66451f}
+.subscription-login-alert>.material-symbols-outlined{font-size:22px;color:#bd741f}.subscription-login-alert div{display:grid;gap:2px}.subscription-login-alert b{font-size:13px}.subscription-login-alert small{font-size:11px;line-height:1.4;color:#806847}.subscription-login-alert button{align-self:center;border:0;border-radius:7px;padding:8px 12px;background:#6c3519;color:#fff;font-weight:700}
+.subscription-login-alert.grace{border-color:#e9b36c;background:#fff3df}.subscription-login-alert.expired,.subscription-login-alert.not-started{border-color:#e3aaa6;background:#fff0ef;color:#842f2b}.subscription-login-alert.expired>.material-symbols-outlined,.subscription-login-alert.not-started>.material-symbols-outlined{color:#bd3e35}

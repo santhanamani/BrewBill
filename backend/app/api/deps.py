@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from ..database import get_session
 from ..models import User
 from ..security import decode_token
+from ..subscriptions import require_subscription_access
 
 
 def current_user(authorization: Annotated[str, Header()], session: Session = Depends(get_session)) -> User:
@@ -11,6 +12,7 @@ def current_user(authorization: Annotated[str, Header()], session: Session = Dep
     user = session.get(User, payload['sub'])
     if user is None or not user.is_active or user.tenant_id != payload.get('tenant_id'):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Session is no longer valid')
+    require_subscription_access(user, session)
     return user
 
 

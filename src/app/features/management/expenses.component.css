@@ -1,0 +1,93 @@
+/* All rules are limited to Expenses; shared Management screens are untouched. */
+:host([data-view='expenses']) { display:block; color:#362b23; background:#fcfaf6; }
+:host([data-view='expenses']) .management-head { margin:0 0 18px; }
+:host([data-view='expenses']) .management-head h1 { font-size:30px; font-weight:750; letter-spacing:-.7px; }
+:host([data-view='expenses']) .management-head p { color:#84766b; font-size:14px; margin-top:5px; }
+:host([data-view='expenses']) .title-with-icon > span { display:grid; place-items:center; width:58px; height:58px; border-radius:14px; color:#805735; background:#f1e9dd; font-size:32px; }
+:host([data-view='expenses']) .scope-banner { display:none; }
+:host([data-view='expenses']) .metric-grid { gap:12px; margin:0 0 16px; }
+:host([data-view='expenses']) .metric { min-width:0; min-height:104px; padding:15px; gap:12px; border:1px solid #e9e0d5; border-radius:13px; background:white; box-shadow:0 3px 12px #60402005; }
+:host([data-view='expenses']) .metric-icon { width:52px; height:56px; flex-shrink:0; border-radius:13px; background:#f4eee5; color:#845b39; }
+:host([data-view='expenses']) .metric-icon.green { color:#208548; background:#eaf7ed; }
+:host([data-view='expenses']) .metric-icon.purple { color:#8a54ab; background:#f3eafa; }
+:host([data-view='expenses']) .metric-icon.red { color:#b66062; background:#fceeee; }
+:host([data-view='expenses']) .metric-icon > span { font-size:30px; }
+:host([data-view='expenses']) .metric small { font-size:12px; color:#68574a; }
+:host([data-view='expenses']) .metric h2 { font-size:25px; font-weight:750; margin:6px 0; font-variant-numeric:tabular-nums; }
+:host([data-view='expenses']) .metric p { font-size:11px; color:#778a6c; margin:0; }
+:host([data-view='expenses']) .panel { background:white; border:1px solid #e8dfd4; border-radius:14px; box-shadow:0 4px 16px #60402005; }
+:host([data-view='expenses']) .expense-form { padding:20px; margin:0 0 16px; }
+:host([data-view='expenses']) .expense-form > h2 { font-size:22px; font-weight:750; gap:10px; margin:0 0 22px; }
+:host([data-view='expenses']) .expense-form > h2 span { color:#805735; font-size:29px; }
+:host([data-view='expenses']) .expense-form .form-grid { display:grid; grid-template-columns:1fr; gap:16px; }
+:host([data-view='expenses']) .expense-form label { display:grid; gap:7px; font-size:13px; font-weight:600; color:#554539; min-width:0; }
+:host([data-view='expenses']) .expense-form input,:host([data-view='expenses']) .expense-form select { width:100%; box-sizing:border-box; min-width:0; height:42px; min-height:42px; padding:9px 12px; border:1px solid #e2d8cc; border-radius:8px; background:#fff; color:#44382e; font:inherit; font-weight:400; }
+:host([data-view='expenses']) .expense-form input[name='description'] { height:56px; min-height:56px; }
+:host([data-view='expenses']) .expense-form input[name='remarks'] { height:42px; min-height:42px; }
+:host([data-view='expenses']) .expense-actions { display:grid; grid-template-columns:1fr 1fr; width:100%; gap:10px; margin-top:4px; }
+:host([data-view='expenses']) .expense-actions button { min-width:0; width:100%; height:44px; min-height:44px; padding:0 10px; display:flex; align-items:center; justify-content:center; gap:7px; border-radius:8px; font-size:13px; font-weight:650; box-shadow:none; }
+:host([data-view='expenses']) .expense-actions .primary-action { background:#805735; border:1px solid #805735; color:white; }
+:host([data-view='expenses']) .expense-actions .clear-purchase { background:#faf5ec; color:#805735; border:1px solid #d9c5ac; }
+:host([data-view='expenses']) .management-table { padding:18px; }
+:host([data-view='expenses']) .expense-report-title { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:0; min-height:42px; margin-bottom:18px; }
+:host([data-view='expenses']) .expense-report-title h2 { font-size:21px; font-weight:750; margin:0; }
+:host([data-view='expenses']) .panel-heading { margin-right:auto; gap:10px; }
+:host([data-view='expenses']) .panel-heading > span { font-size:23px; color:#805735; background:#f5eee4; padding:8px; border-radius:9px; }
+:host([data-view='expenses']) .expense-report-title .search-box { min-width:160px; flex:1 1 220px; max-width:340px; height:40px; padding:0 12px; border:1px solid #e5dcd0; border-radius:8px; font-size:12px; }
+:host([data-view='expenses']) .expense-report-title select { min-width:0; max-width:145px; height:40px; padding:0 8px; border:1px solid #e5dcd0; border-radius:8px; background:#fdfbf7; color:#76553b; font-size:12px; }
+:host([data-view='expenses']) table { width:100%; border-collapse:collapse; }
+:host([data-view='expenses']) th { position:sticky; top:0; z-index:1; background:#f6f2ed; color:#6a5443; font-size:12px; font-weight:650; padding:13px 10px; white-space:nowrap; }
+:host([data-view='expenses']) td { height:58px; padding:10px; border-bottom:1px solid #eee7de; font-size:13px; color:#584a3e; }
+:host([data-view='expenses']) td:nth-child(4) { font-weight:750; white-space:nowrap; color:#382b21; text-align:right; font-variant-numeric:tabular-nums; }
+:host([data-view='expenses']) th:nth-child(4) { text-align:right; }
+:host([data-view='expenses']) td:nth-child(3),:host([data-view='expenses']) td:nth-child(7) { overflow-wrap:anywhere; }
+:host([data-view='expenses']) .payment-badge { font-size:10px; padding:5px 8px; border-radius:7px; background:#eff3ee; color:#51744c; white-space:nowrap; }
+:host([data-view='expenses']) .payment-badge[data-mode='UPI'] { background:#f2eafa; color:#8956a6; }
+:host([data-view='expenses']) .payment-badge[data-mode='CARD'] { background:#ebf0fb; color:#526ea5; }
+:host([data-view='expenses']) .table-scroll { overflow:auto; min-height:150px; }
+:host([data-view='expenses']) .expense-pagination { display:flex; justify-content:space-between; align-items:center; gap:12px; padding-top:14px; margin-top:auto; color:#8a7b6d; font-size:12px; }
+:host([data-view='expenses']) .expense-pagination nav { display:flex; align-items:center; gap:8px; }
+:host([data-view='expenses']) .expense-pagination button { width:34px; height:34px; border:1px solid #e4dbcf; border-radius:7px; background:#fffdf9; color:#805735; }
+:host([data-view='expenses']) .expense-pagination button:disabled { opacity:.4; }
+:host([data-view='expenses']) .expense-pagination nav > span { padding:8px 12px; border-radius:7px; background:#805735; color:white; }
+:host([data-view='expenses']) input:focus-visible,:host([data-view='expenses']) select:focus-visible,:host([data-view='expenses']) button:focus-visible { outline:2px solid #b08b60; outline-offset:2px; }
+@media(min-width:1200px) {
+  :host([data-view='expenses']) { display:grid; grid-template-columns:minmax(0,2.85fr) minmax(320px,1fr); grid-template-rows:auto auto minmax(0,1fr); gap:16px; height:calc(100dvh - 208px); min-height:570px; align-content:start; align-items:start; }
+  :host([data-view='expenses']) > .management-head { grid-column:1; grid-row:1; margin:0; }
+  :host([data-view='expenses']) > .metric-grid { grid-column:1; grid-row:2; margin:0; }
+  :host([data-view='expenses']) .expense-form { grid-column:2; grid-row:1/4; margin:0; height:100%; display:flex; flex-direction:column; max-height:100%; overflow:auto; box-sizing:border-box; }
+  :host([data-view='expenses']) .management-table { grid-column:1; grid-row:3; min-height:0; height:100%; display:flex; flex-direction:column; box-sizing:border-box; }
+  :host([data-view='expenses']) .table-scroll { flex:1; min-height:0; max-height:none; }
+  :host([data-view='expenses']) .expense-report-title,:host([data-view='expenses']) .expense-pagination { flex-shrink:0; }
+  :host([data-view='expenses']) > .notice { grid-column:1/-1; }
+}
+@media(min-width:1200px) and (max-width:1599px) {
+  :host([data-view='expenses']) { height:calc(100dvh - 174px); }
+  :host([data-view='expenses']) .metric { padding:12px; gap:8px; }
+  :host([data-view='expenses']) .metric-icon { width:40px; height:46px; }
+  :host([data-view='expenses']) .metric h2 { font-size:22px; }
+  :host([data-view='expenses']) .expense-form { padding:16px; }
+  :host([data-view='expenses']) .expense-form .form-grid { gap:12px; }
+}
+@media(max-width:1199px) { :host([data-view='expenses']) .expense-form { margin-bottom:16px; } }
+@media(max-width:700px) { :host([data-view='expenses']) .metric-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+@media(min-width:1200px) { :host([data-view='expenses']) .expense-form .form-grid { flex:1; align-content:space-between; } }
+
+:host([data-view='expenses']) .expense-picker { position:relative; flex:0 1 158px; min-width:130px; font-size:12px; }
+:host([data-view='expenses']) .expense-picker.date-picker { flex-basis:130px; min-width:120px; }
+:host([data-view='expenses']) .expense-picker summary { display:flex; align-items:center; gap:7px; height:40px; box-sizing:border-box; padding:0 11px; border:1px solid #e1d5c7; border-radius:9px; background:#fffdf9; color:#725137; cursor:pointer; list-style:none; user-select:none; }
+:host([data-view='expenses']) .expense-picker summary::-webkit-details-marker { display:none; }
+:host([data-view='expenses']) .expense-picker summary > span:nth-child(2) { flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+:host([data-view='expenses']) .expense-picker .material-symbols-outlined { font-size:18px; flex-shrink:0; }
+:host([data-view='expenses']) .expense-picker summary:hover { background:#f8f0e6; border-color:#cdb498; }
+:host([data-view='expenses']) .expense-picker[open] { z-index:40; }
+:host([data-view='expenses']) .expense-picker[open] summary { background:#f5ebde; border-color:#b28d63; }
+:host([data-view='expenses']) .expense-picker[open] .picker-chevron { transform:rotate(180deg); }
+:host([data-view='expenses']) .expense-picker-menu { position:absolute; z-index:40; top:calc(100% + 7px); right:0; width:220px; max-width:calc(100vw - 48px); max-height:260px; overflow:auto; padding:7px; box-sizing:border-box; border:1px solid #e3d5c4; border-radius:12px; background:#fffdfa; box-shadow:0 8px 24px #5b3b1f1c; }
+:host([data-view='expenses']) .date-picker .expense-picker-menu { width:185px; }
+:host([data-view='expenses']) .expense-picker-menu > small { display:block; padding:7px 10px 9px; color:#a28b72; font-size:9px; font-weight:700; letter-spacing:1px; }
+:host([data-view='expenses']) .expense-picker-menu button { display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; min-height:37px; padding:9px 10px; border:0; border-radius:7px; color:#695443; background:transparent; font:inherit; text-align:left; cursor:pointer; }
+:host([data-view='expenses']) .expense-picker-menu button:hover { background:#f7efe4; }
+:host([data-view='expenses']) .expense-picker-menu button.selected { color:#754b28; background:#eee0cb; font-weight:650; }
+:host([data-view='expenses']) .expense-picker summary:focus-visible { outline:2px solid #b08b60; outline-offset:2px; }

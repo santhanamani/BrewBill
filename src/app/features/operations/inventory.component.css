@@ -1,0 +1,84 @@
+/* Inventory only: leave the shared shell and other operations screens unchanged. */
+:host([data-view='inventory']) { color:#302a24; background:#fcfaf6; }
+:host([data-view='inventory']) .view-head { margin-bottom:18px; gap:16px; }
+:host([data-view='inventory']) .view-head h1 { font-size:30px; font-weight:750; letter-spacing:-.7px; }
+:host([data-view='inventory']) .view-head p { color:#83796f; font-size:14px; }
+:host([data-view='inventory']) .view-head .search-box { max-width:340px; }
+:host([data-view='inventory']) .panel, :host([data-view='inventory']) .metric { background:#fff; border:1px solid #e9e0d4; border-radius:14px; box-shadow:0 3px 12px #57371904; }
+:host([data-view='inventory']) .metric-grid { gap:12px; margin-bottom:0; }
+:host([data-view='inventory']) .metric { min-height:104px; padding:16px; gap:13px; }
+:host([data-view='inventory']) .metric-icon { width:52px; height:58px; border-radius:13px; flex-shrink:0; }
+:host([data-view='inventory']) .metric-icon .material-symbols-outlined { font-size:32px; }
+:host([data-view='inventory']) .metric h2 { font-size:27px; font-weight:750; margin:5px 0; }
+:host([data-view='inventory']) .metric small { font-size:12px; }
+:host([data-view='inventory']) .metric p { font-size:11px; color:#7d8377; }
+:host([data-view='inventory']) .table-panel { padding:17px; min-width:0; }
+:host([data-view='inventory']) .panel-title { margin:0 0 16px; padding:0; min-height:0; gap:12px; }
+:host([data-view='inventory']) .panel-title h2 { font-size:20px; font-weight:750; letter-spacing:-.3px; }
+:host([data-view='inventory']) .panel-title h2 small { font-size:12px; font-weight:400; color:#847a70; }
+:host([data-view='inventory']) .panel-title > span { font-size:12px; color:#847a70; }
+:host([data-view='inventory']) table { width:100%; border-collapse:collapse; font-size:12px; }
+:host([data-view='inventory']) th { background:#f7f4ef; color:#685746; font-size:11px; font-weight:650; padding:13px 9px; white-space:nowrap; position:sticky; top:0; z-index:1; }
+:host([data-view='inventory']) td { padding:10px 9px; border-bottom:1px solid #eee7de; height:62px; }
+:host([data-view='inventory']) td:nth-child(n+3):nth-child(-n+7) { white-space:nowrap; text-align:right; font-variant-numeric:tabular-nums; }
+:host([data-view='inventory']) th:nth-child(n+3):nth-child(-n+7) { text-align:right; }
+:host([data-view='inventory']) td:last-child { white-space:nowrap; }
+:host([data-view='inventory']) .inventory-product { min-width:165px; gap:10px; }
+:host([data-view='inventory']) .inventory-product img { width:40px; height:40px; border-radius:8px; object-fit:cover; }
+:host([data-view='inventory']) .inventory-product b { font-size:12px; font-weight:700; line-height:1.4; }
+:host([data-view='inventory']) tr.selected-row td { background:#fcf8ef; }
+:host([data-view='inventory']) tbody tr:hover td { background:#faf7f2; }
+:host([data-view='inventory']) .stock-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 8px; border-radius:8px; background:#e9f7ed; color:#198344; font-size:10px; font-weight:650; white-space:nowrap; }
+:host([data-view='inventory']) .stock-pill::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
+:host([data-view='inventory']) .stock-pill.low { background:#fff4d8; color:#a56b04; }
+:host([data-view='inventory']) .stock-pill.out { background:#fceaea; color:#ba4545; }
+:host([data-view='inventory']) .icon-button { width:30px; height:32px; padding:0; margin-right:4px; border:1px solid #e5dcd0; border-radius:7px; background:#fff; color:#785437; box-shadow:none; }
+:host([data-view='inventory']) .icon-button .material-symbols-outlined { font-size:17px; }
+:host([data-view='inventory']) .inventory-side { display:flex; flex-direction:column; gap:14px; min-width:0; }
+:host([data-view='inventory']) .stock-panel { padding:18px; }
+:host([data-view='inventory']) .stock-panel .panel-title h2 { font-size:21px; }
+:host([data-view='inventory']) .quick-item-select { display:grid; gap:7px; font-size:12px; color:#67574a; }
+:host([data-view='inventory']) select, :host([data-view='inventory']) input, :host([data-view='inventory']) textarea { border:1px solid #e3d9cd; border-radius:8px; background:#fff; color:#3c332b; font:inherit; }
+:host([data-view='inventory']) .quick-item-select select { width:100%; height:40px; padding:0 10px; }
+:host([data-view='inventory']) .stock-current { padding:12px; margin:12px 0; background:#f8f5f0; border-radius:10px; }
+:host([data-view='inventory']) .stock-current img { width:52px; height:52px; border-radius:8px; }
+:host([data-view='inventory']) .stock-current b { font-size:14px; line-height:1.4; }
+:host([data-view='inventory']) .stock-current small { font-size:11px; }
+:host([data-view='inventory']) .quick-actions { gap:6px; grid-template-columns:repeat(5,minmax(0,1fr)); }
+:host([data-view='inventory']) .quick-actions button { min-height:72px; padding:9px 2px; gap:7px; border:1px solid transparent; border-radius:9px; box-shadow:none; font-size:10px; background:#eaf7ee; color:#237b44; }
+:host([data-view='inventory']) .quick-actions button:nth-child(2) { background:#fceced; color:#b44148; }
+:host([data-view='inventory']) .quick-actions button:nth-child(3) { background:#fff5dc; color:#b47a0b; }
+:host([data-view='inventory']) .quick-actions button:nth-child(4) { background:#f3ebfb; color:#8853b2; }
+:host([data-view='inventory']) .quick-actions button:nth-child(5) { background:#eaf0fc; color:#4565a5; }
+:host([data-view='inventory']) .quick-actions button.selected { border-color:currentColor; box-shadow:inset 0 0 0 1px currentColor; }
+:host([data-view='inventory']) .quick-actions .material-symbols-outlined { font-size:23px; }
+:host([data-view='inventory']) .quick-adjust-form { gap:12px; margin-top:17px; }
+:host([data-view='inventory']) .quick-adjust-form label { font-size:12px; color:#67574a; }
+:host([data-view='inventory']) .quick-adjust-form input, :host([data-view='inventory']) .quick-adjust-form select { height:42px; }
+:host([data-view='inventory']) .quick-adjust-form textarea { height:58px; resize:vertical; }
+:host([data-view='inventory']) .primary-action { background:#805733; border:1px solid #805733; box-shadow:none; min-height:44px; border-radius:9px; }
+:host([data-view='inventory']) button:focus-visible, :host([data-view='inventory']) input:focus-visible, :host([data-view='inventory']) select:focus-visible, :host([data-view='inventory']) textarea:focus-visible { outline:2px solid #b58b61; outline-offset:2px; }
+:host([data-view='inventory']) .movement-panel { padding:16px; max-height:200px; overflow:auto; }
+:host([data-view='inventory']) .movement-panel h2 { font-size:16px; }
+:host([data-view='inventory']) .movement { padding:9px 0; font-size:11px; }
+@media(min-width:1200px) {
+  :host([data-view='inventory']) { display:grid; grid-template-columns:minmax(0,2.2fr) minmax(360px,1fr); grid-template-rows:auto auto minmax(0,1fr); gap:16px; align-content:start; }
+  :host([data-view='inventory']) > .view-head { grid-column:1/-1; margin:0; }
+  :host([data-view='inventory']) > .metric-grid { grid-column:1; }
+  :host([data-view='inventory']) .inventory-layout { display:contents; }
+  :host([data-view='inventory']) .inventory-layout > .table-panel { grid-column:1; grid-row:3; align-self:start; }
+  :host([data-view='inventory']) .inventory-side { grid-column:2; grid-row:2/4; }
+  :host([data-view='inventory']) .table-scroll { max-height:calc(100dvh - 430px); overflow:auto; }
+}
+
+@media(min-width:1200px) {
+ :host([data-view='inventory']) { height:calc(100dvh - 208px); min-height:0; }
+ :host([data-view='inventory']) .inventory-layout > .table-panel { display:flex; flex-direction:column; height:100%; min-height:0; }
+ :host([data-view='inventory']) .panel-title { flex-shrink:0; }
+ :host([data-view='inventory']) .table-scroll { max-height:none; min-height:0; overflow:auto; }
+ :host([data-view='inventory']) .inventory-side { max-height:100%; overflow:auto; padding-right:3px; }
+ :host([data-view='inventory']) .stock-panel, :host([data-view='inventory']) .movement-panel { flex-shrink:0; }
+}
+@media(min-width:1200px) and (max-width:1599px) {
+ :host([data-view='inventory']) { height:calc(100dvh - 174px); }
+}

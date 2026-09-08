@@ -25,6 +25,11 @@ const landing: CanActivateFn = () => {
 
 export const routes: Routes = [
   {
+    path: 'subscribe',
+    loadComponent: () =>
+      import('./features/subscription/subscription.component').then((module) => module.SubscriptionComponent),
+  },
+  {
     path: 'login',
     loadComponent: () =>
       import('./features/login/login.component').then((module) => module.LoginComponent),

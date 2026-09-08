@@ -38,11 +38,14 @@ from ..schemas import (
     SupplierRead,
     TenantSettingRead,
     TenantSettingUpdate,
+    TenantPaymentPolicyRead,
+    TenantPaymentPolicyUpdate,
 )
 
 router = APIRouter(prefix='/api', tags=['operations'])
 MONEY = Decimal('0.01')
 INDIA = ZoneInfo('Asia/Kolkata')
+PAYMENT_POLICY_KEY = 'payment_processing_mode'
 
 
 def money(value: Decimal) -> Decimal:
@@ -419,3 +422,35 @@ def update_setting(
     session.commit()
     session.refresh(setting)
     return setting
+
+@router.get('/payment-policy', response_model=TenantPaymentPolicyRead)
+def get_payment_policy(
+    user: User = Depends(require_role('ADMIN', 'CASHIER')),
+    session: Session = Depends(get_session),
+) -> TenantPaymentPolicyRead:
+    setting = session.get(TenantSetting, (user.tenant_id, PAYMENT_POLICY_KEY))
+    mode = setting.setting_value if setting else 'MANUAL_ALLOWED'
+    if mode not in ('MANUAL_ALLOWED', 'TERMINAL_REQUIRED'):
+        mode = 'MANUAL_ALLOWED'
+    return TenantPaymentPolicyRead(payment_processing_mode=mode)
+
+
+@router.put('/payment-policy', response_model=TenantPaymentPolicyRead)
+def update_payment_policy(
+    body: TenantPaymentPolicyUpdate,
+    user: User = Depends(require_role('ADMIN')),
+    session: Session = Depends(get_session),
+) -> TenantPaymentPolicyRead:
+    setting = session.get(TenantSetting, (user.tenant_id, PAYMENT_POLICY_KEY))
+    if setting is None:
+        setting = TenantSetting(
+            tenant_id=user.tenant_id,
+            setting_key=PAYMENT_POLICY_KEY,
+            setting_value=body.payment_processing_mode,
+        )
+        session.add(setting)
+    else:
+        setting.setting_value = body.payment_processing_mode
+    audit(session, user, 'UPDATE', 'TENANT_PAYMENT_POLICY', user.tenant_id)
+    session.commit()
+    return TenantPaymentPolicyRead(payment_processing_mode=body.payment_processing_mode)

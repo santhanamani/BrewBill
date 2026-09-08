@@ -1,12 +1,12 @@
-<section class="view-head">
+<section class="view-head dashboard-head">
   <div>
-    <h1>Admin Dashboard</h1>
+    <span class="dashboard-eyebrow">ADMIN DASHBOARD</span>
+    <h1>Welcome back, {{ session.user()?.display_name ?? 'Admin' }}!</h1>
     <p>Live overview of your café operations</p>
   </div>
-  <div class="filter-row">
-    <button type="button">
-      <span class="material-symbols-outlined">calendar_month</span> Today</button
-    ><button type="button">Current Outlet</button>
+  <div class="filter-row dashboard-filters">
+    <button type="button"><span class="material-symbols-outlined">calendar_month</span>Today</button>
+    <button type="button" class="outlet-filter"><span class="material-symbols-outlined">location_on</span><span><small>Current Outlet</small>{{ session.context()?.outlet_name }}</span><span class="material-symbols-outlined">expand_more</span></button>
   </div>
 </section>
 
@@ -97,36 +97,32 @@
   <section class="dashboard-grid">
     <article class="panel chart-panel">
       <div class="panel-title">
-        <h2>Daily Sales Trend</h2>
-        <button type="button">Today</button>
+        <div class="dashboard-panel-heading"><span class="material-symbols-outlined">bar_chart</span><div><h2>Daily Sales Trend</h2><p>Track your sales throughout the day</p></div></div>
+        <button type="button"><span class="material-symbols-outlined">calendar_month</span>Today<span class="material-symbols-outlined">expand_more</span></button>
       </div>
       @if (metrics()?.hourly_sales?.length) {
         <div echarts [options]="salesChart()" class="sales-chart"></div>
       } @else {
-        <div class="live-state chart-empty">No completed sales today.</div>
+        <div class="chart-reference-empty"><span class="material-symbols-outlined">bar_chart</span><b>No completed sales today.</b><small>Sales data will appear here once you start taking orders.</small></div>
       }
     </article>
     <article class="panel categories-panel">
-      <h2>Category-wise Sales</h2>
+      <div class="panel-title"><div class="dashboard-panel-heading"><span class="material-symbols-outlined">pie_chart</span><div><h2>Category-wise Sales</h2><p>Sales distribution by product category</p></div></div></div>
       @if (metrics()?.category_sales?.length) {
         <div echarts [options]="categoryChart()" class="category-chart"></div>
       } @else {
-        <div class="live-state chart-empty">No category sales today.</div>
+        <div class="chart-reference-empty"><span class="material-symbols-outlined">pie_chart</span><b>No category sales today.</b><small>Category-wise sales will appear here once you have completed sales.</small></div>
       }
     </article>
     <article class="panel product-rank">
       <div class="panel-title">
-        <h2>Top Selling Products</h2>
-        <button type="button">View All</button>
+        <div class="dashboard-panel-heading"><span class="material-symbols-outlined">trophy</span><div><h2>Top Selling Products</h2><p>Your best performing items today</p></div></div>
+        <button type="button">View All<span class="material-symbols-outlined">chevron_right</span></button>
       </div>
       @for (product of topProducts(); track product.product_name; let index = $index) {
-        <div class="rank-line">
-          <em>{{ index + 1 }}</em
-          ><span>{{ product.product_name }}</span
-          ><i [style.width.%]="100 - index * 12"></i><b>{{ product.quantity_sold }}</b>
-        </div>
+        <div class="rank-line"><em>{{ index + 1 }}</em><span>{{ product.product_name }}</span><i [style.width.%]="100 - index * 12"></i><b>{{ product.quantity_sold }}</b></div>
       } @empty {
-        <div class="live-state">No completed sales for today.</div>
+        <div class="chart-reference-empty products-empty"><span class="material-symbols-outlined">bar_chart</span><b>No completed sales for today.</b><small>Top selling products will appear here once you have completed sales.</small></div>
       }
     </article>
   </section>

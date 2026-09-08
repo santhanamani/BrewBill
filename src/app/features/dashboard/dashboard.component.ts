@@ -14,7 +14,7 @@ import { SessionService } from '../../core/session.service';
 export class DashboardComponent {
   private readonly api = inject(BrewBillApiService);
   private readonly catalog = inject(CatalogService);
-  private readonly session = inject(SessionService);
+  readonly session = inject(SessionService);
 
   readonly products = signal<Product[]>([]);
   readonly metrics = signal<DashboardMetric | null>(null);

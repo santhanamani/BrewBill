@@ -1,0 +1,31 @@
+<main class="renewal-page">
+  <section class="renewal-card">
+    <div class="renewal-brand">
+      <img [src]="logoUrl()" [alt]="(tenant()?.name || 'BrewBill') + ' logo'" />
+      <div><span>BREWBILL SUBSCRIPTION</span><h1>{{tenant()?.name || 'Renew your café subscription'}}</h1><p>Tenant code: {{tenant()?.code || tenantCode() || '—'}}</p></div>
+    </div>
+
+    <div class="renewal-status">
+      <span class="material-symbols-outlined">event_busy</span>
+      <div><b>Subscription renewal required</b><p>{{tenant()?.subscription_message || message() || 'Your access will be restored as soon as the Super Administrator renews this tenant.'}}</p></div>
+    </div>
+
+    @if (tenant(); as cafe) {
+      <div class="renewal-dates">
+        <article><small>Plan</small><b>{{cafe.plan_code || 'Not assigned'}}</b></article>
+        <article><small>Expired on</small><b>{{formatDate(cafe.subscription_end)}}</b></article>
+        <article><small>Grace period ended</small><b>{{formatDate(cafe.grace_ends_at)}}</b></article>
+      </div>
+    }
+
+    <div class="renewal-help">
+      <span class="material-symbols-outlined">support_agent</span>
+      <p><b>Contact your platform administrator</b><small>The Super Admin can renew the expiry and grace dates from Administration → Tenant → Subscription. No café data has been deleted.</small></p>
+    </div>
+
+    <div class="renewal-actions">
+      <button type="button" class="secondary" (click)="backToLogin()">Back to login</button>
+      <button type="button" class="primary" [disabled]="loading()" (click)="checkStatus()"><span class="material-symbols-outlined">refresh</span>{{loading() ? 'Checking…' : 'Check renewal status'}}</button>
+    </div>
+  </section>
+</main>

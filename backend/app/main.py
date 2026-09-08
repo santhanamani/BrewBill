@@ -12,6 +12,7 @@ from .security import (
     generate_totp_secret, verify_password, verify_totp,
 )
 from .api.deps import current_user
+from .subscriptions import require_subscription_access
 from .api.products import router as product_router
 from .api.categories import router as category_router
 from .api.orders import router as order_router
@@ -74,6 +75,7 @@ def login(body: LoginRequest, session: Session = Depends(get_session)) -> LoginR
     tenant = session.get(Tenant, user.tenant_id)
     if tenant is None or tenant.status != 'ACTIVE':
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='This cafe account is not active.')
+    require_subscription_access(user, session)
     if user.role_code == 'SUPER_ADMIN':
         setup_required = not user.mfa_enabled or not user.mfa_secret_encrypted
         if not user.mfa_secret_encrypted:
@@ -113,6 +115,7 @@ def refresh(body: RefreshRequest, session: Session = Depends(get_session)) -> To
     record = session.query(RefreshToken).filter(RefreshToken.token_id == payload["jti"], RefreshToken.revoked.is_(False)).one_or_none()
     if record is None or record.expires_at < datetime.now(UTC):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token is no longer valid")
+    require_subscription_access(record.user, session)
     record.revoked = True
     session.flush()
     return issue_pair(record.user, session)
