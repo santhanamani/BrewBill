@@ -2,10 +2,12 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { BrewBillApiService } from './brew-bill-api.service';
 import { CurrentUser, MfaChallenge, PlatformContext } from './models/api.models';
 import { AuthTokenStoreService } from './auth-token-store.service';
+import { CurrencyService } from './currency.service';
 
 @Injectable({ providedIn: 'root' })
 export class SessionService {
   private readonly tokenStore = inject(AuthTokenStoreService);
+  private readonly currency = inject(CurrencyService);
   readonly accessToken = this.tokenStore.accessToken;
   readonly refreshToken = this.tokenStore.refreshToken;
   readonly user = signal<CurrentUser | null>(null);
@@ -100,6 +102,7 @@ export class SessionService {
     const root = document.documentElement;
     root.style.setProperty('--brand-primary', context.branding.primary_color ?? '#5A2D18');
     root.style.setProperty('--brand-secondary', context.branding.secondary_color ?? '#C8874A');
+    this.currency.configure(context.currency);
     this.licenseMessage.set('');
     if(verifyLicense)void this.ensureDesktopLicense();
     if (this.licenseRefreshTimer) window.clearInterval(this.licenseRefreshTimer);
@@ -116,6 +119,7 @@ export class SessionService {
     this.tokenStore.clear();
     this.user.set(null);
     this.context.set(null);
+    this.currency.reset();
     this.licenseMessage.set('');
   }
 

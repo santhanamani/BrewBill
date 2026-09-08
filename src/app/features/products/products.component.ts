@@ -8,6 +8,7 @@ import {
 } from '../../core/models/api.models';
 import { RuntimeConfigService } from '../../core/runtime-config.service';
 import { SessionService } from '../../core/session.service';
+import { CurrencyService } from '../../core/currency.service';
 
 type ProductDraft = {
   categoryId: string;
@@ -25,6 +26,12 @@ type ProductDraft = {
   available: boolean;
   active: boolean;
   sharedAcrossOutlets: boolean;
+};
+
+type VariantDraft = {
+  id: string | null;
+  name: string;
+  price: string;
 };
 
 const emptyDraft = (): ProductDraft => ({
@@ -186,6 +193,7 @@ export class ProductsComponent {
   private readonly catalog = inject(CatalogService);
   readonly session = inject(SessionService);
   private readonly runtime = inject(RuntimeConfigService);
+  readonly currency = inject(CurrencyService);
   readonly products = signal<Product[]>([]);
   readonly globalProducts = signal<GlobalProduct[]>([]);
   readonly outletMappings = signal<OutletProductMapping[]>([]);
@@ -205,6 +213,7 @@ export class ProductsComponent {
   readonly stockSaving = signal(false);
   readonly mappingBusy = signal<string | null>(null);
   private originalMappingStock = '0';
+  private originalMappingPrice = '0';
 
   filterCatalogue(panel:'master'|'mapping', field:'search'|'category', value:string):void {
     if(panel==='master') { (field==='search'?this.masterSearch:this.masterCategory).set(value);this.masterPage.set(0); }
@@ -353,6 +362,9 @@ export class ProductsComponent {
   readonly tenantProductImageName = signal('');
   readonly mappingGstEnabled = signal(true);
   readonly mappingGstDefault = signal(true);
+  readonly mappingVariantsEnabled = signal(false);
+  readonly mappingVariantsTouched = signal(false);
+  readonly variantDrafts = signal<VariantDraft[]>([]);
   readonly viewedMaster = signal<GlobalProduct | null>(null);
 
   viewMaster(product: GlobalProduct, dialog: HTMLDialogElement): void {
@@ -471,6 +483,7 @@ export class ProductsComponent {
     this.mappingTarget.set({ productId: product.id, mappingId: mapping?.id ?? null });
     this.mappingError.set('');
     this.originalMappingStock=mapping?.stock_quantity ?? '0';
+    this.originalMappingPrice=mapping?.selling_price ?? '0';
     this.mappingGstEnabled.set(Number(mapping?.default_gst ?? product.default_gst ?? '5') > 0);
     this.mappingGstDefault.set(mapping?.tax_override == null);
     this.draft.set({ ...emptyDraft(), code: product.code, name: product.name, unit: product.base_unit,
@@ -478,6 +491,7 @@ export class ProductsComponent {
       sellingPrice: mapping?.selling_price ?? '0', stockQuantity: mapping?.stock_quantity ?? '0',
       lowStockLimit: mapping?.low_stock_limit ?? '5', favourite: mapping?.favourite ?? false,
       kotRequired: mapping?.kot_required ?? true, available: mapping?.is_available ?? true, active: mapping?.is_active ?? true });
+    this.loadVariantDrafts(mapping);
     dialog.showModal();
   }
 
@@ -493,6 +507,7 @@ export class ProductsComponent {
     this.mappingTarget.set({ productId: mapping.legacy_product_id, mappingId: mapping.id });
     this.mappingError.set('');
     this.originalMappingStock = mapping.stock_quantity;
+    this.originalMappingPrice = mapping.selling_price;
     this.mappingGstEnabled.set(Number(mapping.default_gst) > 0);
     this.mappingGstDefault.set(mapping.tax_override == null);
     this.draft.set({ ...emptyDraft(), code: mapping.code, name: mapping.name, unit: mapping.base_unit,
@@ -502,7 +517,60 @@ export class ProductsComponent {
       lowStockLimit: mapping.low_stock_limit, favourite: mapping.favourite,
       kotRequired: mapping.kot_required, available: mapping.is_available, active: mapping.is_active,
       sharedAcrossOutlets: false });
+    this.loadVariantDrafts(mapping);
     dialog.showModal();
+  }
+
+  private loadVariantDrafts(mapping: OutletProductMapping | undefined): void {
+    const basePrice = Number(mapping?.selling_price ?? '0');
+    const active = (mapping?.variants ?? [])
+      .filter(variant => variant.is_active)
+      .sort((left, right) => left.display_order - right.display_order)
+      .map(variant => ({
+        id: variant.id,
+        name: variant.name,
+        price: (basePrice + Number(variant.price_adjustment)).toFixed(2),
+      }));
+    this.variantDrafts.set(active);
+    this.mappingVariantsEnabled.set(active.length > 0);
+    this.mappingVariantsTouched.set(false);
+  }
+
+  toggleVariantConfiguration(enabled: boolean): void {
+    this.mappingVariantsEnabled.set(enabled);
+    this.mappingVariantsTouched.set(true);
+    if (enabled && this.variantDrafts().length === 0) {
+      const price = (Number(this.draft().sellingPrice) || 0).toFixed(2);
+      this.variantDrafts.set([
+        { id: null, name: 'Regular', price },
+        { id: null, name: 'Large', price },
+      ]);
+    }
+  }
+
+  addVariantRow(): void {
+    const price = (Number(this.draft().sellingPrice) || 0).toFixed(2);
+    this.variantDrafts.update(rows => [
+      ...rows,
+      { id: null, name: '', price },
+    ]);
+    this.mappingVariantsTouched.set(true);
+  }
+
+  updateVariantRow(index: number, field: 'name' | 'price', value: string): void {
+    this.variantDrafts.update(rows => rows.map((row, rowIndex) =>
+      rowIndex === index ? { ...row, [field]: value } : row,
+    ));
+    this.mappingVariantsTouched.set(true);
+  }
+
+  removeVariantRow(index: number): void {
+    this.variantDrafts.update(rows => rows.filter((_, rowIndex) => rowIndex !== index));
+    this.mappingVariantsTouched.set(true);
+  }
+
+  activeVariantCount(mapping: OutletProductMapping): number {
+    return (mapping.variants ?? []).filter(variant => variant.is_active).length;
   }
 
   async saveMapping(dialog: HTMLDialogElement): Promise<void> {
@@ -515,18 +583,42 @@ export class ProductsComponent {
     if (!this.validStock(draft.stockQuantity) || [draft.sellingPrice, draft.stockQuantity, draft.lowStockLimit].some(value => !value.trim() || !Number.isFinite(Number(value)) || Number(value) < 0)) {
       this.mappingError.set('Enter valid, non-negative price and stock values.'); return;
     }
+    const variants = this.mappingVariantsEnabled() ? this.variantDrafts() : [];
+    if (this.mappingVariantsEnabled()) {
+      const names = variants.map(variant => variant.name.trim().toLowerCase());
+      if (variants.length < 2) {
+        this.mappingError.set('Add at least two variant choices, or turn variants off.'); return;
+      }
+      if (variants.some(variant => !variant.name.trim() || !/^\d{1,15}(\.\d{1,2})?$/.test(variant.price.trim()) || Number(variant.price) < 0)) {
+        this.mappingError.set('Each variant needs a name and a valid non-negative selling price.'); return;
+      }
+      if (new Set(names).size !== names.length) {
+        this.mappingError.set('Variant names must be unique.'); return;
+      }
+    }
     this.saving.set(true); this.mappingError.set('');
     const body = { selling_price: Number(draft.sellingPrice).toFixed(2), low_stock_limit: Number(draft.lowStockLimit).toFixed(3),
       tax_override: !this.mappingGstEnabled() ? '0.00' : this.mappingGstDefault() ? null : Number(draft.gstPercent).toFixed(2),
       favourite: draft.favourite, kot_required: draft.kotRequired, is_available: draft.available, is_active: draft.active };
     try {
-      if (target.mappingId) await this.api.updateOutletProduct(this.requireToken(), target.mappingId, {
+      let savedMapping: OutletProductMapping;
+      if (target.mappingId) savedMapping = await this.api.updateOutletProduct(this.requireToken(), target.mappingId, {
         ...body, ...(Number(draft.stockQuantity)!==Number(this.originalMappingStock) ? {
           stock_quantity:Number(draft.stockQuantity).toFixed(3),expected_stock_quantity:this.originalMappingStock,
         } : {}),
       });
-      else await this.api.mapOutletProduct(this.requireToken(), target.productId, { ...body,
+      else savedMapping = await this.api.mapOutletProduct(this.requireToken(), target.productId, { ...body,
         opening_stock: Number(draft.stockQuantity).toFixed(3), display_order: this.outletMappings().length });
+      const basePriceChanged = Number(draft.sellingPrice) !== Number(this.originalMappingPrice);
+      if (this.mappingVariantsTouched() || (target.mappingId && this.mappingVariantsEnabled() && basePriceChanged)) {
+        const basePrice = Number(draft.sellingPrice);
+        await this.api.replaceProductVariants(this.requireToken(), savedMapping.legacy_product_id, variants.map((variant, index) => ({
+          id: variant.id,
+          name: variant.name.trim(),
+          price_adjustment: (Number(variant.price) - basePrice).toFixed(2),
+          display_order: index,
+        })));
+      }
       dialog.close(); await this.load(); this.notice.set(draft.name + ' outlet mapping saved.');
     } catch (error) {
       this.mappingError.set(error instanceof HttpErrorResponse && typeof error.error?.detail === 'string'
@@ -660,9 +752,7 @@ export class ProductsComponent {
   }
 
   money(value: string): string {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(
-      Number(value),
-    );
+    return this.currency.format(value);
   }
   asset(path: string | null): string {
     return this.runtime.assetUrl(path);

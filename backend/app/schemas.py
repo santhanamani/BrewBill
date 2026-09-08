@@ -60,6 +60,19 @@ class LicenseEnvelope(BaseModel):
     public_key: str
 
 
+class CurrencyRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    code: str
+    name: str
+    symbol: str
+    locale: str
+    decimal_places: int
+
+
+class TenantCurrencyUpdate(BaseModel):
+    currency_code: str = Field(min_length=3, max_length=3, pattern=r'^[A-Za-z]{3}$')
+
+
 class PlatformContextRead(BaseModel):
     tenant_id: str
     tenant_code: str | None
@@ -77,6 +90,7 @@ class PlatformContextRead(BaseModel):
     plan_code: str
     max_terminals: int
     features: dict[str, Any]
+    currency: CurrencyRead
 
 
 class TenantResolveRead(BaseModel):
@@ -97,6 +111,7 @@ class TenantResolveRead(BaseModel):
     grace_days_remaining: int | None
     login_allowed: bool
     subscription_message: str
+    currency: CurrencyRead
 
 
 class GlobalProductCreate(BaseModel):
@@ -158,6 +173,35 @@ class OutletProductMappingUpdate(BaseModel):
     tax_override: Decimal | None = Field(default=None, ge=0, le=100, max_digits=5, decimal_places=2)
 
 
+class ProductVariantRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: str
+    name: str
+    price_adjustment: Decimal
+    display_order: int
+    is_active: bool
+
+
+class ProductVariantCreate(BaseModel):
+    model_config = {'extra': 'forbid'}
+    name: str = Field(min_length=1, max_length=120)
+    price_adjustment: Decimal = Field(default=Decimal('0.00'), ge=Decimal('-1000000'), max_digits=18, decimal_places=2)
+    display_order: int = Field(default=0, ge=0, le=10000)
+
+
+class ProductVariantConfigurationItem(BaseModel):
+    model_config = {'extra': 'forbid'}
+    id: str | None = Field(default=None, max_length=36)
+    name: str = Field(min_length=1, max_length=120)
+    price_adjustment: Decimal = Field(ge=Decimal('-1000000'), max_digits=18, decimal_places=2)
+    display_order: int = Field(default=0, ge=0, le=10000)
+
+
+class ProductVariantConfigurationUpdate(BaseModel):
+    model_config = {'extra': 'forbid'}
+    variants: list[ProductVariantConfigurationItem] = Field(default_factory=list, max_length=20)
+
+
 class OutletProductMappingRead(BaseModel):
     tax_override: Decimal | None = None
     id: str
@@ -178,6 +222,7 @@ class OutletProductMappingRead(BaseModel):
     is_active: bool
     display_order: int
     source: str = 'GLOBAL'
+    variants: list[ProductVariantRead] = Field(default_factory=list)
 
 
 class TenantBrandingUpdate(BaseModel):
@@ -213,6 +258,7 @@ class TenantAdminRead(BaseModel):
     subscription_end: datetime | None = None
     grace_ends_at: datetime | None = None
     login_allowed: bool = False
+    currency_code: str = 'INR'
 
 
 class TenantSubscriptionRead(BaseModel):
@@ -246,6 +292,7 @@ class TenantCreate(BaseModel):
     admin_password: str = Field(min_length=8, max_length=128)
     admin_display_name: str = Field(min_length=2, max_length=120)
     plan_code: str = Field(default='PROFESSIONAL', min_length=2, max_length=48)
+    currency_code: str = Field(default='INR', min_length=3, max_length=3, pattern=r'^[A-Za-z]{3}$')
 
 
 class TenantUpdate(BaseModel):
@@ -356,21 +403,6 @@ class ProductUpdate(BaseModel):
     is_available: bool | None = None
     is_active: bool | None = None
     shared_across_outlets: bool | None = None
-
-
-class ProductVariantRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-    id: str
-    name: str
-    price_adjustment: Decimal
-    display_order: int
-    is_active: bool
-
-
-class ProductVariantCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=120)
-    price_adjustment: Decimal = Field(default=Decimal('0.00'), ge=Decimal('-1000000'), max_digits=18, decimal_places=2)
-    display_order: int = Field(default=0, ge=0, le=10000)
 
 
 class ProductRead(BaseModel):
@@ -603,6 +635,8 @@ class DashboardRead(BaseModel):
     low_stock_products: int
     top_products: list[DashboardTopProduct]
     hourly_sales: list[DashboardSeriesPoint]
+    date_sales: list[DashboardSeriesPoint]
+    hour_sales: list[DashboardSeriesPoint]
     category_sales: list[DashboardSeriesPoint]
 
 

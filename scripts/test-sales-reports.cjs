@@ -5,7 +5,7 @@ const vm=require('node:vm');
 const ts=require('typescript');
 const signal=v=>Object.assign(()=>v,{set:n=>v=n,update:fn=>v=fn(v)});
 function setup(){
- const calls={};const services={ActivatedRoute:{paramMap:{subscribe(){}}},BrewBillApiService:{listOrders:async()=>[],voidOrder:async(t,id,reason)=>calls.void={id,reason}},SessionService:{accessToken:()=> 'test',isAdmin:()=>true},ReceiptPrinterService:{print:async p=>calls.print=p}};
+ const calls={};const services={ActivatedRoute:{paramMap:{subscribe(){}}},BrewBillApiService:{listOrders:async()=>[],voidOrder:async(t,id,reason)=>calls.void={id,reason}},SessionService:{accessToken:()=> 'test',isAdmin:()=>true},ReceiptPrinterService:{print:async p=>calls.print=p},CurrencyService:{current:()=>({code:'INR',name:'Indian Rupee',symbol:'₹',locale:'en-IN',decimal_places:2})}};
  const exports={};const source=ts.transpileModule(fs.readFileSync('src/app/features/operations/operations.component.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,experimentalDecorators:true}}).outputText;
  vm.runInNewContext(source,{exports,Intl,Date,console,window:{prompt:()=> 'Duplicate entry'},require:p=>p==='@angular/core'?{signal,computed:fn=>fn,Component:()=>t=>t,inject:k=>services[k]}:new Proxy({},{get:(_,k)=>k})});const c=new exports.OperationsComponent();c.key.set('reports');return {c,calls};
 }
@@ -19,7 +19,7 @@ test('reports search and combined filters paginate API rows without changing sum
 });
 test('existing print and void handlers retain their API payloads',async()=>{
  const {c,calls}=setup();const order={id:'order',invoice_number:'INV-1',cashier_name:'Admin',status:'COMPLETED',payment_modes:['CASH'],items:[{product_name:'Coffee',quantity:1,line_total:'100'}],subtotal:'100',discount:'0',tax:'5',round_off:'0',grand_total:'105',order_type:'DIRECT'};
- await c.printOrder(order);assert.equal(calls.print.grandTotalMinor,10500);assert.equal(calls.print.invoiceNumber,'INV-1');
+ await c.printOrder(order);assert.equal(calls.print.grandTotalMinor,10500);assert.equal(calls.print.invoiceNumber,'INV-1');assert.equal(calls.print.currency.code,'INR');
  await c.voidOrder(order);assert.equal(calls.void.id,'order');assert.equal(calls.void.reason,'Duplicate entry');
 });
 test('sales styles remain scoped to reports only',()=>{

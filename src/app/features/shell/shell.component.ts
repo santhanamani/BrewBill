@@ -69,10 +69,11 @@ export class ShellComponent {
   }
 
   brandLabel(): string {
-    if (this.session.isSuperAdmin() || this.isActive('/products')) {
-      return this.session.context()?.branding?.display_name ?? 'Brew Haven – RS Puram';
-    }
-    return 'BREW HAVEN';
+    const context = this.session.context();
+    return context?.branding?.display_name?.trim()
+      || context?.tenant_name?.trim()
+      || context?.outlet_name?.trim()
+      || 'BrewBill';
   }
 
   asset(path: string): string {

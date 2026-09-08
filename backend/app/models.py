@@ -12,6 +12,16 @@ class Timestamped:
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
+class Currency(Base):
+    __tablename__ = 'currencies'
+    code: Mapped[str] = mapped_column(String(3), primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), unique=True)
+    symbol: Mapped[str] = mapped_column(String(12))
+    locale: Mapped[str] = mapped_column(String(24), default='en-US')
+    decimal_places: Mapped[int] = mapped_column(Integer, default=2)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+
+
 class Tenant(Base, Timestamped):
     __tablename__ = 'tenants'
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -26,6 +36,9 @@ class Tenant(Base, Timestamped):
     phone: Mapped[str | None] = mapped_column(String(32))
     email: Mapped[str | None] = mapped_column(String(255))
     website: Mapped[str | None] = mapped_column(String(255))
+    # The database migration enforces this reference. Keeping ORM metadata
+    # independent lets isolated test databases create tenants before seed data.
+    currency_code: Mapped[str] = mapped_column(String(3), default='INR', index=True)
 
 
 class SubscriptionPlan(Base, Timestamped):

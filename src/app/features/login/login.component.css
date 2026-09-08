@@ -10,6 +10,8 @@
 .tenant-code-status { display:block; margin-top:7px; color:#218145; }
 .tenant-code-status.invalid { color:#bd3540; }
 :host .login-submit:disabled { opacity:.55; cursor:not-allowed; }
+:host .login-heading > div { min-width:0; flex:1 1 auto; }
+:host .login-heading h1 { white-space:nowrap; line-height:1.15; }
 .subscription-login-alert{display:grid;grid-template-columns:auto 1fr auto;align-items:start;gap:10px;padding:11px 12px;border:1px solid #ead19b;border-radius:10px;background:#fff8e7;color:#66451f}
 .subscription-login-alert>.material-symbols-outlined{font-size:22px;color:#bd741f}.subscription-login-alert div{display:grid;gap:2px}.subscription-login-alert b{font-size:13px}.subscription-login-alert small{font-size:11px;line-height:1.4;color:#806847}.subscription-login-alert button{align-self:center;border:0;border-radius:7px;padding:8px 12px;background:#6c3519;color:#fff;font-weight:700}
 .subscription-login-alert.grace{border-color:#e9b36c;background:#fff3df}.subscription-login-alert.expired,.subscription-login-alert.not-started{border-color:#e3aaa6;background:#fff0ef;color:#842f2b}.subscription-login-alert.expired>.material-symbols-outlined,.subscription-login-alert.not-started>.material-symbols-outlined{color:#bd3e35}

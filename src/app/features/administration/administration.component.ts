@@ -4,7 +4,7 @@ import { RuntimeConfigService } from '../../core/runtime-config.service';
 import { Component, computed, inject, signal } from '@angular/core';
 
 import { BrewBillApiService } from '../../core/brew-bill-api.service';
-import { AdminOutlet, AdminUser, GlobalProduct, TenantAdmin, TenantPaymentPolicy, TenantSubscription } from '../../core/models/api.models';
+import { AdminOutlet, AdminUser, CurrencyDefinition, GlobalProduct, TenantAdmin, TenantPaymentPolicy, TenantSubscription } from '../../core/models/api.models';
 import { SessionService } from '../../core/session.service';
 
 type AdminTab = 'tenants' | 'outlets' | 'products' | 'users' | 'branding';
@@ -23,6 +23,10 @@ export class AdministrationComponent {
   readonly formError = signal('');
   readonly editingProductId = signal<string | null>(null);
   readonly detailTab = signal<'overview' | 'branding' | 'payments' | 'subscription'>('branding');
+  readonly currencies = signal<CurrencyDefinition[]>([]);
+  readonly tenantCurrencyCode = signal('INR');
+  readonly currencySaving = signal(false);
+  readonly currencyFeedback = signal('');
   readonly tenantPaymentMode = signal<TenantPaymentPolicy['payment_processing_mode']>('MANUAL_ALLOWED');
   readonly paymentPolicyLoading = signal(false);
   readonly paymentPolicySaving = signal(false);
@@ -99,8 +103,8 @@ export class AdministrationComponent {
   async load():Promise<void>{
     const token=this.token(); if(!token)return; this.loading.set(true);
     try{
-      const [tenants,outlets,users,products]=await Promise.all([this.api.listTenants(token),this.api.listAdminOutlets(token),this.api.listAdminUsers(token),this.api.listGlobalProducts(token, true)]);
-      this.tenants.set(tenants); this.outlets.set(outlets); this.users.set(users); this.products.set(products);
+      const [tenants,outlets,users,products,currencies]=await Promise.all([this.api.listTenants(token),this.api.listAdminOutlets(token),this.api.listAdminUsers(token),this.api.listGlobalProducts(token, true),this.api.listCurrencies(token)]);
+      this.tenants.set(tenants); this.outlets.set(outlets); this.users.set(users); this.products.set(products); this.currencies.set(currencies);
       const current=this.selected(); const selected=tenants.find(row=>row.id===current?.id) ?? tenants[0] ?? null; if(selected)this.select(selected);
     }catch(error){this.notice.set(error instanceof Error?error.message:'Unable to load platform administration.');}
     finally{this.loading.set(false);}
@@ -111,8 +115,10 @@ export class AdministrationComponent {
     this.brandFeedback.set('');
     this.paymentPolicyFeedback.set('');
     this.subscriptionFeedback.set('');
+    this.currencyFeedback.set('');
     this.tenantSubscription.set(null);
     this.selected.set(tenant);
+    this.tenantCurrencyCode.set(tenant.currency_code || 'INR');
     this.draft.set({name:tenant.name,tagline:tenant.tagline??'',primary_color:tenant.primary_color,secondary_color:tenant.secondary_color,logo_url:tenant.logo_url??'',cover_image_url:tenant.cover_image_url??'',phone:tenant.phone??'',email:tenant.email??'',website:tenant.website??''});
     void this.loadTenantPaymentPolicy(tenant.id,version);
     void this.loadTenantSubscription(tenant.id,version);
@@ -145,6 +151,26 @@ export class AdministrationComponent {
       if(this.selected()?.id===tenant.id&&version===this.brandSelectionVersion)this.paymentPolicyFeedback.set(this.errorMessage(error));
     }finally{
       if(this.selected()?.id===tenant.id&&version===this.brandSelectionVersion)this.paymentPolicySaving.set(false);
+    }
+  }
+  async saveTenantCurrency():Promise<void>{
+    const token=this.token(),tenant=this.selected(),version=this.brandSelectionVersion;
+    if(!token||!tenant||this.currencySaving())return;
+    const selectedCurrency=this.currencies().find(row=>row.code===this.tenantCurrencyCode());
+    if(!selectedCurrency){this.currencyFeedback.set('Choose a valid currency from the master list.');return;}
+    this.currencySaving.set(true);this.currencyFeedback.set('');
+    try{
+      const saved=await this.api.updateTenantCurrency(token,tenant.id,selectedCurrency.code);
+      if(this.selected()?.id===tenant.id&&version===this.brandSelectionVersion){
+        const changed={...tenant,currency_code:saved.code};
+        this.selected.set(changed);this.tenants.update(rows=>rows.map(row=>row.id===tenant.id?changed:row));
+        this.tenantCurrencyCode.set(saved.code);
+        this.currencyFeedback.set(`${saved.name} (${saved.code}) saved for ${tenant.code} only.`);
+      }
+    }catch(error){
+      if(this.selected()?.id===tenant.id&&version===this.brandSelectionVersion)this.currencyFeedback.set(this.errorMessage(error));
+    }finally{
+      if(this.selected()?.id===tenant.id&&version===this.brandSelectionVersion)this.currencySaving.set(false);
     }
   }
   private toDateTimeInput(value:string|null):string {
@@ -216,7 +242,7 @@ export class AdministrationComponent {
   open(type:Exclude<ModalType,null>, item?:TenantAdmin):void{
     this.editingProductId.set(null); this.formError.set('');
     this.modal.set(type);
-    if(type==='tenant')this.form.set({code:'',name:'',outlet_code:'MAIN',outlet_name:'',outlet_address:'',admin_username:'admin',admin_password:'',admin_display_name:'',plan_code:'PROFESSIONAL'});
+    if(type==='tenant')this.form.set({code:'',name:'',outlet_code:'MAIN',outlet_name:'',outlet_address:'',admin_username:'admin',admin_password:'',admin_display_name:'',plan_code:'PROFESSIONAL',currency_code:'INR'});
     if(type==='tenant-edit' && item)this.form.set({id:item.id,name:item.name,status:item.status});
     if(type==='outlet')this.form.set({tenant_id:this.selected()?.id??'',code:'',name:'',address:''});
     if(type==='user')this.form.set({tenant_id:this.selected()?.id??'',outlet_id:'',role_code:'CASHIER',username:'',display_name:'',email:'',phone:'',password:''});
@@ -263,7 +289,7 @@ export class AdministrationComponent {
     if(duplicateError){this.formError.set(duplicateError);return;}
     this.saving.set(true); this.formError.set('');
     try{
-      if(type==='tenant')await this.api.createTenant(token,{code:String(f['code']).trim().toUpperCase(),name:String(f['name']).trim(),outlet_code:String(f['outlet_code']).trim().toUpperCase(),outlet_name:String(f['outlet_name']).trim(),outlet_address:String(f['outlet_address']).trim()||null,admin_username:String(f['admin_username']).trim(),admin_password:String(f['admin_password']),admin_display_name:String(f['admin_display_name']).trim(),plan_code:String(f['plan_code']).trim().toUpperCase()});
+      if(type==='tenant')await this.api.createTenant(token,{code:String(f['code']).trim().toUpperCase(),name:String(f['name']).trim(),outlet_code:String(f['outlet_code']).trim().toUpperCase(),outlet_name:String(f['outlet_name']).trim(),outlet_address:String(f['outlet_address']).trim()||null,admin_username:String(f['admin_username']).trim(),admin_password:String(f['admin_password']),admin_display_name:String(f['admin_display_name']).trim(),plan_code:String(f['plan_code']).trim().toUpperCase(),currency_code:String(f['currency_code']||'INR').toUpperCase()});
       if(type==='tenant-edit')await this.api.updateTenant(token,String(f['id']),{name:String(f['name']),status:String(f['status']) as 'ACTIVE'|'INACTIVE'});
       if(type==='outlet')await this.api.createAdminOutlet(token,{tenant_id:String(f['tenant_id']),code:String(f['code']).toUpperCase(),name:String(f['name']),address:String(f['address'])||null});
       if(type==='outlet-edit')await this.api.updateAdminOutlet(token,String(f['id']),{name:String(f['name']).trim(),address:String(f['address']).trim()||null});

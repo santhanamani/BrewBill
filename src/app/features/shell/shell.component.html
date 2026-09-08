@@ -2,7 +2,7 @@
   <header class="topbar light-topbar">
     <a class="brand" [routerLink]="session.isSuperAdmin() ? '/administration' : '/dashboard'">
       <img class="brand-mark" [src]="logoAsset()" alt="BrewBill" />
-      <span><b>{{ isActive('/pos') ? 'Brew Haven' : brandLabel() }}</b><small>COFFEE &amp; CAFÉ</small></span>
+      <span><b [title]="brandLabel()">{{ brandLabel() }}</b><small>COFFEE &amp; CAFÉ</small></span>
     </a>
     <div class="top-meta outlet-context"><span class="material-symbols-outlined">location_on</span><span><b>{{ session.isSuperAdmin() ? 'All Tenants' : (session.context()?.outlet_name ?? 'Platform') }}</b><small>{{ session.isSuperAdmin() ? 'Super Admin' : (isActive('/pos') ? 'Outlet (' + (session.context()?.outlet_code ?? session.context()?.tenant_code) + ')' : (session.context()?.outlet_code ?? session.context()?.tenant_code)) }}</small></span></div>
     <span class="tenant-context-badge"><span class="material-symbols-outlined">database</span>{{session.isSuperAdmin() ? 'Multi-Tenant Administration' : 'Tenant-scoped data'}}</span>

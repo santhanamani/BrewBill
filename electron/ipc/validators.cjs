@@ -23,6 +23,13 @@ const receiptSchema = z.object({
   paymentMode: z.enum(['CASH', 'UPI', 'CARD', 'SPLIT']),
   orderType: z.enum(['DIRECT', 'KOT', 'TAKEAWAY']).default('DIRECT'),
   serviceReference: z.string().max(80).nullable().default(null),
+  currency: z.object({
+    code: z.string().length(3),
+    name: z.string().max(120),
+    symbol: z.string().max(12),
+    locale: z.string().max(24),
+    decimal_places: z.number().int().min(0).max(3),
+  }),
 });
 
 function parse(schema, value) {

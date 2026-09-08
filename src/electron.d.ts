@@ -50,6 +50,13 @@ declare global {
             paymentMode: 'CASH' | 'UPI' | 'CARD' | 'SPLIT';
             orderType: 'DIRECT' | 'KOT' | 'TAKEAWAY';
             serviceReference: string | null;
+            currency: {
+              code: string;
+              name: string;
+              symbol: string;
+              locale: string;
+              decimal_places: number;
+            };
           },
           printerName?: string,
         ) => Promise<{ success: boolean }>;

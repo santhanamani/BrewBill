@@ -13,6 +13,7 @@ import {
 import { RuntimeConfigService } from '../../core/runtime-config.service';
 import { SessionService } from '../../core/session.service';
 import { ReceiptPaymentMode, ReceiptPrinterService } from '../../core/receipt-printer.service';
+import { CurrencyService } from '../../core/currency.service';
 
 const labels: Record<string, { title: string; detail: string; icon: string }> = {
   holds: {
@@ -46,6 +47,7 @@ export class OperationsComponent {
   private readonly heldCart = inject(HeldCartService);
   private readonly router = inject(Router);
   private readonly receiptPrinter = inject(ReceiptPrinterService);
+  readonly currency = inject(CurrencyService);
 
   readonly key = signal('inventory');
   readonly module = computed(() => labels[this.key()] ?? labels['inventory']);
@@ -419,7 +421,7 @@ export class OperationsComponent {
     this.printingOrderId.set(order.id);
     this.error.set('');
     try {
-      await this.receiptPrinter.print({
+      const printed = await this.receiptPrinter.print({
         cafeName: 'Brew Haven',
         address: 'BrewBill POS',
         invoiceNumber: order.invoice_number,
@@ -440,8 +442,9 @@ export class OperationsComponent {
         paymentMode,
         orderType: order.order_type,
         serviceReference: order.service_reference,
+        currency: this.currency.current(),
       });
-      this.notice.set(`Print request sent for ${order.invoice_number}.`);
+      if (printed) this.notice.set(`Print request sent for ${order.invoice_number}.`);
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to print this invoice.');
     } finally {
@@ -456,9 +459,7 @@ export class OperationsComponent {
     return this.kots().filter((kot) => kot.status === status).length;
   }
   money(value: string | number): string {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(
-      Number(value),
-    );
+    return this.currency.format(value);
   }
   date(value: string): string {
     return new Intl.DateTimeFormat('en-IN', {

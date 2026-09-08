@@ -67,7 +67,13 @@
   @if(dialog==='product'){<label>Product Code *<input [readOnly]="!!editingProductId()" [value]="form()['code']" (input)="patchForm('code',$any($event.target).value)" required /></label><label>Product Name *<input [value]="form()['name']" (input)="patchForm('name',$any($event.target).value)" required /></label><label>Category *<input [value]="form()['category_name']" (input)="patchForm('category_name',$any($event.target).value)" required /></label><label>Base Unit *<input [value]="form()['base_unit']" (input)="patchForm('base_unit',$any($event.target).value)" required /></label><label>Default GST %<input type="number" min="0" max="100" step="0.01" required [value]="form()['default_gst']" (input)="patchForm('default_gst',$any($event.target).value)" /></label><label>Status<select [value]="form()['status']" (change)="patchForm('status',$any($event.target).value)"><option>ACTIVE</option><option>INACTIVE</option></select></label><label class="wide">Image URL<input [value]="form()['image_path']" (input)="patchForm('image_path',$any($event.target).value)" /></label><label class="wide">Description<textarea [value]="form()['description']" (input)="patchForm('description',$any($event.target).value)"></textarea></label>}
 </div>@if(formError()){<p class="form-error" role="alert">{{formError()}}</p>}<footer><button type="button" [disabled]="saving()" (click)="close()">Cancel</button><button class="primary" type="submit" [disabled]="saving()">{{saving()?'Saving…':'Save Changes'}}</button></footer></form></div>}
 <ng-template #brandingFields>
-<fieldset class="brand-upload-fields" [disabled]="!!uploadingBrand() || savingBrand()">
+<fieldset class="brand-upload-fields" [disabled]="!!uploadingBrand() || savingBrand() || currencySaving()">
+<div class="admin-currency-setting">
+  <div><span class="material-symbols-outlined">currency_exchange</span><p><b>Currency &amp; Locale</b><small>Used by every outlet, amount display and receipt for this tenant.</small></p></div>
+  <label>Tenant Currency<select [value]="tenantCurrencyCode()" (change)="tenantCurrencyCode.set($any($event.target).value);currencyFeedback.set('')">@for(row of currencies();track row.code){<option [value]="row.code">{{row.code}} · {{row.name}} ({{row.symbol}})</option>}</select></label>
+  <button class="save" type="button" [disabled]="currencySaving()" (click)="saveTenantCurrency()"><span class="material-symbols-outlined">save</span>{{currencySaving()?'Saving…':'Save Currency'}}</button>
+  <p class="currency-feedback" role="status">{{currencyFeedback()}}</p>
+</div>
 <div class="branding-previews">
   <label>Café Logo
     <div class="logo-preview"><img [src]="runtime.assetUrl(draft().logo_url||'brand/logo.svg')" alt="Café logo preview" /></div>

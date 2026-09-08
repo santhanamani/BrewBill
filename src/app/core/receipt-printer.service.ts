@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { CurrencyDefinition } from './models/api.models';
 
 export type ReceiptPaymentMode = 'CASH' | 'UPI' | 'CARD' | 'SPLIT';
 
@@ -16,18 +17,19 @@ export interface ReceiptPayload {
   paymentMode: ReceiptPaymentMode;
   orderType: 'DIRECT' | 'KOT' | 'TAKEAWAY';
   serviceReference: string | null;
+  currency: CurrencyDefinition;
 }
 
 @Injectable({ providedIn: 'root' })
 export class ReceiptPrinterService {
-  async print(receipt: ReceiptPayload): Promise<void> {
+  async print(receipt: ReceiptPayload): Promise<boolean> {
     if (window.brewBill?.printer) {
       const result = await window.brewBill.printer.printReceipt(receipt);
-      if (!result.success) throw new Error('Printer did not complete the receipt job.');
-      return;
+      return result.success;
     }
 
     this.printInBrowser(receipt);
+    return true;
   }
 
   private printInBrowser(receipt: ReceiptPayload): void {
@@ -42,7 +44,11 @@ export class ReceiptPrinterService {
   }
 
   private markup(receipt: ReceiptPayload): string {
-    const money = (minor: number) => `&#8377;${(minor / 100).toFixed(2)}`;
+    const money = (minor: number) => this.escape(new Intl.NumberFormat(receipt.currency.locale, {
+      style: 'currency', currency: receipt.currency.code,
+      minimumFractionDigits: receipt.currency.decimal_places,
+      maximumFractionDigits: receipt.currency.decimal_places,
+    }).format(minor / 100));
     const rows = receipt.items
       .map(
         (item) =>

@@ -5,7 +5,32 @@
     <p>Live overview of your café operations</p>
   </div>
   <div class="filter-row dashboard-filters">
-    <button type="button"><span class="material-symbols-outlined">calendar_month</span>Today</button>
+    <div class="dashboard-date-control">
+      <button class="date-range-trigger" type="button" [attr.aria-expanded]="pickerOpen()" (click)="toggleDatePicker()">
+        <span class="material-symbols-outlined">date_range</span>
+        <span><small>Date range</small><b>{{ periodLabel() }}</b></span>
+        <span class="material-symbols-outlined range-chevron">{{ pickerOpen() ? 'expand_less' : 'expand_more' }}</span>
+      </button>
+      @if (pickerOpen()) {
+        <div class="dashboard-calendar" role="dialog" aria-label="Choose dashboard date range">
+          <div class="calendar-selection">
+            <button type="button" [class.active]="selectingBoundary() === 'from'" (click)="editBoundary('from')"><small>From</small><b>{{ displayDate(fromDate()) }}</b></button>
+            <span class="material-symbols-outlined">arrow_forward</span>
+            <button type="button" [class.active]="selectingBoundary() === 'to'" (click)="editBoundary('to')"><small>To</small><b>{{ displayDate(toDate()) }}</b></button>
+          </div>
+          <div class="calendar-heading">
+            <b>{{ calendarMonthLabel() }}</b>
+            <div><button type="button" aria-label="Previous month" (click)="moveCalendar(-1)"><span class="material-symbols-outlined">chevron_left</span></button><button type="button" aria-label="Next month" [disabled]="!canMoveNextMonth()" (click)="moveCalendar(1)"><span class="material-symbols-outlined">chevron_right</span></button></div>
+          </div>
+          <div class="calendar-weekdays">@for (label of weekdayLabels; track label) {<span>{{ label }}</span>}</div>
+          <div class="calendar-days">@for (day of calendarDays(); track day.value) {<button type="button" [disabled]="day.disabled" [class.outside]="day.outside" [class.in-range]="day.inRange" [class.range-start]="day.isStart" [class.range-end]="day.isEnd" [class.today]="day.isToday" (click)="selectCalendarDay(day)">{{ day.day }}</button>}</div>
+          <div class="calendar-shortcuts"><button type="button" (click)="chooseQuickRange(7)">Last 7 days</button><button type="button" (click)="chooseQuickRange(30)">Last 30 days</button><button type="button" (click)="chooseThisMonth()">This month</button></div>
+          @if (rangeError()) {<p class="range-error"><span class="material-symbols-outlined">error</span>{{ rangeError() }}</p>}
+          <div class="calendar-actions"><button class="calendar-cancel" type="button" (click)="cancelDatePicker()">Cancel</button><button class="calendar-apply" type="button" [disabled]="loading()" (click)="confirmDateRange()">{{ loading() ? 'Loading…' : 'Apply range' }}</button></div>
+        </div>
+      }
+    </div>
+    @if (periodLabel() !== 'Today') {<button class="today-shortcut" type="button" [disabled]="loading()" (click)="showToday()"><span class="material-symbols-outlined">today</span>Today</button>}
     <button type="button" class="outlet-filter"><span class="material-symbols-outlined">location_on</span><span><small>Current Outlet</small>{{ session.context()?.outlet_name }}</span><span class="material-symbols-outlined">expand_more</span></button>
   </div>
 </section>
@@ -21,7 +46,7 @@
     <article class="metric">
       <span class="metric-icon brown"><span class="material-symbols-outlined">payments</span></span>
       <div>
-        <small>Today's Sales</small>
+        <small>{{ metricPrefix() }} Sales</small>
         <h2>{{ money(metrics()?.sales_today ?? 0) }}</h2>
         <p>live completed bills</p>
       </div>
@@ -31,7 +56,7 @@
         ><span class="material-symbols-outlined">receipt_long</span></span
       >
       <div>
-        <small>Today's Orders</small>
+        <small>{{ metricPrefix() }} Orders</small>
         <h2>{{ metrics()?.orders_today ?? 0 }}</h2>
         <p>PostgreSQL orders</p>
       </div>
@@ -79,7 +104,7 @@
       <div>
         <small>Average Bill Value</small>
         <h2>{{ money(averageBill()) }}</h2>
-        <p>today's average</p>
+        <p>{{ periodLabel() }} average</p>
       </div>
     </article>
     <article class="metric">
@@ -97,13 +122,19 @@
   <section class="dashboard-grid">
     <article class="panel chart-panel">
       <div class="panel-title">
-        <div class="dashboard-panel-heading"><span class="material-symbols-outlined">bar_chart</span><div><h2>Daily Sales Trend</h2><p>Track your sales throughout the day</p></div></div>
-        <button type="button"><span class="material-symbols-outlined">calendar_month</span>Today<span class="material-symbols-outlined">expand_more</span></button>
+        <div class="dashboard-panel-heading"><span class="material-symbols-outlined">bar_chart</span><div><h2>{{ trendMode() === 'date' ? 'Date-wise Sales Trend' : 'Hour-wise Sales Trend' }}</h2><p>{{ trendMode() === 'date' ? 'Sales grouped by date' : 'Sales grouped by hour' }} · {{ periodLabel() }}</p></div></div>
+        <div class="trend-panel-tools">
+          <div class="trend-mode-switch" role="group" aria-label="Sales trend grouping">
+            <button type="button" [class.active]="trendMode() === 'date'" [attr.aria-pressed]="trendMode() === 'date'" (click)="trendMode.set('date')"><span class="material-symbols-outlined">calendar_view_month</span>Date</button>
+            <button type="button" [class.active]="trendMode() === 'hour'" [attr.aria-pressed]="trendMode() === 'hour'" (click)="trendMode.set('hour')"><span class="material-symbols-outlined">schedule</span>Hour</button>
+          </div>
+          <span class="period-chip" [title]="periodLabel()"><span class="material-symbols-outlined">calendar_month</span>{{ periodLabel() }}</span>
+        </div>
       </div>
-      @if (metrics()?.hourly_sales?.length) {
+      @if (trendSeries().length) {
         <div echarts [options]="salesChart()" class="sales-chart"></div>
       } @else {
-        <div class="chart-reference-empty"><span class="material-symbols-outlined">bar_chart</span><b>No completed sales today.</b><small>Sales data will appear here once you start taking orders.</small></div>
+        <div class="chart-reference-empty"><span class="material-symbols-outlined">bar_chart</span><b>No {{ trendMode() === 'date' ? 'date-wise' : 'hour-wise' }} sales in this period.</b><small>Try another date range or complete a new order.</small></div>
       }
     </article>
     <article class="panel categories-panel">
@@ -111,19 +142,28 @@
       @if (metrics()?.category_sales?.length) {
         <div echarts [options]="categoryChart()" class="category-chart"></div>
       } @else {
-        <div class="chart-reference-empty"><span class="material-symbols-outlined">pie_chart</span><b>No category sales today.</b><small>Category-wise sales will appear here once you have completed sales.</small></div>
+        <div class="chart-reference-empty"><span class="material-symbols-outlined">pie_chart</span><b>No category sales in this period.</b><small>Try another date range or complete a new order.</small></div>
       }
     </article>
     <article class="panel product-rank">
       <div class="panel-title">
-        <div class="dashboard-panel-heading"><span class="material-symbols-outlined">trophy</span><div><h2>Top Selling Products</h2><p>Your best performing items today</p></div></div>
-        <button type="button">View All<span class="material-symbols-outlined">chevron_right</span></button>
+        <div class="dashboard-panel-heading"><span class="material-symbols-outlined">trophy</span><div><h2>Top Selling Products</h2><p>Best performers · {{ periodLabel() }}</p></div></div>
+        <button class="dashboard-view-all" type="button" aria-label="View all sales reports" (click)="viewAllSales()">View All<span class="material-symbols-outlined">arrow_forward</span></button>
       </div>
-      @for (product of topProducts(); track product.product_name; let index = $index) {
-        <div class="rank-line"><em>{{ index + 1 }}</em><span>{{ product.product_name }}</span><i [style.width.%]="100 - index * 12"></i><b>{{ product.quantity_sold }}</b></div>
-      } @empty {
-        <div class="chart-reference-empty products-empty"><span class="material-symbols-outlined">bar_chart</span><b>No completed sales for today.</b><small>Top selling products will appear here once you have completed sales.</small></div>
-      }
+      <div class="top-products-list">
+        @for (product of topProducts(); track product.product_name; let index = $index) {
+          <article class="top-product-row">
+            <span class="top-product-rank">{{ index + 1 }}</span>
+            <div class="top-product-main">
+              <strong>{{ product.product_name }}</strong>
+              <div class="top-product-track" aria-hidden="true"><span [style.width.%]="topProductPercent(product.quantity_sold)"></span></div>
+            </div>
+            <span class="top-product-sold"><b>{{ product.quantity_sold }}</b><small>sold</small></span>
+          </article>
+        } @empty {
+          <div class="chart-reference-empty products-empty"><span class="material-symbols-outlined">bar_chart</span><b>No completed sales in this period.</b><small>Try another date range or complete a new order.</small></div>
+        }
+      </div>
     </article>
   </section>
 }

@@ -57,7 +57,7 @@
         <tbody>
           @for (product of mappingRows(); track product.id) {
             <tr>
-              <td><span class="product-cell"><img class="product-thumb" [src]="asset(product.image_path)" [alt]="product.name" /><span><b>{{ product.name }}</b><small>{{ product.code }} · {{ product.category_name }}</small></span></span></td>
+              <td><span class="product-cell"><img class="product-thumb" [src]="asset(product.image_path)" [alt]="product.name" /><span><b>{{ product.name }}</b><small>{{ product.code }} · {{ product.category_name }}</small>@if(activeVariantCount(product)){<small class="variant-summary">{{activeVariantCount(product)}} price options</small>}</span></span></td>
               <td><button class="price-value" type="button" [disabled]="saving() || stockSaving()" title="Edit outlet price" (click)="editMapping(product, productDialog)">{{ money(product.selling_price) }}</button></td>
               <td class="stock-cell">
                 @if(stockEditor()?.id===product.id){
@@ -88,7 +88,7 @@
   <div class="panel-title"><div><h2>{{mappingTarget()?.mappingId?'Edit Outlet Mapping':'Map Product to Outlet'}}</h2><p>{{draft().name}} · {{draft().code}}</p></div><button type="button" aria-label="Close" [disabled]="saving()" (click)="productDialog.close()">×</button></div>
   <p class="mapping-explanation">Price and availability apply only to {{session.context()?.outlet_name??'this outlet'}}. Shared product details are managed by the platform administrator.</p>
   <div class="form-grid">
-    <label>Selling Price (₹) *<input type="number" min="0" step="0.01" required [value]="draft().sellingPrice" (input)="patch('sellingPrice',$any($event.target).value)" /></label>
+    <label>Selling Price ({{ currency.symbol() }}) *<input type="number" min="0" step="0.01" required [value]="draft().sellingPrice" (input)="patch('sellingPrice',$any($event.target).value)" /></label>
     <label>Low Stock Limit ({{draft().unit}})<input type="number" min="0" step="0.001" required [value]="draft().lowStockLimit" (input)="patch('lowStockLimit',$any($event.target).value)" /></label>
     <label>{{mappingTarget()?.mappingId?'Current Stock':'Opening Stock'}} ({{draft().unit}})<input type="number" min="0" step="0.001" required [disabled]="saving()" [value]="draft().stockQuantity" (input)="patch('stockQuantity',$any($event.target).value)" /></label>
     <p class="mapping-explanation">Stock changes are saved to this outlet's product inventory and recorded as corrections. Ingredient stock is managed separately.</p>
@@ -102,6 +102,26 @@
       }
     }
     <p>{{mappingGstEnabled() ? 'GST is added to the selling price. This setting applies only to this outlet product.' : 'GST disabled: new bills for this outlet product will use 0% GST.'}} Existing completed bills are unchanged.</p>
+  </section>
+  <section class="variant-settings" aria-label="Tenant product variant settings">
+    <div class="variant-settings-head">
+      <div><h3>Price Options / Variants</h3><p>Choose which products need options and set the selling price for this tenant.</p></div>
+      <label class="variant-switch"><input type="checkbox" [checked]="mappingVariantsEnabled()" [disabled]="saving()" (change)="toggleVariantConfiguration($any($event.target).checked)" /><span>{{mappingVariantsEnabled()?'Enabled':'Not needed'}}</span></label>
+    </div>
+    @if(mappingVariantsEnabled()){
+      <div class="variant-column-labels" aria-hidden="true"><span>Option name</span><span>Selling price ({{currency.symbol()}})</span><span></span></div>
+      <div class="variant-list">
+        @for(variant of variantDrafts();track $index;let index=$index){
+          <div class="variant-row">
+            <label><span class="sr-only">Variant name</span><input maxlength="120" required placeholder="e.g. Medium" [disabled]="saving()" [value]="variant.name" (input)="updateVariantRow(index,'name',$any($event.target).value)" /></label>
+            <label><span class="sr-only">Variant selling price</span><input type="number" min="0" step="0.01" required [disabled]="saving()" [value]="variant.price" (input)="updateVariantRow(index,'price',$any($event.target).value)" /></label>
+            <button class="variant-remove" type="button" [disabled]="saving()" title="Remove option" aria-label="Remove variant option" (click)="removeVariantRow(index)"><span class="material-symbols-outlined">delete</span></button>
+          </div>
+        }
+      </div>
+      <button class="variant-add" type="button" [disabled]="saving() || variantDrafts().length >= 20" (click)="addVariantRow()"><span class="material-symbols-outlined">add</span>Add another option</button>
+      <p class="variant-help">Add at least two options. POS will show this selector only for products with configured choices.</p>
+    }
   </section>
   <div class="checks">
     <label><input type="checkbox" [checked]="draft().favourite" (change)="patch('favourite',$any($event.target).checked)" />Favourite</label>
@@ -120,8 +140,8 @@
       <label>Category *<select required [value]="draft().categoryId" (change)="patch('categoryId',$any($event.target).value)"><option value="">Select category</option>@for(category of categories();track category.id){<option [value]="category.id">{{category.name}}</option>}</select></label>
       <label>Product Code *<input required maxlength="80" placeholder="e.g. HOUSE_SPECIAL" [value]="draft().code" (input)="patch('code',$any($event.target).value)" /></label>
       <label>Product Name *<input required maxlength="180" placeholder="Enter product name" [value]="draft().name" (input)="patch('name',$any($event.target).value)" /></label>
-      <label>Selling Price (₹) *<input type="number" min="0" step="0.01" required [value]="draft().sellingPrice" (input)="patch('sellingPrice',$any($event.target).value)" /></label>
-      <label>Purchase Price (₹) *<input type="number" min="0" step="0.01" required [value]="draft().purchasePrice" (input)="patch('purchasePrice',$any($event.target).value)" /></label>
+      <label>Selling Price ({{ currency.symbol() }}) *<input type="number" min="0" step="0.01" required [value]="draft().sellingPrice" (input)="patch('sellingPrice',$any($event.target).value)" /></label>
+      <label>Purchase Price ({{ currency.symbol() }}) *<input type="number" min="0" step="0.01" required [value]="draft().purchasePrice" (input)="patch('purchasePrice',$any($event.target).value)" /></label>
       <label>GST (%) *<input type="number" min="0" max="100" step="0.01" required [value]="draft().gstPercent" (input)="patch('gstPercent',$any($event.target).value)" /></label>
       <label>Unit *<input required maxlength="24" placeholder="pcs" [value]="draft().unit" (input)="patch('unit',$any($event.target).value)" /></label>
       <label>Opening Stock *<input type="number" min="0" step="0.001" required [value]="draft().stockQuantity" (input)="patch('stockQuantity',$any($event.target).value)" /></label>

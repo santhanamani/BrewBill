@@ -111,7 +111,7 @@
             required
         /></label>
         <label
-          >Purchase Price (₹) *<input
+          >Purchase Price ({{ currency.symbol() }}) *<input
             name="cost"
             type="number"
             min="0"
@@ -240,7 +240,7 @@
           required
       /></label>
       <label
-        >Amount (₹) *<input
+        >Amount ({{ currency.symbol() }}) *<input
           name="amount"
           type="number"
           min="0.01"
@@ -374,7 +374,7 @@
         <label
           >Business Date<input name="closingDate" type="date" [(ngModel)]="closingDate" /></label
         ><label
-          >Counted Cash (₹)<input
+          >Counted Cash ({{ currency.symbol() }})<input
             name="countedCash"
             type="number"
             min="0"
@@ -428,6 +428,34 @@
       ><span class="material-symbols-outlined">task_alt</span>Daily Closing</a
     >
   </nav>
+  <section class="panel form-panel currency-settings">
+    <div class="panel-title currency-title">
+      <div>
+        <small>THIS TENANT · ALL OUTLETS</small>
+        <h2>Currency &amp; Amount Format</h2>
+        <p>Select the currency used across POS, products, purchases, expenses, reports and receipts.</p>
+      </div>
+      <span class="currency-badge"><b>{{ currency.symbol() }}</b>{{ currency.code() }}</span>
+    </div>
+    <div class="currency-setting-body">
+      <label>Tenant Currency
+        <select name="currencyCode" [(ngModel)]="currencyCode" (change)="currencyMessage.set('')">
+          @for (row of currencies(); track row.code) {
+            <option [value]="row.code">{{ row.code }} · {{ row.name }} ({{ row.symbol }})</option>
+          }
+        </select>
+      </label>
+      <div class="currency-preview">
+        <small>FORMAT PREVIEW</small>
+        <b>{{ currencyPreview() }}</b>
+        <p>Changing currency changes display and future receipts. Stored numeric prices are not exchange-rate converted.</p>
+      </div>
+      <button class="primary-action" type="button" [disabled]="saving() || !currencies().length" (click)="saveCurrency()">
+        <span class="material-symbols-outlined">currency_exchange</span>{{ saving() ? 'Saving…' : 'Save Tenant Currency' }}
+      </button>
+    </div>
+    <p class="currency-feedback" role="status">{{ currencyMessage() }}</p>
+  </section>
   <section class="panel form-panel payment-policy-settings">
     <div class="panel-title payment-policy-title">
       <div><small>THIS TENANT</small><h2>Payment Collection Mode</h2><p>Choose how bills can be completed for every outlet under this tenant.</p></div>

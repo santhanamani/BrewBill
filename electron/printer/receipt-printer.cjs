@@ -7,7 +7,11 @@ function escapeHtml(value) {
 }
 
 function receiptMarkup(receipt) {
-  const money = (minor) => `&#8377;${(minor / 100).toFixed(2)}`;
+  const money = (minor) => escapeHtml(new Intl.NumberFormat(receipt.currency.locale, {
+    style: 'currency', currency: receipt.currency.code,
+    minimumFractionDigits: receipt.currency.decimal_places,
+    maximumFractionDigits: receipt.currency.decimal_places,
+  }).format(minor / 100));
   const rows = receipt.items
     .map(
       (item) =>
@@ -32,8 +36,17 @@ async function printReceipt(BrowserWindow, receipt, printerName) {
     const success = await new Promise((resolve, reject) =>
       window.webContents.print(
         { silent: false, deviceName: printerName || undefined, printBackground: true },
-        (ok, reason) =>
-          ok ? resolve(true) : reject(new Error(reason || 'Printer did not accept the receipt')),
+        (ok, reason) => {
+          if (ok) {
+            resolve(true);
+            return;
+          }
+          if (/cancel(?:led|ed)/i.test(reason || '')) {
+            resolve(false);
+            return;
+          }
+          reject(new Error(reason || 'Printer did not accept the receipt'));
+        },
       ),
     );
     return { success };

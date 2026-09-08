@@ -164,6 +164,49 @@ html, body { overflow:hidden; }
 .dashboard-head h1 { font-size:38px; line-height:42px; letter-spacing:-1.2px; margin:0 0 3px; }
 .dashboard-head p { font-size:17px; }
 .dashboard-filters button { min-height:62px; display:flex; align-items:center; gap:10px; padding:10px 21px; border-radius:11px; font-size:15px; font-weight:650; box-shadow:0 4px 12px #3a1c0c0a; }
+.dashboard-date-control { position:relative; }
+.dashboard-filters .date-range-trigger { min-width:255px; justify-content:flex-start; padding:9px 14px; border-color:#e5d9cc; background:#fffdfa; box-shadow:0 4px 14px #4d29160b; }
+.dashboard-filters .date-range-trigger:hover,.dashboard-filters .date-range-trigger[aria-expanded='true'] { border-color:#cda985; background:#fffaf5; }
+.date-range-trigger > .material-symbols-outlined:first-child { width:37px; height:37px; display:grid; place-items:center; border-radius:9px; background:#f5eadc; color:#79411e; font-size:22px; }
+.date-range-trigger > span:nth-child(2) { min-width:0; display:grid; gap:1px; text-align:left; }
+.date-range-trigger small { color:#958477; font-size:9px; font-weight:750; letter-spacing:.75px; text-transform:uppercase; }
+.date-range-trigger b { max-width:170px; overflow:hidden; color:#2b1a11; font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
+.date-range-trigger .range-chevron { margin-left:auto; color:#8e745f; font-size:20px; }
+.dashboard-filters > .today-shortcut { min-width:84px; padding-inline:14px; color:#75401f; background:#faf3ea; }
+.dashboard-calendar { position:absolute; z-index:120; top:calc(100% + 8px); right:0; width:min(300px,calc(100vw - 24px)); padding:11px; border:1px solid #e7d9cb; border-radius:12px; background:#fffefb; color:#2c1b12; box-shadow:0 14px 34px #3f210f1f; transform-origin:top right; animation:dashboard-calendar-in .14s ease-out; }
+.dashboard-calendar::before { content:''; position:absolute; top:-6px; right:24px; width:10px; height:10px; border-top:1px solid #e7d9cb; border-left:1px solid #e7d9cb; background:#fffefb; transform:rotate(45deg); }
+@keyframes dashboard-calendar-in { from { opacity:0; transform:translateY(-4px) scale(.985); } to { opacity:1; transform:none; } }
+@media (prefers-reduced-motion:reduce) { .dashboard-calendar { animation:none; } }
+.calendar-selection { display:grid; grid-template-columns:1fr 18px 1fr; align-items:center; gap:3px; padding:4px; border:1px solid #eee4d9; border-radius:9px; background:#f8f3ec; }
+.dashboard-calendar .calendar-selection button { min-width:0; min-height:40px; display:grid; justify-content:start; gap:1px; padding:5px 8px; border:1px solid transparent; border-radius:7px; background:transparent; box-shadow:none; text-align:left; }
+.dashboard-calendar .calendar-selection button.active { border-color:#d7b896; background:#fff; box-shadow:0 2px 6px #5930130b; }
+.calendar-selection small { color:#9a8778; font-size:7px; font-weight:800; letter-spacing:.75px; text-transform:uppercase; }
+.calendar-selection b { overflow:hidden; font-size:9px; text-overflow:ellipsis; white-space:nowrap; }
+.calendar-selection > .material-symbols-outlined { color:#b49d89; font-size:13px; }
+.calendar-heading { height:39px; display:flex; align-items:center; justify-content:space-between; padding:4px 1px 0 6px; }
+.calendar-heading > b { font-size:12px; }
+.calendar-heading > div { display:flex; gap:4px; }
+.dashboard-calendar .calendar-heading button { width:28px; min-height:28px; padding:0; border:0; border-radius:7px; background:#f7f1e9; box-shadow:none; }
+.dashboard-calendar .calendar-heading button .material-symbols-outlined { font-size:18px; }
+.dashboard-calendar .calendar-heading button:disabled { opacity:.35; }
+.calendar-weekdays,.calendar-days { display:grid; grid-template-columns:repeat(7,1fr); }
+.calendar-weekdays { padding:2px 0 5px; color:#a08f81; font-size:7px; font-weight:800; text-align:center; text-transform:uppercase; }
+.calendar-days { row-gap:2px; }
+.dashboard-calendar .calendar-days button { position:relative; z-index:1; display:grid; place-items:center; width:28px; min-width:28px; min-height:28px; justify-self:center; padding:0; border:0; border-radius:50%; background:transparent; box-shadow:none; color:#433127; font-size:9px; font-weight:650; line-height:1; text-align:center; }
+.dashboard-calendar .calendar-days button:hover:not(:disabled) { background:#f2e6d8; color:#6d3618; }
+.dashboard-calendar .calendar-days button.outside { color:#baa99c; }
+.dashboard-calendar .calendar-days button:disabled { color:#d8cec6; cursor:not-allowed; }
+.dashboard-calendar .calendar-days button.in-range { width:100%; border-radius:5px; background:#f3e5d6; color:#673616; }
+.dashboard-calendar .calendar-days button.range-start,.dashboard-calendar .calendar-days button.range-end { width:28px; border-radius:50%; background:#75401f; color:#fff; box-shadow:0 3px 7px #5f2d1438; }
+.dashboard-calendar .calendar-days button.today:not(.range-start):not(.range-end) { box-shadow:inset 0 0 0 1px #bd8e68; color:#713d20; }
+.calendar-shortcuts { display:flex; gap:5px; margin-top:8px; padding-top:8px; border-top:1px solid #eee4da; }
+.dashboard-calendar .calendar-shortcuts button { flex:1; min-width:0; min-height:27px; padding:0 3px; border:1px solid #e4d5c6; border-radius:6px; background:#fffaf4; color:#75401f; box-shadow:none; font-size:7px; }
+.dashboard-calendar .range-error { display:flex; align-items:center; gap:5px; margin:9px 0 0; padding:7px 9px; border-radius:7px; background:#fff0ed; color:#b33329; font-size:9px; }
+.dashboard-calendar .range-error .material-symbols-outlined { font-size:15px; }
+.calendar-actions { display:flex; justify-content:flex-end; gap:6px; margin-top:9px; }
+.dashboard-calendar .calendar-actions button { min-height:32px; padding:0 12px; border-radius:7px; box-shadow:none; font-size:8px; }
+.dashboard-calendar .calendar-cancel { border-color:#ded2c7; background:#fff; color:#725a49; }
+.dashboard-calendar .calendar-apply { border-color:#75401f; background:#75401f; color:#fff; }
 .dashboard-filters .outlet-filter { min-width:280px; justify-content:flex-start; text-align:left; }
 .dashboard-filters .outlet-filter > span:nth-child(2) { display:grid; margin-right:auto; }
 .dashboard-filters .outlet-filter small { font-size:11px; font-weight:500; }
@@ -183,12 +226,33 @@ html, body { overflow:hidden; }
 .dashboard-panel-heading p { margin:3px 0 0; color:#8a7c73; font-size:13px; }
 .dashboard-grid .panel-title button { display:flex; align-items:center; gap:8px; padding:11px 14px; white-space:nowrap; }
 .dashboard-grid .panel-title button .material-symbols-outlined { font-size:18px; }
+.trend-panel-tools { min-width:0; display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-left:auto; }
+.trend-mode-switch { flex:0 0 auto; display:flex; align-items:center; gap:2px; padding:3px; border:1px solid #e8ddd2; border-radius:9px; background:#f7f1ea; }
+.dashboard-grid .panel-title .trend-mode-switch button { min-height:30px; padding:0 8px; gap:4px; border:0; border-radius:6px; background:transparent; color:#765e4d; box-shadow:none; font-size:10px; font-weight:700; }
+.dashboard-grid .panel-title .trend-mode-switch button.active { background:#75401f; color:#fff; box-shadow:0 2px 6px #5c2c1624; }
+.dashboard-grid .panel-title .trend-mode-switch button .material-symbols-outlined { font-size:14px; }
+.trend-panel-tools .period-chip { max-width:155px; }
+.dashboard-grid .period-chip { max-width:190px; display:flex; align-items:center; gap:6px; padding:8px 11px; border:1px solid #e8dfd5; border-radius:8px; background:#faf7f2; color:#76563f; font-size:11px; font-weight:650; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dashboard-grid .period-chip .material-symbols-outlined { flex:0 0 auto; font-size:17px; }
 .categories-panel { display:block; }
 .chart-reference-empty { min-height:220px; margin:0 20px 18px; display:grid; place-content:center; justify-items:center; gap:7px; padding:25px; border:1px dashed #decfbe; border-radius:11px; color:#5f5048; text-align:center; }
 .chart-reference-empty > .material-symbols-outlined { color:#c7b8aa; font-size:48px; }
 .chart-reference-empty b { font-size:16px; font-weight:500; }
 .chart-reference-empty small { max-width:390px; color:#81736b; font-size:13px; line-height:1.45; }
 .products-empty { background:radial-gradient(circle at 88% 95%,#f1e4d7 0 6%,transparent 7%); }
+.product-rank .panel-title { border-bottom:1px solid #eee6de; }
+.dashboard-grid .panel-title .dashboard-view-all { min-height:40px; padding:0 14px; border:1px solid #e2d6cb; border-radius:9px; background:#fffdf9; color:#603116; box-shadow:none; font-size:12px; font-weight:700; transition:border-color .16s ease,background .16s ease,transform .16s ease; }
+.dashboard-grid .panel-title .dashboard-view-all:hover { border-color:#c9a98e; background:#f8efe5; transform:translateY(-1px); }
+.top-products-list { display:grid; gap:8px; padding:12px 16px 16px; }
+.top-product-row { display:grid; grid-template-columns:30px minmax(0,1fr) 46px; align-items:center; gap:11px; min-height:48px; padding:8px 10px; border:1px solid #eee6de; border-radius:10px; background:#fffdfb; }
+.top-product-rank { display:grid; place-items:center; width:28px; height:28px; border-radius:8px; background:#f5ede4; color:#74401f; font-size:11px; font-weight:800; }
+.top-product-main { min-width:0; display:grid; gap:7px; }
+.top-product-main strong { overflow:hidden; color:#2b211b; font-size:12px; font-weight:700; line-height:1.25; text-overflow:ellipsis; white-space:nowrap; }
+.top-product-track { height:6px; overflow:hidden; border-radius:999px; background:#eee6de; }
+.top-product-track span { display:block; height:100%; min-width:0; border-radius:inherit; background:linear-gradient(90deg,#8a4b23,#b77745); }
+.top-product-sold { display:grid; justify-items:end; color:#4f2915; line-height:1; }
+.top-product-sold b { font-size:13px; }
+.top-product-sold small { margin-top:4px; color:#9a8779; font-size:8px; font-weight:650; text-transform:uppercase; }
 
 /* Shared operational cards */
 .title-with-icon > .material-symbols-outlined { width:62px; height:62px; display:grid; place-items:center; border-radius:13px; background:#f5eee7; font-size:38px; }
@@ -289,6 +353,9 @@ html, body { overflow:hidden; }
   .four-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .dashboard-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .dashboard-grid { grid-template-columns:1fr; }
+  .dashboard-head { align-items:flex-start; }
+  .dashboard-filters { width:100%; flex-wrap:wrap; }
+  .dashboard-date-control { flex:1 1 270px; }
   .admin-title-row { grid-template-columns:1fr; }
 }
 /* POS final-fit corrections */
@@ -401,6 +468,7 @@ app-dashboard,app-pos,app-products,app-operations,app-management,app-administrat
   .light-topbar .brand { flex-basis:185px; }
   .light-topbar .outlet-context { flex-basis:172px; }
   .dashboard-filters .outlet-filter { min-width:200px; }
+  .dashboard-filters .date-range-trigger { min-width:220px; }
   .dashboard-metrics .metric-icon { width:48px; min-width:48px; }
   .bottom-nav button { font-size:10px; }
 }

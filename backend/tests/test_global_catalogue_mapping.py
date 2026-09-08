@@ -114,6 +114,75 @@ def test_global_product_has_isolated_outlet_mapping() -> None:
         Base.metadata.drop_all(engine)
 
 
+def test_tenant_admin_can_configure_catalogue_variants_without_cross_tenant_access() -> None:
+    engine = create_engine(
+        'sqlite+pysqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool
+    )
+    sessions = sessionmaker(bind=engine, expire_on_commit=False)
+    Base.metadata.create_all(engine)
+    with sessions() as session:
+        role = Role(id=str(uuid4()), code='TENANT_ADMIN', name='Tenant Administrator')
+        master = GlobalProduct(
+            id=str(uuid4()), code='SHAKE', name='Milkshake',
+            category_name='Milkshakes', base_unit='cup', default_gst=Decimal('5.00'), status='ACTIVE',
+        )
+        users = []
+        for code in ('CAFE1', 'CAFE2'):
+            tenant = Tenant(id=str(uuid4()), code=code, name=code, status='ACTIVE')
+            outlet = Outlet(id=str(uuid4()), tenant_id=tenant.id, code='MAIN', name=f'{code} Main')
+            user = User(
+                id=str(uuid4()), tenant_id=tenant.id, outlet_id=outlet.id, role_id=role.id,
+                username='admin', display_name=f'{code} Admin', password_hash='x', is_active=True,
+            )
+            user.role = role
+            session.add_all([tenant, outlet, user])
+            users.append(user)
+        session.add_all([role, master])
+        session.commit()
+
+    active_user = {'value': users[0]}
+
+    def test_session():
+        with sessions() as session:
+            yield session
+
+    app.dependency_overrides[get_session] = test_session
+    app.dependency_overrides[current_user] = lambda: active_user['value']
+    try:
+        with TestClient(app) as client:
+            mapped = client.post(f'/api/products/catalogue/{master.id}', json={'selling_price': '100.00'})
+            assert mapped.status_code == 201, mapped.text
+            product_id = mapped.json()['legacy_product_id']
+            configured = client.put(f'/api/products/{product_id}/variants', json={'variants': [
+                {'name': 'Medium', 'price_adjustment': '10.00', 'display_order': 0},
+                {'name': 'Large', 'price_adjustment': '30.00', 'display_order': 1},
+            ]})
+            assert configured.status_code == 200, configured.text
+            assert [row['name'] for row in configured.json()] == ['Medium', 'Large']
+            catalogue = client.get('/api/products/catalogue').json()[0]
+            assert [row['name'] for row in catalogue['variants'] if row['is_active']] == ['Medium', 'Large']
+            operational = client.get('/api/products').json()[0]
+            assert [row['price_adjustment'] for row in operational['variants']] == ['10.00', '30.00']
+
+            active_user['value'] = users[1]
+            assert client.put(f'/api/products/{product_id}/variants', json={'variants': []}).status_code == 404
+            assert client.get('/api/products/catalogue').json() == []
+
+            active_user['value'] = users[0]
+            disabled = client.put(f'/api/products/{product_id}/variants', json={'variants': []})
+            assert disabled.status_code == 200, disabled.text
+            assert disabled.json() == []
+            catalogue = client.get('/api/products/catalogue').json()[0]
+            assert len(catalogue['variants']) == 2
+            assert all(not row['is_active'] for row in catalogue['variants'])
+            operational_variants = client.get('/api/products').json()[0]['variants']
+            assert len(operational_variants) == 2
+            assert all(not row['is_active'] for row in operational_variants)
+    finally:
+        app.dependency_overrides.clear()
+        Base.metadata.drop_all(engine)
+
+
 def test_master_actions_persist_and_are_restricted_to_super_admin() -> None:
     engine = create_engine('sqlite+pysqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
     sessions = sessionmaker(bind=engine, expire_on_commit=False)

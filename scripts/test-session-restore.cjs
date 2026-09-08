@@ -20,8 +20,11 @@ function store(saved=storage(),fetcher=()=>{throw Error('Unexpected refresh');})
 }
 const pair={access_token:'access-one',refresh_token:'refresh-one'};
 const user={id:'u1',tenant_id:'t1',outlet_id:'o1',role_code:'ADMIN'};
-const context={tenant_id:'t1',outlet_id:'o1',branding:{}};
-function session(tokens,api) {return new (load('src/app/core/session.service.ts','SessionService',{AuthTokenStoreService:tokens}))(api);}
+const context={tenant_id:'t1',outlet_id:'o1',branding:{},currency:{code:'INR',name:'Indian Rupee',symbol:'₹',locale:'en-IN',decimal_places:2}};
+function session(tokens,api) {
+  const currency={configure(){},reset(){}};
+  return new (load('src/app/core/session.service.ts','SessionService',{AuthTokenStoreService:tokens,CurrencyService:currency}))(api);
+}
 
 test('hard reload restores tokens, then server-verified user and outlet',async()=>{
   const saved=storage(),first=store(saved);first.set(pair);

@@ -13,6 +13,7 @@ from ..database import get_session
 from ..inventory_service import adjust_stock
 from ..models import (
     AuditLog,
+    Currency,
     Customer,
     DailyClosing,
     Expense,
@@ -23,6 +24,7 @@ from ..models import (
     PurchaseItem,
     Supplier,
     TenantSetting,
+    Tenant,
     User,
 )
 from ..schemas import (
@@ -40,7 +42,10 @@ from ..schemas import (
     TenantSettingUpdate,
     TenantPaymentPolicyRead,
     TenantPaymentPolicyUpdate,
+    CurrencyRead,
+    TenantCurrencyUpdate,
 )
+from ..currency import currency_read, resolve_currency, tenant_currency
 
 router = APIRouter(prefix='/api', tags=['operations'])
 MONEY = Decimal('0.01')
@@ -50,6 +55,43 @@ PAYMENT_POLICY_KEY = 'payment_processing_mode'
 
 def money(value: Decimal) -> Decimal:
     return value.quantize(MONEY, rounding=ROUND_HALF_UP)
+
+
+@router.get('/currencies', response_model=list[CurrencyRead])
+def list_currencies(
+    user: User = Depends(require_role('ADMIN', 'CASHIER', 'SUPER_ADMIN')),
+    session: Session = Depends(get_session),
+) -> list[Currency]:
+    return list(session.scalars(
+        select(Currency).where(Currency.is_active.is_(True)).order_by(Currency.name)
+    ).all())
+
+
+@router.get('/currency', response_model=CurrencyRead)
+def get_tenant_currency(
+    user: User = Depends(require_role('ADMIN', 'CASHIER')),
+    session: Session = Depends(get_session),
+) -> CurrencyRead:
+    tenant = session.get(Tenant, user.tenant_id)
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Tenant not found.')
+    return currency_read(tenant_currency(session, tenant))
+
+
+@router.put('/currency', response_model=CurrencyRead)
+def update_tenant_currency(
+    body: TenantCurrencyUpdate,
+    user: User = Depends(require_role('ADMIN')),
+    session: Session = Depends(get_session),
+) -> CurrencyRead:
+    tenant = session.get(Tenant, user.tenant_id)
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Tenant not found.')
+    currency = resolve_currency(session, body.currency_code)
+    tenant.currency_code = currency.code
+    audit(session, user, 'UPDATE', 'TENANT_CURRENCY', tenant.id)
+    session.commit()
+    return currency_read(currency)
 
 
 def outlet_id_for(user: User) -> str:

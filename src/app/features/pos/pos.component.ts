@@ -8,6 +8,7 @@ import { CartLine, Category, Product, ProductVariant, TenantPaymentPolicy } from
 import { RuntimeConfigService } from '../../core/runtime-config.service';
 import { SessionService } from '../../core/session.service';
 import { ReceiptPayload, ReceiptPrinterService } from '../../core/receipt-printer.service';
+import { CurrencyService } from '../../core/currency.service';
 
 @Component({
   selector: 'app-pos',
@@ -22,6 +23,7 @@ export class PosComponent {
   private readonly session = inject(SessionService);
   private readonly heldCart = inject(HeldCartService);
   private readonly receiptPrinter = inject(ReceiptPrinterService);
+  readonly currency = inject(CurrencyService);
 
   readonly products = signal<Product[]>([]);
   readonly categories = signal<Category[]>([]);
@@ -306,7 +308,10 @@ export class PosComponent {
         cashier: user?.display_name ?? 'Cashier',
         paymentMode: receiptMode,
         items: saleLines.map((line) => ({
-          name: line.name,
+          name:
+            line.selected_variant_name && line.selected_variant_name !== 'Regular'
+              ? `${line.name} (${line.selected_variant_name})`
+              : line.name,
           quantity: line.quantity,
           amountMinor: Math.round(this.price(line.selling_price) * line.quantity * 100),
         })),
@@ -317,6 +322,7 @@ export class PosComponent {
         grandTotalMinor: Math.round(saleGrandTotal * 100),
         orderType: this.orderType(),
         serviceReference: this.serviceReference().trim() || null,
+        currency: this.currency.current(),
       });
       this.cart.set([]);
       this.resumedHoldId.set(null);
@@ -423,8 +429,9 @@ export class PosComponent {
     }
     this.submitting.set(true);
     try {
-      await this.receiptPrinter.print(receipt);
-      this.notify(`Print request sent for invoice ${receipt.invoiceNumber}.`);
+      const printed = await this.receiptPrinter.print(receipt);
+      if (printed) this.notify(`Print request sent for invoice ${receipt.invoiceNumber}.`);
+      else this.notify('Print cancelled. No bill was printed.');
     } catch (error) {
       this.notify(this.errorMessage(error, 'Unable to print the receipt.'));
     } finally {
@@ -439,7 +446,7 @@ export class PosComponent {
     return Number.parseFloat(value) || 0;
   }
   money(value: number): string {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value);
+    return this.currency.format(value);
   }
 
   private notify(message: string): void {

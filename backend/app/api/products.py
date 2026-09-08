@@ -19,7 +19,8 @@ from ..models import (
 from ..schemas import (
     GlobalProductCreate, GlobalProductRead, GlobalProductUpdate, OutletProductMappingCreate,
     OutletProductMappingRead, OutletProductMappingUpdate, ProductCreate, ProductRead,
-    ProductUpdate, ProductVariantCreate, ProductVariantRead, ProductFavouriteUpdate,
+    ProductUpdate, ProductVariantConfigurationUpdate, ProductVariantCreate,
+    ProductVariantRead, ProductFavouriteUpdate,
 )
 
 router = APIRouter(prefix='/api/products', tags=['products'])
@@ -51,6 +52,9 @@ def mapping_view(session: Session, mapping: OutletProductMapping, inventory: Inv
         is_active=mapping.is_active and (master is None or master.status == 'ACTIVE'),
         display_order=mapping.display_order,
         source='GLOBAL' if master else 'TENANT',
+        variants=[ProductVariantRead.model_validate(variant) for variant in sorted(
+            product.variants, key=lambda row: (row.display_order, row.name.casefold()),
+        )],
     )
 
 @router.get('/master', response_model=list[GlobalProductRead])
@@ -108,7 +112,10 @@ def list_outlet_catalogue(
     selected_outlet = resolve_outlet(session, user, outlet_id)
     mappings = session.scalars(
         select(OutletProductMapping)
-        .options(selectinload(OutletProductMapping.global_product), selectinload(OutletProductMapping.legacy_product))
+        .options(
+            selectinload(OutletProductMapping.global_product),
+            selectinload(OutletProductMapping.legacy_product).selectinload(Product.variants),
+        )
         .where(
             OutletProductMapping.tenant_id == user.tenant_id,
             OutletProductMapping.outlet_id == selected_outlet,
@@ -170,6 +177,7 @@ def create_tenant_catalogue_product(
     mapping = session.scalar(select(OutletProductMapping).options(
         selectinload(OutletProductMapping.global_product),
         selectinload(OutletProductMapping.legacy_product).selectinload(Product.category),
+        selectinload(OutletProductMapping.legacy_product).selectinload(Product.variants),
     ).where(OutletProductMapping.id == mapping.id))
     if mapping is None:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='Tenant product could not be reloaded.')
@@ -264,7 +272,8 @@ def map_global_product(
     inventory.low_stock_limit = body.low_stock_limit
     session.commit()
     mapping = session.scalar(select(OutletProductMapping).options(
-        selectinload(OutletProductMapping.global_product), selectinload(OutletProductMapping.legacy_product)
+        selectinload(OutletProductMapping.global_product),
+        selectinload(OutletProductMapping.legacy_product).selectinload(Product.variants),
     ).where(OutletProductMapping.id == mapping.id))
     return mapping_view(session, mapping)
 
@@ -277,7 +286,8 @@ def update_outlet_mapping(
     session: Session = Depends(get_session),
 ) -> OutletProductMappingRead:
     mapping = session.scalar(select(OutletProductMapping).options(
-        selectinload(OutletProductMapping.global_product), selectinload(OutletProductMapping.legacy_product)
+        selectinload(OutletProductMapping.global_product),
+        selectinload(OutletProductMapping.legacy_product).selectinload(Product.variants),
     ).where(
         OutletProductMapping.id == mapping_id,
         OutletProductMapping.tenant_id == user.tenant_id,
@@ -517,7 +527,7 @@ def create_product(
 def create_variant(
     product_id: str,
     body: ProductVariantCreate,
-    user: User = Depends(require_role('ADMIN')),
+    user: User = Depends(require_role('ADMIN', 'TENANT_ADMIN')),
     session: Session = Depends(get_session),
 ) -> ProductVariant:
     product = session.scalar(select(Product).where(
@@ -537,6 +547,81 @@ def create_variant(
     return variant
 
 
+@router.put('/{product_id}/variants', response_model=list[ProductVariantRead])
+def replace_variant_configuration(
+    product_id: str,
+    body: ProductVariantConfigurationUpdate,
+    user: User = Depends(require_role('ADMIN', 'TENANT_ADMIN')),
+    session: Session = Depends(get_session),
+) -> list[ProductVariant]:
+    # Missing rows are disabled, not deleted, so historic order lines keep their references.
+    outlet_id = resolve_outlet(session, user)
+    mapping = session.scalar(select(OutletProductMapping).options(
+        selectinload(OutletProductMapping.legacy_product).selectinload(Product.variants),
+    ).where(
+        OutletProductMapping.tenant_id == user.tenant_id,
+        OutletProductMapping.outlet_id == outlet_id,
+        OutletProductMapping.legacy_product_id == product_id,
+    ))
+    if mapping is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Product is not mapped to this outlet.')
+
+    product = mapping.legacy_product
+    existing = list(product.variants)
+    by_id = {variant.id: variant for variant in existing}
+    by_name = {variant.name.strip().casefold(): variant for variant in existing}
+    used_ids: set[str] = set()
+    used_names: set[str] = set()
+
+    for item in body.variants:
+        name = item.name.strip()
+        name_key = name.casefold()
+        if not name:
+            raise HTTPException(status_code=422, detail='Variant name cannot be empty.')
+        if name_key in used_names:
+            raise HTTPException(status_code=422, detail='Variant names must be unique.')
+        used_names.add(name_key)
+
+        variant = by_id.get(item.id) if item.id else None
+        if item.id and variant is None:
+            raise HTTPException(status_code=422, detail='A selected variant does not belong to this product.')
+        if variant is None:
+            reusable = by_name.get(name_key)
+            if reusable is not None and reusable.id not in used_ids:
+                variant = reusable
+        if variant is None:
+            variant = ProductVariant(
+                id=str(uuid4()), tenant_id=user.tenant_id, product_id=product.id,
+                name=name, price_adjustment=item.price_adjustment,
+                display_order=item.display_order, is_active=True,
+            )
+            session.add(variant)
+        else:
+            variant.name = name
+            variant.price_adjustment = item.price_adjustment
+            variant.display_order = item.display_order
+            variant.is_active = True
+        used_ids.add(variant.id)
+
+    for variant in existing:
+        if variant.id not in used_ids:
+            variant.is_active = False
+
+    try:
+        session.commit()
+    except IntegrityError as error:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail='Variant names must be unique for this tenant product.',
+        ) from error
+    return list(session.scalars(select(ProductVariant).where(
+        ProductVariant.tenant_id == user.tenant_id,
+        ProductVariant.product_id == product.id,
+        ProductVariant.is_active.is_(True),
+    ).order_by(ProductVariant.display_order, ProductVariant.name)).all())
+
+
 @router.patch('/{product_id}/favourite', response_model=ProductRead)
 def update_product_favourite(
     product_id: str,
@@ -547,7 +632,7 @@ def update_product_favourite(
     outlet_id = resolve_outlet(session, user)
     mapping = session.scalar(select(OutletProductMapping).options(
         selectinload(OutletProductMapping.global_product),
-        selectinload(OutletProductMapping.legacy_product),
+        selectinload(OutletProductMapping.legacy_product).selectinload(Product.variants),
     ).where(
         OutletProductMapping.tenant_id == user.tenant_id,
         OutletProductMapping.outlet_id == outlet_id,

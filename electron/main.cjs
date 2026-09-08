@@ -7,6 +7,7 @@ const { openLocalDatabase } = require('./database/local-database.cjs');
 const { receiptSchema, parse } = require('./ipc/validators.cjs');
 const { installLicense, verifyLicense } = require('./license/license-service.cjs');
 const { printReceipt } = require('./printer/receipt-printer.cjs');
+const { isHardReloadShortcut } = require('./keyboard-shortcuts.cjs');
 const { collectPayment, terminalStatus } = require('./payment/terminal-adapter.cjs');
 
 let mainWindow;
@@ -40,6 +41,9 @@ function createWindow() {
       sandbox: true,
       preload: path.join(__dirname, 'preload.cjs'),
     },
+  });
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (isHardReloadShortcut(input)) event.preventDefault();
   });
   if (app.isPackaged)
     mainWindow.loadFile(

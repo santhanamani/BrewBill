@@ -22,7 +22,9 @@ from ..schemas import (
     TenantCreate, TenantResolveRead, TenantUpdate,
     TenantPaymentPolicyRead, TenantPaymentPolicyUpdate,
     TenantSubscriptionRead, TenantSubscriptionUpdate,
+    CurrencyRead, TenantCurrencyUpdate,
 )
+from ..currency import currency_read, resolve_currency, tenant_currency
 from ..security import hash_password
 from ..subscriptions import (
     active_subscription, grace_end, subscription_lifecycle, utc,
@@ -71,6 +73,7 @@ def resolve_tenant(
         grace_days_remaining=lifecycle.grace_days_remaining,
         login_allowed=(lifecycle.login_allowed or is_platform_admin_tenant) and tenant.status == 'ACTIVE',
         subscription_message=lifecycle.message,
+        currency=currency_read(tenant_currency(session, tenant)),
     )
 
 
@@ -107,6 +110,7 @@ def context(user: User = Depends(current_user), session: Session = Depends(get_s
         plan_code=plan.code,
         max_terminals=plan.max_terminals,
         features=features(plan),
+        currency=currency_read(tenant_currency(session, tenant)),
     )
 
 
@@ -149,6 +153,7 @@ def create_tenant(
     tenant = Tenant(
         id=str(uuid4()), code=code, name=name, status='ACTIVE',
         primary_color='#5A2D18', secondary_color='#C8874A',
+        currency_code=resolve_currency(session, body.currency_code).code,
     )
     session.add(tenant)
     try:
@@ -207,6 +212,7 @@ def tenant_read(tenant: Tenant, session: Session) -> TenantAdminRead:
         subscription_state=lifecycle.state,
         subscription_end=subscription.ends_at if subscription else None,
         grace_ends_at=lifecycle.grace_ends_at, login_allowed=lifecycle.login_allowed,
+        currency_code=tenant.currency_code,
     )
 
 
@@ -247,6 +253,22 @@ def update_tenant(
         session.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Tenant name already exists.') from error
     return tenant_read(tenant, session)
+
+
+@router.put('/admin/tenants/{tenant_id}/currency', response_model=CurrencyRead)
+def update_admin_tenant_currency(
+    tenant_id: str,
+    body: TenantCurrencyUpdate,
+    user: User = Depends(require_role('SUPER_ADMIN')),
+    session: Session = Depends(get_session),
+) -> CurrencyRead:
+    tenant = session.get(Tenant, tenant_id)
+    if tenant is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Tenant not found.')
+    currency = resolve_currency(session, body.currency_code)
+    tenant.currency_code = currency.code
+    session.commit()
+    return currency_read(currency)
 
 
 @router.get('/admin/tenants/{tenant_id}/subscription', response_model=TenantSubscriptionRead)

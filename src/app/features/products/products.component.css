@@ -140,3 +140,28 @@
 :host .product-image-field > small { color:#85786c; font-size:10px; font-weight:500; line-height:1.45; }
 :host .selected-image-name { display:flex; align-items:center; gap:5px; color:#17733b; font-size:11px; font-weight:700; overflow-wrap:anywhere; }
 :host .selected-image-name .material-symbols-outlined { font-size:16px; }
+:host .variant-summary { width:max-content; margin-top:2px; padding:2px 6px; border-radius:999px; color:#7b512c !important; background:#f5eadc; font-size:9px !important; font-weight:700; }
+:host .variant-settings { display:grid; gap:12px; padding:15px; border:1px solid #e6dccf; border-radius:12px; background:#fffdfa; }
+:host .variant-settings-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
+:host .variant-settings h3 { margin:0 0 3px; font-size:15px; color:#34271d; }
+:host .variant-settings p { margin:0; color:#81766d; font-size:11px; line-height:1.45; }
+:host .variant-switch { display:flex !important; align-items:center; gap:7px; flex:0 0 auto; min-height:34px; padding:0 10px; border:1px solid #ddcbb8; border-radius:9px; background:#f7efe4; color:#6d4523; font-size:11px !important; font-weight:700 !important; }
+:host .variant-switch input { width:17px; height:17px; accent-color:#815833; }
+:host .variant-column-labels,:host .variant-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(130px,.72fr) 34px; gap:9px; align-items:center; }
+:host .variant-column-labels { padding:0 2px; color:#7c7065; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+:host .variant-list { display:grid; gap:8px; }
+:host .variant-row label { display:block; }
+:host .variant-row input { width:100%; min-height:39px; border:1px solid #e2d7cb; border-radius:8px; padding:8px 10px; background:#fff; font:inherit; }
+:host .variant-row input:focus { border-color:#b98a5d; outline:2px solid #ead8c4; }
+:host .variant-remove { display:grid; place-items:center; width:34px; min-width:34px; min-height:34px; padding:0; border:1px solid #efd9d5; border-radius:8px; color:#bb3c42; background:#fff8f7; }
+:host .variant-remove .material-symbols-outlined { font-size:17px; }
+:host .variant-add { display:inline-flex; width:max-content; align-items:center; gap:5px; min-height:34px; padding:0 11px; border:1px solid #d7b998; border-radius:8px; color:#704720; background:#f8eee2; font-size:11px; font-weight:700; }
+:host .variant-add .material-symbols-outlined { font-size:17px; }
+:host .variant-help { padding-top:2px; }
+:host .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+@media(max-width:600px){
+  :host .variant-settings-head { align-items:stretch; flex-direction:column; gap:10px; }
+  :host .variant-switch { width:max-content; }
+  :host .variant-column-labels { display:none; }
+  :host .variant-row { grid-template-columns:1fr 1fr 34px; }
+}

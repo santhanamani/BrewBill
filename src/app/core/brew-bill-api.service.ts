@@ -24,6 +24,7 @@ import {
   PlatformContext,
   Product,
   ProductCreate,
+  ProductVariant,
   Purchase,
   PurchaseCreate,
   Supplier,
@@ -36,6 +37,7 @@ import {
   TenantPaymentPolicy,
   TenantSubscription,
   MfaChallenge,
+  CurrencyDefinition,
 } from './models/api.models';
 import { RuntimeConfigService } from './runtime-config.service';
 
@@ -92,6 +94,29 @@ export class BrewBillApiService {
 
   getPlatformContext(accessToken: string): Promise<PlatformContext> {
     return this.get<PlatformContext>(accessToken, '/platform/context');
+  }
+
+  listCurrencies(accessToken: string): Promise<CurrencyDefinition[]> {
+    return this.get<CurrencyDefinition[]>(accessToken, '/currencies');
+  }
+
+  updateCurrency(accessToken: string, currencyCode: string): Promise<CurrencyDefinition> {
+    return this.request(
+      this.http.put<CurrencyDefinition>(this.runtime.apiUrl('/currency'),
+        { currency_code: currencyCode }, { headers: this.authHeaders(accessToken) }),
+      5000,
+    );
+  }
+
+  updateTenantCurrency(accessToken: string, tenantId: string, currencyCode: string): Promise<CurrencyDefinition> {
+    return this.request(
+      this.http.put<CurrencyDefinition>(
+        this.runtime.apiUrl(`/platform/admin/tenants/${tenantId}/currency`),
+        { currency_code: currencyCode },
+        { headers: this.authHeaders(accessToken) },
+      ),
+      5000,
+    );
   }
 
   listGlobalProducts(accessToken: string, includeInactive = false): Promise<GlobalProduct[]> {
@@ -165,7 +190,7 @@ export class BrewBillApiService {
     body: {
       code: string; name: string; outlet_code: string; outlet_name: string;
       outlet_address: string | null; admin_username: string; admin_password: string;
-      admin_display_name: string; plan_code: string;
+      admin_display_name: string; plan_code: string; currency_code?: string;
     },
   ): Promise<TenantAdmin> {
     return this.post<TenantAdmin>(accessToken, '/platform/admin/tenants', body);
@@ -285,6 +310,21 @@ export class BrewBillApiService {
     body: { name: string; price_adjustment: string; display_order: number },
   ): Promise<unknown> {
     return this.post(accessToken, `/products/${productId}/variants`, body);
+  }
+
+  replaceProductVariants(
+    accessToken: string,
+    productId: string,
+    variants: Array<{ id: string | null; name: string; price_adjustment: string; display_order: number }>,
+  ): Promise<ProductVariant[]> {
+    return this.request(
+      this.http.put<ProductVariant[]>(
+        this.runtime.apiUrl('/products/' + productId + '/variants'),
+        { variants },
+        { headers: this.authHeaders(accessToken) },
+      ),
+      5000,
+    );
   }
 
   activateDevice(
@@ -439,9 +479,12 @@ export class BrewBillApiService {
     );
   }
 
-  getDashboard(accessToken: string): Promise<DashboardMetric> {
+  getDashboard(accessToken: string, fromDate?: string, toDate?: string): Promise<DashboardMetric> {
+    const range = fromDate && toDate
+      ? `?from_date=${encodeURIComponent(fromDate)}&to_date=${encodeURIComponent(toDate)}`
+      : '';
     return this.request(
-      this.http.get<DashboardMetric>(this.runtime.apiUrl('/dashboard'), {
+      this.http.get<DashboardMetric>(this.runtime.apiUrl(`/dashboard${range}`), {
         headers: this.authHeaders(accessToken),
       }),
       5000,

@@ -15,8 +15,10 @@ import {
   Supplier,
   TenantSetting,
   TenantPaymentPolicy,
+  CurrencyDefinition,
 } from '../../core/models/api.models';
 import { SessionService } from '../../core/session.service';
+import { CurrencyService } from '../../core/currency.service';
 
 const pageDetails: Record<string, { title: string; detail: string; icon: string }> = {
   purchases: {
@@ -62,6 +64,7 @@ export class ManagementComponent {
   private readonly route = inject(ActivatedRoute);
   private readonly api = inject(BrewBillApiService);
   readonly session = inject(SessionService);
+  readonly currency = inject(CurrencyService);
 
   readonly key = signal('purchases');
   readonly page = computed(() => pageDetails[this.key()] ?? pageDetails['purchases']);
@@ -76,6 +79,7 @@ export class ManagementComponent {
   readonly customers = signal<Customer[]>([]);
   readonly closings = signal<DailyClosing[]>([]);
   readonly settings = signal<TenantSetting[]>([]);
+  readonly currencies = signal<CurrencyDefinition[]>([]);
   readonly categories = signal<Category[]>([]);
   readonly search = signal('');
   readonly visibleLimit = signal(10);
@@ -190,6 +194,8 @@ export class ManagementComponent {
   });
   paymentProcessingMode: TenantPaymentPolicy['payment_processing_mode'] = 'MANUAL_ALLOWED';
   readonly paymentPolicyMessage = signal('');
+  currencyCode = 'INR';
+  readonly currencyMessage = signal('');
 
   constructor() {
     this.route.paramMap.subscribe((params) => {
@@ -251,12 +257,15 @@ export class ManagementComponent {
           this.closings.set(await this.api.listClosings(token));
           break;
         case 'settings': {
-          const [settings, policy] = await Promise.all([
+          const [settings, policy, currencies] = await Promise.all([
             this.api.listSettings(token),
             this.api.getPaymentPolicy(token),
+            this.api.listCurrencies(token),
           ]);
           this.settings.set(settings);
           this.paymentProcessingMode = policy.payment_processing_mode;
+          this.currencies.set(currencies);
+          this.currencyCode = this.currency.code();
           await this.loadPaymentTerminalSettings();
           break;
         }
@@ -385,6 +394,35 @@ export class ManagementComponent {
     });
   }
 
+  async saveCurrency(): Promise<void> {
+    const selected = this.currencies().find((row) => row.code === this.currencyCode);
+    if (!selected) {
+      this.currencyMessage.set('Choose a valid currency from the master list.');
+      return;
+    }
+    this.currencyMessage.set('');
+    await this.save(`Currency changed to ${selected.code} for this tenant.`, async (token) => {
+      const saved = await this.api.updateCurrency(token, selected.code);
+      this.currency.configure(saved);
+      this.session.context.update((context) => context ? { ...context, currency: saved } : context);
+      this.currencyCode = saved.code;
+      this.currencyMessage.set(
+        `${saved.name} (${saved.code}) is now used for all amount displays and receipts.`,
+      );
+    });
+  }
+
+  currencyPreview(): string {
+    const selected = this.currencies().find((row) => row.code === this.currencyCode);
+    if (!selected) return this.currency.format(1234.5);
+    return new Intl.NumberFormat(selected.locale, {
+      style: 'currency',
+      currency: selected.code,
+      minimumFractionDigits: selected.decimal_places,
+      maximumFractionDigits: selected.decimal_places,
+    }).format(1234.5);
+  }
+
   async addSupplier(): Promise<void> {
     if (!this.supplierName.trim()) {
       this.error.set('Enter the supplier name.');
@@ -490,9 +528,7 @@ export class ManagementComponent {
   }
 
   money(value: string | number): string {
-    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(
-      Number(value),
-    );
+    return this.currency.format(value);
   }
 
   date(value: string): string {

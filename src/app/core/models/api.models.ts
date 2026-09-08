@@ -34,6 +34,14 @@ export interface CurrentUser {
   role_code: 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'ADMIN' | 'CASHIER';
 }
 
+export interface CurrencyDefinition {
+  code: string;
+  name: string;
+  symbol: string;
+  locale: string;
+  decimal_places: number;
+}
+
 export type SubscriptionState = 'ACTIVE' | 'EXPIRING_SOON' | 'GRACE' | 'EXPIRED' | 'NOT_STARTED';
 
 export interface TenantPreview {
@@ -54,6 +62,7 @@ export interface TenantPreview {
   grace_days_remaining: number | null;
   login_allowed: boolean;
   subscription_message: string;
+  currency: CurrencyDefinition;
 }
 
 export interface PlatformContext {
@@ -80,6 +89,7 @@ export interface PlatformContext {
   plan_code: string;
   max_terminals: number;
   features: Record<string, unknown>;
+  currency: CurrencyDefinition;
 }
 
 export interface GlobalProduct {
@@ -92,6 +102,14 @@ export interface GlobalProduct {
   default_gst: string;
   image_path: string | null;
   status: 'ACTIVE' | 'INACTIVE';
+}
+
+export interface ProductVariant {
+  id: string;
+  name: string;
+  price_adjustment: string;
+  display_order: number;
+  is_active: boolean;
 }
 
 export interface OutletProductMapping {
@@ -114,6 +132,7 @@ export interface OutletProductMapping {
   is_active: boolean;
   display_order: number;
   source: 'GLOBAL' | 'TENANT';
+  variants: ProductVariant[];
 }
 
 export interface TenantAdmin {
@@ -137,6 +156,7 @@ export interface TenantAdmin {
   subscription_end: string | null;
   grace_ends_at: string | null;
   login_allowed: boolean;
+  currency_code: string;
 }
 
 export interface TenantSubscription {
@@ -186,14 +206,6 @@ export interface Category {
   name: string;
   image_path: string | null;
   display_order: number;
-}
-
-export interface ProductVariant {
-  id: string;
-  name: string;
-  price_adjustment: string;
-  display_order: number;
-  is_active: boolean;
 }
 
 export interface Product {
@@ -367,6 +379,8 @@ export interface DashboardMetric {
   low_stock_products: number;
   top_products: Array<{ product_name: string; quantity_sold: number; revenue: string }>;
   hourly_sales: Array<{ label: string; value: string }>;
+  date_sales: Array<{ label: string; value: string }>;
+  hour_sales: Array<{ label: string; value: string }>;
   category_sales: Array<{ label: string; value: string }>;
 }
 
