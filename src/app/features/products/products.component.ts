@@ -203,11 +203,19 @@ export class ProductsComponent {
   readonly mappingCategory = signal('ALL');
   readonly masterPage = signal(0);
   readonly mappingPage = signal(0);
-  readonly pageSize = 4;
+  readonly pageSizeOptions = [4, 8, 12, 20] as const;
+  readonly masterPageSize = signal<number>(4);
+  readonly mappingPageSize = signal<number>(4);
   readonly masterCategories = computed(() => [...new Set(this.globalProducts().map(p => p.category_name))].sort());
   readonly mappingCategories = computed(() => [...new Set(this.outletMappings().map(p => p.category_name))].sort());
-  readonly masterRows = computed(() => this.visibleMasters().slice(this.masterPage() * this.pageSize, (this.masterPage()+1) * this.pageSize));
-  readonly mappingRows = computed(() => this.visibleMappings().slice(this.mappingPage() * this.pageSize, (this.mappingPage()+1) * this.pageSize));
+  readonly masterRows = computed(() => this.visibleMasters().slice(
+    this.masterPage() * this.masterPageSize(),
+    (this.masterPage() + 1) * this.masterPageSize(),
+  ));
+  readonly mappingRows = computed(() => this.visibleMappings().slice(
+    this.mappingPage() * this.mappingPageSize(),
+    (this.mappingPage() + 1) * this.mappingPageSize(),
+  ));
   readonly stockEditor = signal<{id:string; previous:string; value:string} | null>(null);
   readonly stockError = signal('');
   readonly stockSaving = signal(false);
@@ -219,13 +227,25 @@ export class ProductsComponent {
     if(panel==='master') { (field==='search'?this.masterSearch:this.masterCategory).set(value);this.masterPage.set(0); }
     else { (field==='search'?this.mappingSearch:this.mappingCategory).set(value);this.mappingPage.set(0); }
   }
-  pageCount(count:number):number { return Math.max(1,Math.ceil(count/this.pageSize)); }
-  pageStart(page:number,count:number):number { return count ? page*this.pageSize+1 : 0; }
-  pageEnd(page:number,count:number):number { return Math.min((page+1)*this.pageSize,count); }
+  pageCount(count:number,pageSize:number):number { return Math.max(1,Math.ceil(count/pageSize)); }
+  pageStart(page:number,count:number,pageSize:number):number { return count ? page*pageSize+1 : 0; }
+  pageEnd(page:number,count:number,pageSize:number):number { return Math.min((page+1)*pageSize,count); }
   changeCataloguePage(panel:'master'|'mapping', delta:number):void {
     const page=panel==='master'?this.masterPage:this.mappingPage;
     const count=panel==='master'?this.visibleMasters().length:this.visibleMappings().length;
-    page.set(Math.max(0,Math.min(page()+delta,this.pageCount(count)-1)));
+    const pageSize=panel==='master'?this.masterPageSize():this.mappingPageSize();
+    page.set(Math.max(0,Math.min(page()+delta,this.pageCount(count,pageSize)-1)));
+  }
+  changePageSize(panel:'master'|'mapping', rawValue:string):void {
+    const pageSize=Number(rawValue);
+    if(!this.pageSizeOptions.some(option=>option===pageSize))return;
+    const size=panel==='master'?this.masterPageSize:this.mappingPageSize;
+    const page=panel==='master'?this.masterPage:this.mappingPage;
+    size.set(pageSize);
+    page.set(0);
+    const key=this.pageSizeStorageKey(panel);
+    if(!key)return;
+    try { localStorage.setItem(key,String(pageSize)); } catch { /* Keep the in-memory preference when storage is unavailable. */ }
   }
   editStock(product:OutletProductMapping):void {
     if(this.stockSaving()||this.saving())return;
@@ -328,7 +348,26 @@ export class ProductsComponent {
   );
 
   constructor() {
+    this.restorePageSizes();
     void this.load();
+  }
+
+  private pageSizeStorageKey(panel:'master'|'mapping'):string|null {
+    const userId=this.session.user?.()?.id;
+    return userId?`brewbill.products.page-size.${userId}.${panel}`:null;
+  }
+
+  private restorePageSizes():void {
+    for(const panel of ['master','mapping'] as const){
+      const key=this.pageSizeStorageKey(panel);
+      if(!key)continue;
+      try {
+        const saved=Number(localStorage.getItem(key));
+        if(this.pageSizeOptions.some(option=>option===saved)){
+          (panel==='master'?this.masterPageSize:this.mappingPageSize).set(saved);
+        }
+      } catch { /* Use the default when storage is unavailable. */ }
+    }
   }
 
   async load(): Promise<void> {
@@ -344,8 +383,8 @@ export class ProductsComponent {
       this.products.set(result.products);
       this.globalProducts.set(globalProducts);
       this.outletMappings.set(outletMappings);
-      this.masterPage.set(Math.min(this.masterPage(),this.pageCount(this.visibleMasters().length)-1));
-      this.mappingPage.set(Math.min(this.mappingPage(),this.pageCount(this.visibleMappings().length)-1));
+      this.masterPage.set(Math.min(this.masterPage(),this.pageCount(this.visibleMasters().length,this.masterPageSize())-1));
+      this.mappingPage.set(Math.min(this.mappingPage(),this.pageCount(this.visibleMappings().length,this.mappingPageSize())-1));
       if (!this.draft().categoryId && result.categories[0])
         this.patch('categoryId', result.categories[0].id);
     } catch (error) {

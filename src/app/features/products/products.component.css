@@ -52,10 +52,16 @@
 :host .stock-edit-actions .icon-button { width:28px; min-width:28px; min-height:25px; height:25px; }
 :host .stock-error { color:#b43139; font-size:12px; padding:10px; background:#fff1f0; border-radius:8px; }
 :host .catalogue-pagination { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:12px; color:#817a74; font-size:11px; }
+:host .pagination-tools { display:flex; align-items:center; justify-content:flex-end; gap:9px; }
 :host .catalogue-pagination nav { display:flex; gap:5px; align-items:center; }
 :host .catalogue-pagination button { display:grid; place-items:center; width:28px; height:28px; min-height:28px; padding:0; background:white; border:1px solid var(--line); border-radius:6px; }
 :host .catalogue-pagination .material-symbols-outlined { font-size:19px; }
-:host .page-number { padding:6px 9px; border-radius:6px; background:#f1e6d8; color:#744a27; font-weight:700; }
+:host .page-size-control { display:flex; align-items:center; gap:7px; color:#675d54; font-size:11px; font-weight:600; white-space:nowrap; }
+:host .page-size-control select { box-sizing:border-box; width:68px; min-width:68px; height:32px; padding:0 8px; border:1px solid #d9c9b8; border-radius:7px; outline:0; background-color:#fffaf4; color:#3f2a18; font-family:inherit; font-size:12px; font-weight:800; line-height:30px; text-align:center; text-align-last:center; cursor:pointer; }
+:host .page-size-control select option { color:#33251a; background:#fff; font-weight:700; }
+:host .page-size-control select:hover { border-color:#c9aa89; background:#f9f0e5; }
+:host .page-size-control select:focus-visible { border-color:#a9784b; outline:2px solid #ead9c7; outline-offset:1px; }
+:host .page-number { min-width:42px; padding:7px 9px; border-radius:6px; background:#f1e6d8; color:#5f381b; font-size:12px; font-weight:800; line-height:1; text-align:center; white-space:nowrap; }
 :host button:disabled { opacity:.45; cursor:not-allowed; }
 :host button:focus-visible { outline:2px solid #bc955e; outline-offset:2px; }
 :host .product-dialog .panel-title { display:flex; justify-content:space-between; }
@@ -70,6 +76,8 @@
   :host .catalogue-toolbar-line { flex-wrap:wrap; }
   :host .catalogue-toolbar-line .category-select { flex-basis:100%; }
   :host .panel-title { flex-wrap:wrap; }
+  :host .catalogue-pagination { align-items:flex-start; flex-direction:column; }
+  :host .pagination-tools { width:100%; justify-content:space-between; }
 }
 
 :host .stock-value.out { color:#c73740; }
