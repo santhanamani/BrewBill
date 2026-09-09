@@ -496,6 +496,44 @@ export interface TenantPaymentPolicy {
   payment_processing_mode: 'MANUAL_ALLOWED' | 'TERMINAL_REQUIRED';
 }
 
+export type MarketplaceProvider = 'SWIGGY' | 'ZOMATO';
+export type MarketplaceOrderStatus = 'RECEIVED' | 'ACCEPTED' | 'PREPARING' | 'READY' | 'COMPLETED' | 'REJECTED' | 'CANCELLED';
+
+export interface MarketplaceOrder {
+  id: string;
+  provider: MarketplaceProvider;
+  external_order_id: string;
+  merchant_id: string;
+  status: MarketplaceOrderStatus;
+  subtotal: string;
+  tax: string;
+  packaging_charge: string;
+  discount: string;
+  commission: string;
+  grand_total: string;
+  net_settlement: string;
+  food_cost: string;
+  estimated_profit: string;
+  customer_name: string | null;
+  customer_phone_masked: string | null;
+  instructions: string | null;
+  placed_at: string;
+  items: Array<{ id:string; product_id:string|null; product_name:string; variant_name:string|null; quantity:number; unit_price:string; line_total:string }>;
+}
+
+export interface MarketplaceSummary {
+  total_orders: number;
+  active_orders: number;
+  completed_orders: number;
+  cancelled_orders: number;
+  gross_sales: string;
+  net_settlement: string;
+  estimated_profit: string;
+  swiggy_orders: number;
+  zomato_orders: number;
+  mock_enabled: boolean;
+}
+
 export interface LicenseEnvelope {
   payload: Record<string, unknown>;
   signature: string;

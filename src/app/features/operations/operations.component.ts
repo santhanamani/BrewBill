@@ -8,6 +8,8 @@ import {
   IngredientInventoryItem,
   IngredientMovement,
   KotTicket,
+  MarketplaceOrder,
+  MarketplaceSummary,
   OrderListItem,
 } from '../../core/models/api.models';
 import { RuntimeConfigService } from '../../core/runtime-config.service';
@@ -96,6 +98,11 @@ export class OperationsComponent {
   });
   readonly kots = signal<KotTicket[]>([]);
   readonly orders = signal<OrderListItem[]>([]);
+  readonly marketplaceOrders = signal<MarketplaceOrder[]>([]);
+  readonly marketplaceSummary = signal<MarketplaceSummary | null>(null);
+  readonly marketplaceEnabled = computed(
+    () => this.session.context()?.plan_code === 'ULTRA_PROFESSIONAL',
+  );
   readonly inventoryItems = signal<IngredientInventoryItem[]>([]);
   readonly movements = signal<IngredientMovement[]>([]);
   readonly inventorySearch = signal('');
@@ -144,6 +151,7 @@ export class OperationsComponent {
   }
   pageReports(delta:number):void { this.reportPage.set(Math.max(0,Math.min(this.currentReportPage()+delta,this.reportPages()-1))); }
   sizeReports(value:string):void { const size=Number(value);if([10,25,50].includes(size)){this.reportPageSize.set(size);this.reportPage.set(0);} }
+  openMarketplace():void { void this.router.navigateByUrl('/marketplace'); }
   readonly inventoryDialog = signal<'ADD' | 'EDIT' | null>(null);
   readonly inventoryForm = signal({
     id: '',
@@ -209,7 +217,16 @@ export class OperationsComponent {
           this.selectedHoldId.set(rows[0]?.id ?? null);
       }
       if (this.key() === 'kot') this.kots.set(await this.api.listKots(token));
-      if (this.key() === 'reports') this.orders.set(await this.api.listOrders(token));
+      if (this.key() === 'reports') {
+        const [orders, marketplaceOrders, marketplaceSummary] = await Promise.all([
+          this.api.listOrders(token),
+          this.marketplaceEnabled() ? this.api.listMarketplaceOrders(token) : Promise.resolve([]),
+          this.marketplaceEnabled() ? this.api.getMarketplaceSummary(token) : Promise.resolve(null),
+        ]);
+        this.orders.set(orders);
+        this.marketplaceOrders.set(marketplaceOrders);
+        this.marketplaceSummary.set(marketplaceSummary);
+      }
       if (this.key() === 'inventory') {
         const [items, movements] = await Promise.all([
           this.api.listInventoryItems(token),

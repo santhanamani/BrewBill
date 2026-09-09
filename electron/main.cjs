@@ -5,7 +5,7 @@ const { randomUUID } = require('node:crypto');
 const { z } = require('zod');
 const { openLocalDatabase } = require('./database/local-database.cjs');
 const { receiptSchema, parse } = require('./ipc/validators.cjs');
-const { installLicense, verifyLicense } = require('./license/license-service.cjs');
+const { installLicense, resetLicenseTrust, verifyLicense } = require('./license/license-service.cjs');
 const { printReceipt } = require('./printer/receipt-printer.cjs');
 const { isHardReloadShortcut, isZoomShortcut } = require('./keyboard-shortcuts.cjs');
 const { collectPayment, terminalStatus } = require('./payment/terminal-adapter.cjs');
@@ -93,6 +93,9 @@ function registerIpc() {
         })
         .parse(envelope),
     ),
+  );
+  ipcMain.handle('license:reset-trust', (_event, confirmation) =>
+    resetLicenseTrust(db, safeStorage, z.literal('RESET LICENSE TRUST').parse(confirmation)),
   );
   ipcMain.handle(
     'settings:get',

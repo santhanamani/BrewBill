@@ -66,3 +66,24 @@
   :host([data-view='reports']) .table-scroll { min-height:0; max-height:none; flex:1 1 auto; }
 }
 @media(min-width:1200px) and (max-width:1599px) { :host([data-view='reports']) { height:calc(100dvh - 174px); } }
+
+:host([data-view='reports']) .marketplace-report { margin-top:14px; padding:16px; border:1px solid #e7ded2; border-radius:14px; background:#fff; box-shadow:none; }
+:host([data-view='reports']) .marketplace-report > header { display:flex; align-items:center; gap:14px; margin-bottom:12px; }
+:host([data-view='reports']) .marketplace-report > header > button { display:flex; align-items:center; gap:6px; height:40px; padding:0 13px; border:1px solid #d9c4aa; border-radius:8px; background:#754019; color:#fff; white-space:nowrap; }
+:host([data-view='reports']) .marketplace-report-summary { display:flex; align-items:center; gap:9px; margin-left:auto; }
+:host([data-view='reports']) .marketplace-report-summary > span { display:grid; min-width:112px; padding:7px 10px; border-radius:8px; background:#faf6ef; }
+:host([data-view='reports']) .marketplace-report-summary small { color:#8b7a6a; font-size:9px; text-transform:uppercase; letter-spacing:.05em; }
+:host([data-view='reports']) .marketplace-report-summary b { margin-top:2px; color:#4a3829; font-size:13px; }
+:host([data-view='reports']) .marketplace-report-table { max-height:230px; min-height:70px; }
+:host([data-view='reports']) .marketplace-report-table td:first-child { min-width:90px; }
+:host([data-view='reports']) .marketplace-report-table td:nth-child(2) { min-width:150px; }
+:host([data-view='reports']) .marketplace-report-table td:nth-child(3) { min-width:140px; }
+:host([data-view='reports']) .marketplace-report-table th:nth-child(n+5):nth-child(-n+8),:host([data-view='reports']) .marketplace-report-table td:nth-child(n+5):nth-child(-n+8) { text-align:right; white-space:nowrap; }
+:host([data-view='reports']) .market-provider,:host([data-view='reports']) .market-status { display:inline-flex; padding:5px 8px; border-radius:999px; font-size:9px; font-weight:800; }
+:host([data-view='reports']) .market-provider { background:#fff0e7; color:#d95824; }
+:host([data-view='reports']) .market-provider[data-provider='ZOMATO'] { background:#ffebee; color:#c72838; }
+:host([data-view='reports']) .market-status { background:#fff2cf; color:#90620d; }
+:host([data-view='reports']) .market-status[data-status='COMPLETED'] { background:#e5f7e9; color:#227843; }
+:host([data-view='reports']) .market-status[data-status='CANCELLED'],:host([data-view='reports']) .market-status[data-status='REJECTED'] { background:#fbeceb; color:#a84c48; }
+:host([data-view='reports']) .marketplace-report-empty { padding:24px; color:#8d7e70; text-align:center; }
+@media(max-width:1200px) { :host([data-view='reports']) .marketplace-report > header { align-items:flex-start; flex-wrap:wrap; } :host([data-view='reports']) .marketplace-report-summary { order:3; width:100%; margin-left:0; overflow:auto; } }

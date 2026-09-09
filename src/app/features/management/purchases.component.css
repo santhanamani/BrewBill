@@ -107,5 +107,8 @@
 .ultra-grid article { padding:14px; border:1px solid #e8ded4; border-radius:10px; background:#fffdfa; }
 .ultra-grid h3 { display:flex; align-items:center; gap:7px; margin:0 0 12px; }
 .ultra-grid p,.ultra-upgrade { color:#76675c; font-size:12px; line-height:1.45; }
+.channel-switches { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.channel-switches label { display:flex; align-items:center; gap:7px; padding:7px 10px; border:1px solid #e5d8cb; border-radius:8px; background:#fbf7f1; color:#5f4938; font-size:11px; font-weight:700; }
+.channel-switches input { width:16px; height:16px; accent-color:#75401d; }
 .ultra-upgrade { display:flex; align-items:center; gap:9px; padding:13px; border-radius:8px; background:#f8f1e8; }
 @media(max-width:1250px){.ultra-grid{grid-template-columns:1fr}.ultra-grid .three-columns{grid-template-columns:repeat(2,1fr)}}

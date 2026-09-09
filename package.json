@@ -11,7 +11,7 @@
     "dev": "npm run desktop:dev",
     "desktop:dev": "set \"PATH=D:\\BrewBillTools\\NodeJS\\22.22.3;%PATH%\" && concurrently -k \"npm.cmd run start\" \"wait-on http://127.0.0.1:4200 && set ELECTRON_RUN_AS_NODE=&& electron .\"",
     "desktop:package": "set \"PATH=D:\\BrewBillTools\\NodeJS\\22.22.3;%PATH%\" && npm.cmd run build && electron-builder --win nsis",
-    "test:license": "node scripts/test-license.cjs",
+    "test:license": "set \"PATH=D:\\BrewBillTools\\NodeJS\\22.22.3;%PATH%\" && node scripts/test-license.cjs",
     "test:shortcuts": "node --test scripts/test-electron-shortcuts.cjs"
   },
   "private": true,

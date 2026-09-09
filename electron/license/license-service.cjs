@@ -54,6 +54,26 @@ function installLicense(db, safeStorage, envelope) {
   return verifyLicense(db, safeStorage);
 }
 
+function resetLicenseTrust(db, safeStorage, confirmation) {
+  if (confirmation !== 'RESET LICENSE TRUST')
+    throw new Error('License trust reset confirmation is invalid.');
+  const keys = [
+    'secure.license.token',
+    'secure.license.public-key',
+    'secure.license.last-server-time',
+    'secure.license.last-successful-validation',
+    'secure.license.last-application-time',
+  ];
+  const remove = db.prepare('DELETE FROM local_settings WHERE key=?');
+  db.transaction(() => {
+    for (const key of keys) remove.run(key);
+    db.prepare(
+      "INSERT INTO local_settings (key,value) VALUES ('license.last-trust-reset',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=CURRENT_TIMESTAMP",
+    ).run(new Date().toISOString());
+  })();
+  return verifyLicense(db, safeStorage);
+}
+
 function verifyLicense(db, safeStorage) {
   const serialized = readSecure(db, safeStorage, 'license.token');
   const publicKey = readSecure(db, safeStorage, 'license.public-key');
@@ -127,4 +147,4 @@ function verifyLicense(db, safeStorage) {
   }
 }
 
-module.exports = { installLicense, verifyLicense };
+module.exports = { installLicense, resetLicenseTrust, verifyLicense };

@@ -10,7 +10,14 @@
 </section>
 
 @if (error()) {
-  <div class="notice error-state">{{ error() }}</div>
+  <div class="notice error-state" [class.license-rotation-notice]="licenseSigningKeyChanged()">
+    <span>{{ error() }}</span>
+    @if (licenseSigningKeyChanged() && session.isAdmin()) {
+      <button type="button" [disabled]="posDeviceRefreshing()" (click)="openLicenseSigningKeyReset()">
+        <span class="material-symbols-outlined">key_off</span>Resolve signing-key change
+      </button>
+    }
+  </div>
 }
 @if (success()) {
   <div class="notice success-state">{{ success() }}</div>
@@ -520,6 +527,11 @@
       <button class="secondary-action" type="button" [disabled]="posDeviceRefreshing()" (click)="refreshPosDevice()">
         <span class="material-symbols-outlined">sync</span>{{ posDeviceRefreshing() ? 'Activating…' : 'Activate / Refresh' }}
       </button>
+      @if (licenseSigningKeyChanged() && session.isAdmin()) {
+        <button class="license-trust-reset" type="button" [disabled]="posDeviceRefreshing()" (click)="openLicenseSigningKeyReset()">
+          <span class="material-symbols-outlined">key_off</span>Reset signing-key trust
+        </button>
+      }
     </div>
   </section>
   <section class="panel form-panel terminal-settings">
@@ -547,7 +559,7 @@
     @if (ultraEnabled()) {
       <div class="ultra-grid">
         <article><h3><span class="material-symbols-outlined">group_add</span>Tenant Users</h3><div class="form-grid three-columns"><label>Full name<input [(ngModel)]="newUserName" /></label><label>Username<input [(ngModel)]="newUsername" /></label><label>Role<select [(ngModel)]="newUserRole"><option value="CASHIER">Cashier</option><option value="ADMIN">Admin</option></select></label><label>Password<input type="password" minlength="8" [(ngModel)]="newUserPassword" /></label><button class="primary-action" type="button" (click)="addTenantUser()">Add User</button></div><p>{{ tenantUsers().length }} tenant users configured.</p></article>
-        <article><h3><span class="material-symbols-outlined">storefront</span>Marketplace Sales</h3><div class="form-grid"><label>Swiggy Merchant ID<input [(ngModel)]="swiggyMerchantId" placeholder="SWG-merchant-id" /></label><label>Zepto Merchant ID<input [(ngModel)]="zeptoMerchantId" placeholder="ZEP-merchant-id" /></label></div><p>Merchant mapping is saved per tenant. Live order/product sync activates after the provider supplies partner API credentials.</p></article>
+        <article class="marketplace-settings"><h3><span class="material-symbols-outlined">storefront</span>Marketplace Sales</h3><div class="form-grid"><label>Swiggy Merchant ID<input [(ngModel)]="swiggyMerchantId" placeholder="SWG-merchant-id" /></label><label>Zomato Store ID<input [(ngModel)]="zomatoMerchantId" placeholder="ZOM-store-id" /></label></div><div class="channel-switches"><label><input type="checkbox" [(ngModel)]="swiggyMarketplaceEnabled" />Swiggy enabled</label><label><input type="checkbox" [(ngModel)]="zomatoMarketplaceEnabled" />Zomato enabled</label></div><p>Merchant mapping is tenant-scoped. Live webhooks require credentials issued by each provider; test mode uses BrewBill mock orders.</p></article>
         <article><h3><span class="material-symbols-outlined">send_to_mobile</span>Daily Report Delivery</h3><div class="form-grid"><label>Mobile number<input [(ngModel)]="dailyReportPhone" placeholder="+91 98765 43210" /></label><label>Send time<input type="time" [(ngModel)]="dailyReportTime" /></label></div><p>This number and schedule are tenant-scoped. A WhatsApp/SMS provider connection is required for delivery.</p></article>
       </div>
       <button class="primary-action" type="button" [disabled]="saving()" (click)="saveUltraSettings()"><span class="material-symbols-outlined">save</span>Save Ultra Settings</button>
@@ -649,6 +661,28 @@
           </tbody>
         </table>
       </div>
+    </section>
+  </div>
+}
+
+@if (licenseResetDialog()) {
+  <div class="license-reset-backdrop" (click)="closeLicenseSigningKeyReset()">
+    <section class="license-reset-dialog" role="dialog" aria-modal="true" aria-labelledby="license-reset-title" (click)="$event.stopPropagation()">
+      <header>
+        <span class="material-symbols-outlined">key_off</span>
+        <div><small>THIS DESKTOP ONLY</small><h2 id="license-reset-title">Trust the new signing key?</h2></div>
+      </header>
+      <p>BrewBill's license signing key was intentionally rotated. This clears only the old encrypted license and key pin; tenant data, bills, terminal identity and registration remain unchanged.</p>
+      <label>Type <b>RESET LICENSE TRUST</b> to continue
+        <input autocomplete="off" [(ngModel)]="licenseResetConfirmation" (input)="licenseResetError.set('')" />
+      </label>
+      @if (licenseResetError()) { <div class="license-reset-error">{{ licenseResetError() }}</div> }
+      <footer>
+        <button type="button" [disabled]="posDeviceRefreshing()" (click)="closeLicenseSigningKeyReset()">Cancel</button>
+        <button class="confirm" type="button" [disabled]="posDeviceRefreshing() || licenseResetConfirmation.trim() !== 'RESET LICENSE TRUST'" (click)="resetLicenseSigningKeyTrust()">
+          <span class="material-symbols-outlined">verified_user</span>{{ posDeviceRefreshing() ? 'Reactivating…' : 'Reset & Reactivate' }}
+        </button>
+      </footer>
     </section>
   </div>
 }

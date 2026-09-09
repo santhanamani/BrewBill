@@ -119,6 +119,10 @@
     </article>
   </section>
 
+  @if(marketplaceEnabled()){
+    <section class="dashboard-marketplace"><header><div><small>ULTRA PROFESSIONAL</small><h2><span class="material-symbols-outlined">delivery_dining</span>Marketplace Sales</h2><p>Swiggy and Zomato · {{periodLabel()}}</p></div><button type="button" (click)="router.navigateByUrl('/marketplace')">Open Online Orders<span class="material-symbols-outlined">arrow_forward</span></button></header><div><article><small>Active orders</small><b>{{marketplace()?.active_orders??0}}</b></article><article><small>Swiggy</small><b>{{marketplace()?.swiggy_orders??0}} orders</b></article><article><small>Zomato</small><b>{{marketplace()?.zomato_orders??0}} orders</b></article><article><small>Net settlement</small><b>{{money(marketplace()?.net_settlement??0)}}</b></article><article><small>Estimated profit</small><b>{{money(marketplace()?.estimated_profit??0)}}</b></article></div></section>
+  }
+
   <section class="dashboard-grid">
     <article class="panel chart-panel">
       <div class="panel-title">

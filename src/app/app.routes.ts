@@ -18,6 +18,13 @@ const operationalUser: CanActivateFn = () => {
   return !session.isSuperAdmin() || inject(Router).createUrlTree(['/administration']);
 };
 
+const ultraOperationalUser: CanActivateFn = () => {
+  const session = inject(SessionService);
+  return !session.isSuperAdmin() && session.context()?.plan_code === 'ULTRA_PROFESSIONAL'
+    ? true
+    : inject(Router).createUrlTree(['/dashboard']);
+};
+
 const landing: CanActivateFn = () => {
   const session = inject(SessionService);
   return inject(Router).createUrlTree([session.isSuperAdmin() ? '/administration' : '/dashboard']);
@@ -52,6 +59,11 @@ export const routes: Routes = [
         canActivate: [operationalUser],
         loadComponent: () =>
           import('./features/pos/pos.component').then((module) => module.PosComponent),
+      },
+      {
+        path: 'marketplace',
+        canActivate: [ultraOperationalUser],
+        loadComponent: () => import('./features/marketplace/marketplace.component').then(module => module.MarketplaceComponent),
       },
       {
         path: 'products',

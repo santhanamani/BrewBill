@@ -303,6 +303,54 @@ class Payment(Base):
     order: Mapped[Order] = relationship(back_populates='payments')
 
 
+class MarketplaceOrder(Base, Timestamped):
+    __tablename__ = 'marketplace_orders'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id'), index=True)
+    outlet_id: Mapped[str] = mapped_column(ForeignKey('outlets.id'), index=True)
+    provider: Mapped[str] = mapped_column(String(24), index=True)
+    external_order_id: Mapped[str] = mapped_column(String(100))
+    merchant_id: Mapped[str] = mapped_column(String(120))
+    status: Mapped[str] = mapped_column(String(24), default='RECEIVED', index=True)
+    currency_code: Mapped[str] = mapped_column(String(3), default='INR')
+    subtotal: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal('0.00'))
+    tax: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal('0.00'))
+    packaging_charge: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal('0.00'))
+    discount: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal('0.00'))
+    commission: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal('0.00'))
+    grand_total: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal('0.00'))
+    net_settlement: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal('0.00'))
+    food_cost: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal('0.00'))
+    estimated_profit: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal('0.00'))
+    customer_name: Mapped[str | None] = mapped_column(String(120))
+    customer_phone_masked: Mapped[str | None] = mapped_column(String(32))
+    instructions: Mapped[str | None] = mapped_column(Text)
+    stock_committed: Mapped[bool] = mapped_column(Boolean, default=False)
+    placed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ready_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    items: Mapped[list['MarketplaceOrderItem']] = relationship(back_populates='order', cascade='all, delete-orphan')
+    __table_args__ = (UniqueConstraint('tenant_id', 'provider', 'external_order_id', name='uq_marketplace_external_order'),)
+
+
+class MarketplaceOrderItem(Base):
+    __tablename__ = 'marketplace_order_items'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    order_id: Mapped[str] = mapped_column(ForeignKey('marketplace_orders.id'), index=True)
+    product_id: Mapped[str | None] = mapped_column(ForeignKey('products.id'), index=True)
+    variant_id: Mapped[str | None] = mapped_column(ForeignKey('product_variants.id'))
+    external_item_id: Mapped[str] = mapped_column(String(120))
+    product_name: Mapped[str] = mapped_column(String(180))
+    variant_name: Mapped[str | None] = mapped_column(String(120))
+    quantity: Mapped[int] = mapped_column(Integer)
+    unit_price: Mapped[Decimal] = mapped_column(Numeric(18, 2))
+    line_total: Mapped[Decimal] = mapped_column(Numeric(18, 2))
+    unit_cost: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal('0.00'))
+    order: Mapped[MarketplaceOrder] = relationship(back_populates='items')
+
+
 class KotHeader(Base):
     __tablename__ = 'kot_headers'
     id: Mapped[str] = mapped_column(String(36), primary_key=True)

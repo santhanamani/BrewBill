@@ -363,6 +363,34 @@
     </div>
     <footer class="report-pagination"><span>{{filteredOrders().length}} orders · Page {{currentReportPage()+1}} of {{reportPages()}}</span><nav aria-label="Sales report pages"><button type="button" aria-label="Previous sales page" [disabled]="currentReportPage()===0" (click)="pageReports(-1)">‹</button><span>{{currentReportPage()+1}}</span><button type="button" aria-label="Next sales page" [disabled]="currentReportPage()+1>=reportPages()" (click)="pageReports(1)">›</button><select aria-label="Orders per page" [value]="reportPageSize()" (change)="sizeReports($any($event.target).value)"><option value="10">10 / page</option><option value="25">25 / page</option><option value="50">50 / page</option></select></nav></footer>
   </section>
+  @if (marketplaceEnabled()) {
+    <section class="panel marketplace-report">
+      <header>
+        <div class="panel-heading">
+          <span class="material-symbols-outlined">delivery_dining</span>
+          <div><h2>Marketplace Sales <small>({{ marketplaceOrders().length }} orders)</small></h2><p>Swiggy and Zomato settlement and estimated profitability.</p></div>
+        </div>
+        <div class="marketplace-report-summary">
+          <span><small>Gross</small><b>{{ money(marketplaceSummary()?.gross_sales ?? 0) }}</b></span>
+          <span><small>Net settlement</small><b>{{ money(marketplaceSummary()?.net_settlement ?? 0) }}</b></span>
+          <span><small>Estimated profit</small><b>{{ money(marketplaceSummary()?.estimated_profit ?? 0) }}</b></span>
+        </div>
+        <button type="button" (click)="openMarketplace()">Open queue<span class="material-symbols-outlined">arrow_forward</span></button>
+      </header>
+      <div class="table-scroll marketplace-report-table">
+        <table>
+          <thead><tr><th>Channel</th><th>Order</th><th>Date &amp; Time</th><th>Items</th><th>Gross</th><th>Commission</th><th>Net</th><th>Est. Profit</th><th>Status</th></tr></thead>
+          <tbody>
+            @for (order of marketplaceOrders(); track order.id) {
+              <tr><td><span class="market-provider" [attr.data-provider]="order.provider">{{ order.provider }}</span></td><td><b>{{ order.external_order_id }}</b></td><td>{{ date(order.placed_at) }}</td><td>{{ order.items.length }}</td><td>{{ money(order.grand_total) }}</td><td>{{ money(order.commission) }}</td><td><b>{{ money(order.net_settlement) }}</b></td><td><b>{{ money(order.estimated_profit) }}</b></td><td><span class="market-status" [attr.data-status]="order.status">{{ order.status }}</span></td></tr>
+            } @empty {
+              <tr><td colspan="9"><div class="marketplace-report-empty">No marketplace orders for this outlet yet.</div></td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
 } @else if (key() === 'inventory') {
   <section class="metric-grid four-metrics">
     <article class="metric">

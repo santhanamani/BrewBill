@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const crypto = require('node:crypto');
 const Database = require('better-sqlite3');
-const { installLicense, verifyLicense } = require('../electron/license/license-service.cjs');
+const { installLicense, resetLicenseTrust, verifyLicense } = require('../electron/license/license-service.cjs');
 
 function stableStringify(value) {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
@@ -48,6 +48,19 @@ const envelope = {
 
 assert.equal(installLicense(db, safeStorage, envelope).state, 'ACTIVE');
 assert.equal(verifyLicense(db, safeStorage).canCreateBills, true);
+
+const rotatedKeys = crypto.generateKeyPairSync('ed25519');
+const rotatedEnvelope = {
+  payload,
+  signature: crypto
+    .sign(null, Buffer.from(stableStringify(payload)), rotatedKeys.privateKey)
+    .toString('base64'),
+  public_key: rotatedKeys.publicKey.export({ type: 'spki', format: 'pem' }),
+};
+assert.throws(() => installLicense(db, safeStorage, rotatedEnvelope), /License signing key changed/);
+assert.throws(() => resetLicenseTrust(db, safeStorage, 'RESET'), /confirmation is invalid/);
+assert.equal(resetLicenseTrust(db, safeStorage, 'RESET LICENSE TRUST').state, 'ACTIVATION_REQUIRED');
+assert.equal(installLicense(db, safeStorage, rotatedEnvelope).state, 'ACTIVE');
 
 const encryptedToken = db
   .prepare("SELECT value FROM local_settings WHERE key='secure.license.token'")

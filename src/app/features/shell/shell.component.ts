@@ -4,6 +4,7 @@ import { NavigationCancel, NavigationEnd, NavigationError, NavigationStart, Rout
 import { SessionService } from '../../core/session.service';
 import { ClockService } from '../../core/clock.service';
 import { RuntimeConfigService } from '../../core/runtime-config.service';
+import { BrewBillApiService } from '../../core/brew-bill-api.service';
 
 @Component({
   selector: 'app-shell',
@@ -15,8 +16,10 @@ export class ShellComponent {
   readonly clock = inject(ClockService);
   private readonly runtime = inject(RuntimeConfigService);
   private readonly router = inject(Router);
+  private readonly api = inject(BrewBillApiService);
   readonly navigationError = signal('');
   readonly navigating = signal(false);
+  readonly marketplaceUnread = signal(0);
   private failedPath = '';
 
   constructor() {
@@ -32,6 +35,24 @@ export class ShellComponent {
         this.navigating.set(false);
       }
     });
+    if (this.marketplaceEnabled()) {
+      void this.pollMarketplace();
+      window.setInterval(() => void this.pollMarketplace(), 15000);
+    }
+  }
+
+  marketplaceEnabled(): boolean { return !this.session.isSuperAdmin() && this.session.context()?.plan_code === 'ULTRA_PROFESSIONAL'; }
+
+  private async pollMarketplace(): Promise<void> {
+    const token=this.session.accessToken();const userId=this.session.user()?.id;
+    if(!token||!userId||!this.marketplaceEnabled())return;
+    try{
+      const orders=await this.api.listMarketplaceOrders(token);const received=orders.filter(order=>order.status==='RECEIVED');this.marketplaceUnread.set(received.length);
+      const key=`brewbill.marketplace.seen.${userId}`;let seen:string[]=[];try{seen=JSON.parse(localStorage.getItem(key)??'[]');}catch{}
+      const known=new Set(seen);const fresh=received.filter(order=>!known.has(order.id));
+      for(const order of fresh.slice(0,3)){if('Notification'in window&&Notification.permission==='granted')new Notification(`New ${order.provider} order`,{body:`${order.external_order_id} · ${order.items.length} items`});known.add(order.id);}
+      try{localStorage.setItem(key,JSON.stringify([...known].slice(-250)));}catch{}
+    }catch{/* Notification polling must never interrupt billing. */}
   }
 
   async logout(): Promise<void> {

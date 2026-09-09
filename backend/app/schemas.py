@@ -653,6 +653,87 @@ class DashboardRead(BaseModel):
     category_sales: list[DashboardSeriesPoint]
 
 
+class MarketplaceOrderItemRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    product_id: str | None
+    product_name: str
+    variant_name: str | None
+    quantity: int
+    unit_price: Decimal
+    line_total: Decimal
+
+
+class MarketplaceOrderRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    provider: str
+    external_order_id: str
+    merchant_id: str
+    status: str
+    subtotal: Decimal
+    tax: Decimal
+    packaging_charge: Decimal
+    discount: Decimal
+    commission: Decimal
+    grand_total: Decimal
+    net_settlement: Decimal
+    food_cost: Decimal
+    estimated_profit: Decimal
+    customer_name: str | None
+    customer_phone_masked: str | None
+    instructions: str | None
+    placed_at: datetime
+    items: list[MarketplaceOrderItemRead]
+
+
+class MarketplaceSummaryRead(BaseModel):
+    total_orders: int
+    active_orders: int
+    completed_orders: int
+    cancelled_orders: int
+    gross_sales: Decimal
+    net_settlement: Decimal
+    estimated_profit: Decimal
+    swiggy_orders: int
+    zomato_orders: int
+    mock_enabled: bool
+
+
+class MarketplaceStatusUpdate(BaseModel):
+    status: Literal['ACCEPTED', 'REJECTED', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED']
+
+
+class MarketplaceMockOrderCreate(BaseModel):
+    provider: Literal['SWIGGY', 'ZOMATO']
+
+
+class MarketplaceIngestItem(BaseModel):
+    external_item_id: str = Field(min_length=1, max_length=120)
+    product_name: str = Field(min_length=1, max_length=180)
+    variant_name: str | None = Field(default=None, max_length=120)
+    quantity: int = Field(gt=0, le=999)
+    unit_price: Decimal = Field(ge=0, max_digits=18, decimal_places=2)
+
+
+class MarketplaceOrderIngest(BaseModel):
+    provider: Literal['SWIGGY', 'ZOMATO']
+    merchant_id: str = Field(min_length=1, max_length=120)
+    outlet_code: str | None = Field(default=None, max_length=32)
+    external_order_id: str = Field(min_length=1, max_length=100)
+    customer_name: str | None = Field(default=None, max_length=120)
+    customer_phone_masked: str | None = Field(default=None, max_length=32)
+    instructions: str | None = Field(default=None, max_length=2000)
+    tax: Decimal = Field(default=Decimal('0.00'), ge=0, max_digits=18, decimal_places=2)
+    packaging_charge: Decimal = Field(default=Decimal('0.00'), ge=0, max_digits=18, decimal_places=2)
+    discount: Decimal = Field(default=Decimal('0.00'), ge=0, max_digits=18, decimal_places=2)
+    commission: Decimal = Field(default=Decimal('0.00'), ge=0, max_digits=18, decimal_places=2)
+    placed_at: datetime
+    items: list[MarketplaceIngestItem] = Field(min_length=1, max_length=200)
+
+
 class SupplierCreate(BaseModel):
     name: str = Field(min_length=2, max_length=180)
     contact_person: str | None = Field(default=None, max_length=120)

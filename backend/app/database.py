@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     license_private_key: str = ''
     license_public_key: str = ''
     cors_origins: str = 'http://localhost:4200,http://127.0.0.1:4200,null'
+    marketplace_mock_enabled: bool = False
+    marketplace_connector_token: str = ''
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
 

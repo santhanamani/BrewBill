@@ -39,6 +39,10 @@ import {
   TenantSubscription,
   MfaChallenge,
   CurrencyDefinition,
+  MarketplaceOrder,
+  MarketplaceOrderStatus,
+  MarketplaceProvider,
+  MarketplaceSummary,
 } from './models/api.models';
 import { RuntimeConfigService } from './runtime-config.service';
 
@@ -360,6 +364,25 @@ export class BrewBillApiService {
       }),
       2500,
     );
+  }
+
+  listMarketplaceOrders(accessToken: string): Promise<MarketplaceOrder[]> {
+    return this.get<MarketplaceOrder[]>(accessToken, '/marketplace/orders');
+  }
+
+  getMarketplaceSummary(accessToken: string, fromDate?: string, toDate?: string): Promise<MarketplaceSummary> {
+    const params = new URLSearchParams();
+    if (fromDate) params.set('from_date', fromDate);
+    if (toDate) params.set('to_date', toDate);
+    return this.get<MarketplaceSummary>(accessToken, `/marketplace/summary${params.size ? `?${params}` : ''}`);
+  }
+
+  createMarketplaceMockOrder(accessToken: string, provider: MarketplaceProvider): Promise<MarketplaceOrder> {
+    return this.post<MarketplaceOrder>(accessToken, '/marketplace/mock-orders', { provider });
+  }
+
+  updateMarketplaceOrderStatus(accessToken: string, orderId: string, orderStatus: MarketplaceOrderStatus): Promise<MarketplaceOrder> {
+    return this.request(this.http.put<MarketplaceOrder>(this.runtime.apiUrl(`/marketplace/orders/${orderId}/status`), { status: orderStatus }, { headers: this.authHeaders(accessToken) }), 8000);
   }
 
   voidOrder(accessToken: string, orderId: string, reason: string): Promise<OrderResult> {

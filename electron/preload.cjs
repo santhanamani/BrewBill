@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('brewBill', {
     status: () => invoke('license:status'),
     identity: () => invoke('license:identity'),
     install: (envelope) => invoke('license:install', envelope),
+    resetTrust: (confirmation) => invoke('license:reset-trust', confirmation),
   },
   settings: {
     get: (key) => invoke('settings:get', key),

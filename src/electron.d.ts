@@ -24,6 +24,12 @@ declare global {
           offlineValidUntil: string | null;
           message: string;
         }>;
+        resetTrust: (confirmation: 'RESET LICENSE TRUST') => Promise<{
+          state: string;
+          canCreateBills: boolean;
+          offlineValidUntil: string | null;
+          message: string;
+        }>;
       };
       settings: {
         get: (key: string) => Promise<string | null>;

@@ -188,6 +188,12 @@ export class ManagementComponent {
   readonly posDeviceReady = signal(false);
   readonly posDeviceRefreshing = signal(false);
   readonly posDeviceMessage = signal('');
+  readonly licenseResetDialog = signal(false);
+  readonly licenseResetError = signal('');
+  licenseResetConfirmation = '';
+  readonly licenseSigningKeyChanged = computed(() =>
+    this.posDeviceMessage().toLowerCase().includes('license signing key changed'),
+  );
   readonly posDeviceIdentity = signal<{ installationId: string; terminalCode: string } | null>(null);
   readonly posDeviceLicense = signal<{
     state: string;
@@ -204,7 +210,9 @@ export class ManagementComponent {
   currencyCode = 'INR';
   readonly currencyMessage = signal('');
   swiggyMerchantId = '';
-  zeptoMerchantId = '';
+  zomatoMerchantId = '';
+  swiggyMarketplaceEnabled = true;
+  zomatoMarketplaceEnabled = true;
   dailyReportPhone = '';
   dailyReportTime = '22:00';
   newUserName = '';
@@ -285,7 +293,9 @@ export class ManagementComponent {
           ]);
           this.settings.set(settings);
           this.swiggyMerchantId = this.setting('swiggy_merchant_id');
-          this.zeptoMerchantId = this.setting('zepto_merchant_id');
+          this.zomatoMerchantId = this.setting('zomato_merchant_id') || this.setting('zepto_merchant_id');
+          this.swiggyMarketplaceEnabled = this.setting('swiggy_enabled') !== 'false';
+          this.zomatoMarketplaceEnabled = this.setting('zomato_enabled') !== 'false';
           this.dailyReportPhone = this.setting('daily_report_phone');
           this.dailyReportTime = this.setting('daily_report_time') || '22:00';
           if (this.ultraEnabled()) this.tenantUsers.set(await this.api.listTenantUsers(token));
@@ -318,7 +328,9 @@ export class ManagementComponent {
     await this.save('Ultra Professional settings saved.', async token => {
       await Promise.all([
         this.api.updateSetting(token, 'swiggy_merchant_id', this.swiggyMerchantId.trim()),
-        this.api.updateSetting(token, 'zepto_merchant_id', this.zeptoMerchantId.trim()),
+        this.api.updateSetting(token, 'zomato_merchant_id', this.zomatoMerchantId.trim()),
+        this.api.updateSetting(token, 'swiggy_enabled', String(this.swiggyMarketplaceEnabled)),
+        this.api.updateSetting(token, 'zomato_enabled', String(this.zomatoMarketplaceEnabled)),
         this.api.updateSetting(token, 'daily_report_phone', this.dailyReportPhone.trim()),
         this.api.updateSetting(token, 'daily_report_time', this.dailyReportTime),
       ]);
@@ -437,6 +449,43 @@ export class ManagementComponent {
         error instanceof Error ? error.message : 'Unable to activate this POS device.',
       );
       if (announce) this.error.set(this.posDeviceMessage());
+    } finally {
+      this.posDeviceRefreshing.set(false);
+    }
+  }
+
+  openLicenseSigningKeyReset(): void {
+    if (!this.session.isAdmin() || !window.brewBill) return;
+    this.licenseResetConfirmation = '';
+    this.licenseResetError.set('');
+    this.licenseResetDialog.set(true);
+  }
+
+  closeLicenseSigningKeyReset(): void {
+    if (this.posDeviceRefreshing()) return;
+    this.licenseResetDialog.set(false);
+    this.licenseResetConfirmation = '';
+    this.licenseResetError.set('');
+  }
+
+  async resetLicenseSigningKeyTrust(): Promise<void> {
+    if (!this.session.isAdmin() || !window.brewBill) return;
+    if (this.licenseResetConfirmation.trim() !== 'RESET LICENSE TRUST') {
+      this.licenseResetError.set('Type RESET LICENSE TRUST exactly to continue.');
+      return;
+    }
+    this.posDeviceRefreshing.set(true);
+    this.error.set('');
+    this.licenseResetError.set('');
+    try {
+      await window.brewBill.license.resetTrust('RESET LICENSE TRUST');
+      this.licenseResetDialog.set(false);
+      this.licenseResetConfirmation = '';
+      this.posDeviceMessage.set('Old signing-key trust cleared. Reactivating this device…');
+      await this.refreshPosDevice();
+    } catch (error) {
+      this.posDeviceMessage.set(error instanceof Error ? error.message : 'Unable to reset license trust.');
+      this.licenseResetError.set(this.posDeviceMessage());
     } finally {
       this.posDeviceRefreshing.set(false);
     }

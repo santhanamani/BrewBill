@@ -3,7 +3,7 @@ import { EChartsCoreOption } from 'echarts/core';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import { BrewBillApiService } from '../../core/brew-bill-api.service';
 import { CatalogService } from '../../core/catalog.service';
-import { DashboardMetric, Product } from '../../core/models/api.models';
+import { DashboardMetric, MarketplaceSummary, Product } from '../../core/models/api.models';
 import { SessionService } from '../../core/session.service';
 import { CurrencyService } from '../../core/currency.service';
 import { Router } from '@angular/router';
@@ -28,12 +28,14 @@ export class DashboardComponent {
   private readonly api = inject(BrewBillApiService);
   private readonly catalog = inject(CatalogService);
   private readonly host = inject(ElementRef<HTMLElement>);
-  private readonly router = inject(Router);
+  readonly router = inject(Router);
   readonly session = inject(SessionService);
   readonly currency = inject(CurrencyService);
 
   readonly products = signal<Product[]>([]);
   readonly metrics = signal<DashboardMetric | null>(null);
+  readonly marketplace = signal<MarketplaceSummary | null>(null);
+  readonly marketplaceEnabled = computed(()=>this.session.context()?.plan_code==='ULTRA_PROFESSIONAL');
   readonly loading = signal(true);
   readonly error = signal('');
   readonly rangeError = signal('');
@@ -179,12 +181,14 @@ export class DashboardComponent {
     this.loading.set(true);
     this.error.set('');
     try {
-      const [catalog, metrics] = await Promise.all([
+      const [catalog, metrics, marketplace] = await Promise.all([
         this.catalog.load(token),
         this.api.getDashboard(token, this.appliedFromDate(), this.appliedToDate()),
+        this.marketplaceEnabled()?this.api.getMarketplaceSummary(token,this.appliedFromDate(),this.appliedToDate()):Promise.resolve(null),
       ]);
       this.products.set(catalog.products);
       this.metrics.set(metrics);
+      this.marketplace.set(marketplace);
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to load dashboard data.');
     } finally {

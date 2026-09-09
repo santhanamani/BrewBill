@@ -566,7 +566,7 @@ def update_setting(
 ) -> TenantSetting:
     if not setting_key.replace('_', '').replace('-', '').isalnum() or len(setting_key) > 120:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Invalid setting key.')
-    if setting_key.startswith(('swiggy_', 'zepto_')):
+    if setting_key.startswith(('swiggy_', 'zomato_', 'zepto_')):
         require_plan_feature(user, session, 'marketplace_integrations')
     if setting_key.startswith('daily_report_'):
         require_plan_feature(user, session, 'scheduled_reports')
