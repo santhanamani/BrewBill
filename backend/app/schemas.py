@@ -468,8 +468,6 @@ class OrderCreate(BaseModel):
 
     @model_validator(mode='after')
     def validate_payment_choice(self) -> 'OrderCreate':
-        if self.credit_customer_id and self.payments:
-            raise ValueError('A credit sale cannot also contain immediate payments.')
         if not self.credit_customer_id and not self.payments:
             raise ValueError('Provide a payment or select a credit customer.')
         return self
@@ -829,6 +827,7 @@ class CustomerCreditAccountRead(BaseModel):
 
 
 class CustomerCreditSettlementCreate(BaseModel):
+    amount: Decimal | None = Field(default=None, gt=0, max_digits=18, decimal_places=2)
     payment_mode: str = Field(pattern=r'^(CASH|UPI|CARD)$')
     reference: str | None = Field(default=None, max_length=128)
     notes: str | None = Field(default=None, max_length=1000)

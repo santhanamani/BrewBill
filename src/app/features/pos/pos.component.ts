@@ -54,6 +54,8 @@ export class PosComponent {
   readonly customers = signal<Customer[]>([]);
   readonly selectedCreditCustomerId = signal('');
   readonly creditDueDays = signal(10);
+  readonly creditPaidAmount = signal('0.00');
+  readonly creditPaymentMode = signal<'CASH' | 'UPI' | 'CARD'>('CASH');
   readonly newCreditCustomerName = signal('');
   readonly newCreditCustomerMobile = signal('');
   readonly selectedCreditCustomer = computed(() => this.customers().find(customer => customer.id === this.selectedCreditCustomerId()) ?? null);
@@ -87,6 +89,9 @@ export class PosComponent {
   readonly roundOff = computed(() => this.grandTotal() - this.beforeRounding());
   readonly splitTotal = computed(
     () => this.price(this.splitCash()) + this.price(this.splitUpi()) + this.price(this.splitCard()),
+  );
+  readonly creditBalance = computed(() =>
+    Math.max(0, this.grandTotal() - Math.max(0, this.price(this.creditPaidAmount()))),
   );
 
   constructor() {
@@ -279,6 +284,8 @@ export class PosComponent {
       this.customers.set(await this.api.listCustomers(token));
       this.selectedCreditCustomerId.set(this.customers()[0]?.id ?? '');
       this.creditDueDays.set(10);
+      this.creditPaidAmount.set('0.00');
+      this.creditPaymentMode.set(this.terminalRequired() ? 'UPI' : 'CASH');
       this.showCredit.set(true);
     } catch (error) {
       this.notify(this.errorMessage(error, 'Unable to load customers.'));
@@ -310,8 +317,20 @@ export class PosComponent {
       this.notify('Select a customer before saving this credit bill.');
       return;
     }
+    const paidAmount = this.price(this.creditPaidAmount());
+    if (paidAmount < 0 || paidAmount >= this.grandTotal()) {
+      this.notify('Paid amount must be zero or less than the bill total. Use a normal payment for a fully paid bill.');
+      return;
+    }
+    if (paidAmount > 0 && this.terminalRequired() && this.creditPaymentMode() === 'CASH') {
+      this.notify('Cash is not allowed when POS terminal payment is required.');
+      return;
+    }
+    const payments = paidAmount > 0
+      ? [{ mode: this.creditPaymentMode(), amount: paidAmount }]
+      : [];
     this.showCredit.set(false);
-    await this.checkout([], 'CREDIT', this.selectedCreditCustomerId(), this.creditDueDays());
+    await this.checkout(payments, 'CREDIT', this.selectedCreditCustomerId(), this.creditDueDays());
   }
 
   private async checkout(
@@ -327,7 +346,7 @@ export class PosComponent {
     this.submitting.set(true);
     try {
       const orderId = crypto.randomUUID();
-      const capturedPayments = creditCustomerId ? [] : await Promise.all(
+      const capturedPayments = await Promise.all(
         payments.map((payment) => this.capturePayment(payment, orderId)),
       );
       const saleLines = this.cart();

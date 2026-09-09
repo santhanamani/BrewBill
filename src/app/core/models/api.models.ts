@@ -290,7 +290,7 @@ export interface OrderResult {
   invoice_number: string;
   grand_total: string;
   status: string;
-  payment_status: 'PAID' | 'CREDIT' | 'SETTLED' | 'VOID';
+  payment_status: 'PAID' | 'CREDIT' | 'PARTIAL_CREDIT' | 'SETTLED' | 'VOID';
   customer_id: string | null;
   order_type: 'DIRECT' | 'KOT' | 'TAKEAWAY';
   service_reference: string | null;

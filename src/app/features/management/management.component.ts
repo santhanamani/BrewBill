@@ -60,7 +60,7 @@ const pageDetails: Record<string, { title: string; detail: string; icon: string 
   host: { '[attr.data-view]': 'key()' },
   imports: [FormsModule, RouterLink],
   templateUrl: './management.component.html',
-  styleUrls: ['./expenses.component.css', './purchases.component.css'],
+  styleUrls: ['./expenses.component.css', './purchases.component.css', './settings.component.css'],
 })
 export class ManagementComponent {
   private readonly route = inject(ActivatedRoute);
@@ -81,6 +81,8 @@ export class ManagementComponent {
   readonly customers = signal<Customer[]>([]);
   readonly creditAccounts = signal<CustomerCreditAccount[]>([]);
   readonly settlingCustomerId = signal('');
+  readonly creditCollectionCustomer = signal<Customer | null>(null);
+  creditCollectionAmount = '';
   creditSettlementMode: 'CASH' | 'UPI' | 'CARD' = 'CASH';
   readonly closings = signal<DailyClosing[]>([]);
   readonly settings = signal<TenantSetting[]>([]);
@@ -116,6 +118,10 @@ export class ManagementComponent {
   readonly visibleClosings = computed(() => this.filtered(this.closings()));
   readonly visibleSettings = computed(() => this.filtered(this.settings()));
   readonly visibleCategories = computed(() => this.filtered(this.categories()));
+  readonly nextCategoryDisplayOrder = computed(() =>
+    this.categories().reduce((highest, row) => Math.max(highest, row.display_order), -1) + 1,
+  );
+  readonly categoryFormError = signal('');
 
   readonly purchaseTotal = computed(() =>
     this.purchases().reduce((sum, row) => sum + Number(row.total), 0),
@@ -364,20 +370,56 @@ export class ManagementComponent {
     return this.creditAccounts().find(account => account.customer.id === customerId);
   }
 
-  async settleCredit(customer: Customer): Promise<void> {
-    const token = this.requireCloudToken();
+  creditCollectionRemaining(customerId: string): number {
+    const outstanding = Number(this.creditAccount(customerId)?.outstanding_balance || 0);
+    return Math.max(0, outstanding - Math.max(0, Number(this.creditCollectionAmount) || 0));
+  }
+
+  openCreditCollection(customer: Customer): void {
     const account = this.creditAccount(customer.id);
-    if (!token || !account || Number(account.outstanding_balance) <= 0 || this.settlingCustomerId()) return;
-    if (!window.confirm(`Collect the full ${this.money(Number(account.outstanding_balance))} from ${customer.name} by ${this.creditSettlementMode}?`)) return;
+    if (!account || Number(account.outstanding_balance) <= 0) return;
+    this.creditCollectionCustomer.set(customer);
+    this.creditCollectionAmount = Number(account.outstanding_balance).toFixed(2);
+    this.creditSettlementMode = 'CASH';
+    this.error.set('');
+  }
+
+  closeCreditCollection(): void {
+    if (this.settlingCustomerId()) return;
+    this.creditCollectionCustomer.set(null);
+    this.creditCollectionAmount = '';
+  }
+
+  async settleCredit(): Promise<void> {
+    const customer = this.creditCollectionCustomer();
+    const token = this.requireCloudToken();
+    const account = customer ? this.creditAccount(customer.id) : undefined;
+    const amount = Number(this.creditCollectionAmount);
+    const outstanding = Number(account?.outstanding_balance || 0);
+    if (!customer || !token || !account || this.settlingCustomerId()) return;
+    if (!Number.isFinite(amount) || amount <= 0 || amount > outstanding) {
+      this.error.set('Collection amount must be greater than zero and cannot exceed the outstanding credit.');
+      return;
+    }
     this.settlingCustomerId.set(customer.id);
     this.error.set('');
+    this.success.set('');
     try {
       const saved = await this.api.settleCustomerCredit(token, customer.id, {
+        amount: amount.toFixed(2),
         payment_mode: this.creditSettlementMode,
-        notes: 'Full outstanding collected from Customer Management',
+        notes: amount === outstanding
+          ? 'Full outstanding collected from Customer Management'
+          : 'Partial outstanding collected from Customer Management',
       });
       this.creditAccounts.update(accounts => accounts.map(row => row.customer.id === customer.id ? saved : row));
-      this.success.set(`${customer.name}'s full outstanding amount was collected.`);
+      this.success.set(
+        amount === outstanding
+          ? customer.name + "'s full outstanding amount was collected."
+          : this.money(amount) + ' collected from ' + customer.name + '. Remaining credit: ' + this.money(Number(saved.outstanding_balance)) + '.',
+      );
+      this.creditCollectionCustomer.set(null);
+      this.creditCollectionAmount = '';
     } catch (error) {
       this.error.set(this.message(error));
     } finally {
@@ -656,13 +698,27 @@ export class ManagementComponent {
   }
 
   async addCategory(): Promise<void> {
-    if (!this.categoryCode.trim() || !this.categoryName.trim()) return;
-    await this.save('Category added.', async (token) => {
+    const code = this.categoryCode.trim().toUpperCase();
+    const name = this.categoryName.trim();
+    this.categoryFormError.set('');
+    if (!code || !name) {
+      this.categoryFormError.set('Category code and name are required.');
+      return;
+    }
+    if (!/^[A-Z0-9_-]+$/.test(code)) {
+      this.categoryFormError.set('Use only letters, numbers, hyphens or underscores in the category code.');
+      return;
+    }
+    if (this.categories().some(row => row.code.toUpperCase() === code)) {
+      this.categoryFormError.set('This category code already exists. Choose a different code.');
+      return;
+    }
+    await this.save('Category added to this tenant catalogue.', async (token) => {
       await this.api.createCategory(token, {
-        code: this.categoryCode.trim().toUpperCase(),
-        name: this.categoryName.trim(),
+        code,
+        name,
         image_path: this.categoryImage.trim() || null,
-        display_order: this.categories().length + 1,
+        display_order: this.nextCategoryDisplayOrder(),
       });
       this.categoryCode = this.categoryName = this.categoryImage = '';
       this.categories.set(await this.api.listCategories(token));

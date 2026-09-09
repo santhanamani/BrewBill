@@ -441,23 +441,32 @@ def settle_customer_credit(
     balance = money(sum((Decimal(entry.amount) for entry in entries), Decimal('0.00')))
     if balance <= 0:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='This customer has no outstanding credit.')
+    settlement_amount = money(body.amount) if body.amount is not None else balance
+    if settlement_amount > balance:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail='Collection amount cannot exceed the outstanding credit.',
+        )
+    remaining_balance = money(balance - settlement_amount)
     settlement = CustomerCreditEntry(
         id=str(uuid4()), tenant_id=user.tenant_id, outlet_id=outlet_id,
-        customer_id=customer.id, order_id=None, entry_type='PAYMENT', amount=-balance,
+        customer_id=customer.id, order_id=None, entry_type='PAYMENT', amount=-settlement_amount,
         due_date=None, payment_mode=body.payment_mode, reference=body.reference,
-        notes=body.notes or 'Full outstanding settlement', created_by=user.id,
+        notes=body.notes or ('Full outstanding settlement' if remaining_balance == 0 else 'Partial credit collection'),
+        created_by=user.id,
     )
     session.add(settlement)
-    credit_orders = session.scalars(select(Order).where(
-        Order.tenant_id == user.tenant_id,
-        Order.outlet_id == outlet_id,
-        Order.customer_id == customer.id,
-        Order.status == 'COMPLETED',
-        Order.payment_status == 'CREDIT',
-    )).all()
-    for order in credit_orders:
-        order.payment_status = 'SETTLED'
-    audit(session, user, 'SETTLE', 'CUSTOMER_CREDIT', customer.id)
+    if remaining_balance == 0:
+        credit_orders = session.scalars(select(Order).where(
+            Order.tenant_id == user.tenant_id,
+            Order.outlet_id == outlet_id,
+            Order.customer_id == customer.id,
+            Order.status == 'COMPLETED',
+            Order.payment_status.in_(('CREDIT', 'PARTIAL_CREDIT')),
+        )).all()
+        for order in credit_orders:
+            order.payment_status = 'SETTLED'
+    audit(session, user, 'SETTLE' if remaining_balance == 0 else 'COLLECT', 'CUSTOMER_CREDIT', customer.id)
     session.commit()
     return credit_account_read(session, customer, outlet_id)
 

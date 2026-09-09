@@ -275,7 +275,7 @@
         <div><small>Customer credit ledger</small><h2>Save as Credit</h2></div>
         <button type="button" (click)="showCredit.set(false)"><span class="material-symbols-outlined">close</span></button>
       </div>
-      <div class="credit-total"><span>This bill</span><b>{{ money(grandTotal()) }}</b></div>
+      <div class="credit-total"><span>Bill total</span><b>{{ money(grandTotal()) }}</b></div>
       <label>Customer
         <select [value]="selectedCreditCustomerId()" (change)="selectedCreditCustomerId.set($any($event.target).value)">
           <option value="">Select customer</option>
@@ -284,18 +284,34 @@
           }
         </select>
       </label>
-      <label>Due after
-        <span class="credit-due"><input type="number" min="1" max="365" [value]="creditDueDays()" (input)="creditDueDays.set(+$any($event.target).value)" /><b>days</b></span>
-      </label>
+      <div class="credit-payment-grid">
+        <label>Pay now
+          <input type="number" min="0" [max]="grandTotal()" step="0.01" [value]="creditPaidAmount()" (input)="creditPaidAmount.set($any($event.target).value)" />
+        </label>
+        <label>Payment mode
+          <select [value]="creditPaymentMode()" (change)="creditPaymentMode.set($any($event.target).value)">
+            @if (!terminalRequired()) { <option value="CASH">Cash</option> }
+            <option value="UPI">UPI</option>
+            <option value="CARD">Card</option>
+          </select>
+        </label>
+        <label>Due after
+          <span class="credit-due"><input type="number" min="1" max="365" [value]="creditDueDays()" (input)="creditDueDays.set(+$any($event.target).value)" /><b>days</b></span>
+        </label>
+      </div>
+      <div class="credit-breakdown">
+        <span><small>Collected now</small><b>{{ money(+creditPaidAmount() || 0) }}</b></span>
+        <span><small>Added to credit</small><b>{{ money(creditBalance()) }}</b></span>
+      </div>
       <div class="quick-customer">
         <strong>Quick add customer</strong>
         <input placeholder="Customer name" [value]="newCreditCustomerName()" (input)="newCreditCustomerName.set($any($event.target).value)" />
         <input placeholder="Mobile number" inputmode="tel" [value]="newCreditCustomerMobile()" (input)="newCreditCustomerMobile.set($any($event.target).value)" />
         <button type="button" (click)="addCreditCustomer()"><span class="material-symbols-outlined">person_add</span>Add & Select</button>
       </div>
-      <p class="credit-note"><span class="material-symbols-outlined">info</span>Every later credit bill for this customer is added to the same balance. The Customers screen can collect the full outstanding amount.</p>
-      <button class="primary-action" type="button" [disabled]="!selectedCreditCustomerId() || submitting()" (click)="confirmCredit()">
-        Add {{ money(grandTotal()) }} to Credit
+      <p class="credit-note"><span class="material-symbols-outlined">info</span>Enter zero for a fully credited bill, or collect a partial amount now. Only the remaining balance is added to this customer's credit ledger.</p>
+      <button class="primary-action" type="button" [disabled]="!selectedCreditCustomerId() || submitting() || creditBalance() <= 0" (click)="confirmCredit()">
+        Save · {{ money(creditBalance()) }} Credit
       </button>
     </section>
   </div>

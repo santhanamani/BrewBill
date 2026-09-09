@@ -57,7 +57,11 @@ def list_orders(
             created_at=order.created_at,
             cashier_name=cashiers.get(order.cashier_id, 'Unknown'),
             item_count=sum(item.quantity for item in order.items),
-            payment_modes=(['CREDIT'] if order.payment_status == 'CREDIT' else sorted({payment.payment_mode for payment in order.payments})),
+            payment_modes=(
+                sorted({payment.payment_mode for payment in order.payments}) + ['CREDIT']
+                if order.payment_status in ('CREDIT', 'PARTIAL_CREDIT')
+                else sorted({payment.payment_mode for payment in order.payments})
+            ),
             items=[
                 {
                     'product_name': item.product_name,
@@ -191,6 +195,12 @@ def create_order(
     paid_total = money(sum((payment.amount for payment in body.payments), Decimal('0.00')))
     if credit_customer is None and paid_total != grand_total:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Payment total must exactly equal the grand total.')
+    if credit_customer is not None and paid_total >= grand_total:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail='Immediate payment must be less than the grand total when saving a credit balance.',
+        )
+    credit_amount = money(grand_total - paid_total) if credit_customer is not None else Decimal('0.00')
 
     sequence = session.query(Order).filter(Order.tenant_id == user.tenant_id).count() + 1
     outlet = session.get(Outlet, terminal.outlet_id)
@@ -203,7 +213,8 @@ def create_order(
         invoice_number=invoice_number,
         order_type=body.order_type, service_reference=body.service_reference,
         subtotal=subtotal, discount=discount, tax=tax, round_off=round_off,
-        grand_total=grand_total, status='COMPLETED', payment_status='CREDIT' if credit_customer else 'PAID',
+        grand_total=grand_total, status='COMPLETED',
+        payment_status=('PARTIAL_CREDIT' if paid_total > 0 else 'CREDIT') if credit_customer else 'PAID',
     )
     order.items = order_lines
     order.payments = [
@@ -222,7 +233,7 @@ def create_order(
         session.add(CustomerCreditEntry(
             id=str(uuid4()), tenant_id=user.tenant_id, outlet_id=terminal.outlet_id,
             customer_id=credit_customer.id, order_id=order.id, entry_type='PURCHASE',
-            amount=grand_total,
+            amount=credit_amount,
             due_date=datetime.now(INDIA).date() + timedelta(days=body.credit_due_days),
             payment_mode=None, reference=None,
             notes=f'Credit invoice {invoice_number}', created_by=user.id,
@@ -307,13 +318,31 @@ def void_order(
     order.cancellation_reason = body.reason.strip()
     order.voided_at = datetime.now(UTC)
     order.voided_by = user.id
-    if order.payment_status == 'CREDIT' and order.customer_id:
-        session.add(CustomerCreditEntry(
-            id=str(uuid4()), tenant_id=user.tenant_id, outlet_id=order.outlet_id,
-            customer_id=order.customer_id, order_id=order.id, entry_type='REVERSAL',
-            amount=-money(order.grand_total), due_date=None, payment_mode=None,
-            reference=None, notes=f'Voided: {body.reason.strip()}', created_by=user.id,
-        ))
+    if order.payment_status in ('CREDIT', 'PARTIAL_CREDIT') and order.customer_id:
+        order_credit = session.scalar(select(CustomerCreditEntry).where(
+            CustomerCreditEntry.tenant_id == user.tenant_id,
+            CustomerCreditEntry.outlet_id == order.outlet_id,
+            CustomerCreditEntry.customer_id == order.customer_id,
+            CustomerCreditEntry.order_id == order.id,
+            CustomerCreditEntry.entry_type == 'PURCHASE',
+        ).with_for_update())
+        customer_entries = session.scalars(select(CustomerCreditEntry).where(
+            CustomerCreditEntry.tenant_id == user.tenant_id,
+            CustomerCreditEntry.outlet_id == order.outlet_id,
+            CustomerCreditEntry.customer_id == order.customer_id,
+        ).with_for_update()).all()
+        customer_balance = max(
+            money(sum((Decimal(entry.amount) for entry in customer_entries), Decimal('0.00'))),
+            Decimal('0.00'),
+        )
+        reversal_amount = min(money(Decimal(order_credit.amount)), customer_balance) if order_credit else Decimal('0.00')
+        if reversal_amount > 0:
+            session.add(CustomerCreditEntry(
+                id=str(uuid4()), tenant_id=user.tenant_id, outlet_id=order.outlet_id,
+                customer_id=order.customer_id, order_id=order.id, entry_type='REVERSAL',
+                amount=-reversal_amount, due_date=None, payment_mode=None,
+                reference=None, notes=f'Voided: {body.reason.strip()}', created_by=user.id,
+            ))
         order.payment_status = 'VOID'
     session.add(AuditLog(
         id=str(uuid4()), tenant_id=user.tenant_id, actor_user_id=user.id,

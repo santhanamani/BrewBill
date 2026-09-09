@@ -568,7 +568,7 @@ export class BrewBillApiService {
   settleCustomerCredit(
     accessToken: string,
     customerId: string,
-    body: { payment_mode: 'CASH' | 'UPI' | 'CARD'; reference?: string; notes?: string },
+    body: { amount?: string; payment_mode: 'CASH' | 'UPI' | 'CARD'; reference?: string; notes?: string },
   ): Promise<CustomerCreditAccount> {
     return this.post<CustomerCreditAccount>(accessToken, `/customers/${customerId}/credit/settle`, body);
   }

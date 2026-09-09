@@ -372,3 +372,20 @@
   .payment-grid button { font-size:12px; }
   .payment-grid .material-symbols-outlined { font-size:23px; }
 }
+
+.credit-payment-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.credit-payment-grid > label:last-child { grid-column:1/-1; }
+.credit-breakdown { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.credit-breakdown span { display:grid; gap:4px; padding:10px 12px; border:1px solid #eadfd4; border-radius:9px; background:#fcfaf7; }
+.credit-breakdown small { color:#8a796d; font-size:11px; font-weight:650; }
+.credit-breakdown b { color:#5e321b; font-size:17px; font-variant-numeric:tabular-nums; }
+.credit-breakdown span:last-child { border-color:#dfbd8f; background:#fbf3e7; }
+@media(max-width:560px){.credit-payment-grid,.credit-breakdown{grid-template-columns:1fr}.credit-payment-grid > label:last-child{grid-column:auto}}
+.credit-payment-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.credit-payment-grid label:last-child { grid-column:1/-1; }
+.credit-breakdown { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.credit-breakdown > span { display:grid; gap:3px; padding:10px 12px; border:1px solid #e7dbcf; border-radius:9px; background:#fcfaf7; }
+.credit-breakdown > span:last-child { border-color:#d9c3a9; background:#f8efe3; }
+.credit-breakdown small { color:#8a786b; font-size:10px; font-weight:650; }
+.credit-breakdown b { color:#452c1d; font-size:17px; font-variant-numeric:tabular-nums; }
+@media(max-width:560px){.credit-payment-grid,.credit-breakdown{grid-template-columns:1fr}.credit-payment-grid label:last-child{grid-column:auto}.quick-customer{grid-template-columns:1fr}.quick-customer strong{grid-column:auto}}

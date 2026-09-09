@@ -22,6 +22,14 @@
 @if (success()) {
   <div class="notice success-state">{{ success() }}</div>
 }
+@if (key() === 'settings' || key() === 'categories' || key() === 'customers' || key() === 'closing') {
+  <nav class="management-links management-section-nav" aria-label="Settings sections">
+    <a routerLink="/management/settings" [class.active]="key() === 'settings'"><span class="material-symbols-outlined">arrow_back</span>Settings</a>
+    <a routerLink="/management/categories" [class.active]="key() === 'categories'"><span class="material-symbols-outlined">category</span>Categories</a>
+    <a routerLink="/management/customers" [class.active]="key() === 'customers'"><span class="material-symbols-outlined">groups</span>Customers</a>
+    <a routerLink="/management/closing" [class.active]="key() === 'closing'"><span class="material-symbols-outlined">task_alt</span>Daily Closing</a>
+  </nav>
+}
 @if (loading()) {
   <div class="live-state">Loading live PostgreSQL data...</div>
 } @else if (key() === 'purchases') {
@@ -341,7 +349,7 @@
     <section class="panel table-panel">
       <div class="panel-title">
         <h2>Customer Directory</h2>
-        <div class="credit-collection-mode"><label>Collect credit by <select [(ngModel)]="creditSettlementMode"><option value="CASH">Cash</option><option value="UPI">UPI</option><option value="CARD">Card</option></select></label><span>{{ customers().length }} customers</span></div>
+        <span class="directory-count">{{ customers().length }} customers</span>
       </div>
       <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
         <table>
@@ -367,7 +375,7 @@
                 <td>{{ row.loyalty_points }}</td>
                 <td><b class="credit-balance" [class.clear]="!creditAccount(row.id) || +creditAccount(row.id)!.outstanding_balance === 0">{{ money(+(creditAccount(row.id)?.outstanding_balance || 0)) }}</b><small class="credit-bills">{{ creditAccount(row.id)?.open_bill_count || 0 }} open bills</small></td>
                 <td>{{ creditAccount(row.id)?.oldest_due_date || '—' }}</td>
-                <td><button class="settle-credit" type="button" [disabled]="!creditAccount(row.id) || +creditAccount(row.id)!.outstanding_balance === 0 || !!settlingCustomerId()" (click)="settleCredit(row)">{{ settlingCustomerId() === row.id ? 'Collecting…' : 'Collect Full' }}</button></td>
+                <td><button class="settle-credit" type="button" [disabled]="!creditAccount(row.id) || +creditAccount(row.id)!.outstanding_balance === 0 || !!settlingCustomerId()" (click)="openCreditCollection(row)"><span class="material-symbols-outlined">payments</span>Collect</button></td>
               </tr>
             }
           </tbody>
@@ -432,15 +440,7 @@
     </section>
   </div>
 } @else if (key() === 'settings') {
-  <nav class="management-links">
-    <a routerLink="/management/categories"
-      ><span class="material-symbols-outlined">category</span>Categories</a
-    ><a routerLink="/management/customers"
-      ><span class="material-symbols-outlined">groups</span>Customers</a
-    ><a routerLink="/management/closing"
-      ><span class="material-symbols-outlined">task_alt</span>Daily Closing</a
-    >
-  </nav>
+  <div class="settings-layout">
   <section class="panel form-panel currency-settings">
     <div class="panel-title currency-title">
       <div>
@@ -562,7 +562,25 @@
         <article class="marketplace-settings"><h3><span class="material-symbols-outlined">storefront</span>Marketplace Sales</h3><div class="form-grid"><label>Swiggy Merchant ID<input [(ngModel)]="swiggyMerchantId" placeholder="SWG-merchant-id" /></label><label>Zomato Store ID<input [(ngModel)]="zomatoMerchantId" placeholder="ZOM-store-id" /></label></div><div class="channel-switches"><label><input type="checkbox" [(ngModel)]="swiggyMarketplaceEnabled" />Swiggy enabled</label><label><input type="checkbox" [(ngModel)]="zomatoMarketplaceEnabled" />Zomato enabled</label></div><p>Merchant mapping is tenant-scoped. Live webhooks require credentials issued by each provider; test mode uses BrewBill mock orders.</p></article>
         <article><h3><span class="material-symbols-outlined">send_to_mobile</span>Daily Report Delivery</h3><div class="form-grid"><label>Mobile number<input [(ngModel)]="dailyReportPhone" placeholder="+91 98765 43210" /></label><label>Send time<input type="time" [(ngModel)]="dailyReportTime" /></label></div><p>This number and schedule are tenant-scoped. A WhatsApp/SMS provider connection is required for delivery.</p></article>
       </div>
-      <button class="primary-action" type="button" [disabled]="saving()" (click)="saveUltraSettings()"><span class="material-symbols-outlined">save</span>Save Ultra Settings</button>
+      <div class="ultra-footer-actions">
+        <span>{{ tenantUsers().length }} active and configured tenant users</span>
+        <button class="primary-action" type="button" [disabled]="saving()" (click)="saveUltraSettings()"><span class="material-symbols-outlined">save</span>Save Ultra Settings</button>
+      </div>
+      <section class="tenant-user-directory">
+        <div class="tenant-user-directory-head"><div><h3>Tenant User Directory</h3><p>Admins and cashiers who can sign in to this tenant.</p></div><span>{{ tenantUsers().length }} users</span></div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>User</th><th>Username</th><th>Role</th><th>Outlet</th><th>Status</th></tr></thead>
+            <tbody>
+              @for (user of tenantUsers(); track user.id) {
+                <tr><td><b>{{ user.display_name }}</b></td><td>{{ user.username }}</td><td><span class="user-role-badge">{{ user.role_code === 'TENANT_ADMIN' ? 'Tenant Admin' : user.role_code === 'ADMIN' ? 'Admin' : 'Cashier' }}</span></td><td>{{ user.outlet_name || 'All outlets' }}</td><td><span class="user-status-badge" [class.inactive]="!user.is_active">{{ user.is_active ? 'Active' : 'Inactive' }}</span></td></tr>
+              } @empty {
+                <tr><td colspan="5" class="empty-cell">No tenant users are configured.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
     } @else {
       <p class="ultra-upgrade"><span class="material-symbols-outlined">lock</span>Professional keeps all current POS and management features. Upgrade this tenant from Super Admin → Subscription to enable these additional tools.</p>
     }
@@ -611,56 +629,58 @@
       </div>
     </section>
   </div>
+  </div>
 } @else {
-  <div class="simple-management">
-    <section class="panel form-panel">
-      <h2>Add Category</h2>
+  <div class="simple-management category-management-layout">
+    <section class="panel form-panel category-create-panel">
+      <div class="category-panel-heading">
+        <span class="material-symbols-outlined">add_circle</span>
+        <div><small>THIS TENANT</small><h2>Create Category</h2><p>Add a category to organize products in the live POS catalogue.</p></div>
+      </div>
       <form class="form-grid" (ngSubmit)="addCategory()">
-        <label
-          >Code<input
-            name="categoryCode"
-            [(ngModel)]="categoryCode"
-            placeholder="HOT_DRINKS" /></label
-        ><label
-          >Name<input
-            name="categoryName"
-            [(ngModel)]="categoryName"
-            placeholder="Hot Drinks" /></label
-        ><label class="span-two"
-          >Image Path<input
-            name="categoryImage"
-            [(ngModel)]="categoryImage"
-            placeholder="categories/hot-drinks.jpg"
-        /></label>
+        <label>Category Name *<input name="categoryName" [(ngModel)]="categoryName" (input)="categoryFormError.set('')" placeholder="e.g. Hot Drinks" required /></label>
+        <label>Category Code *<input name="categoryCode" [(ngModel)]="categoryCode" (input)="categoryCode = categoryCode.toUpperCase(); categoryFormError.set('')" placeholder="e.g. HOT_DRINKS" required /><small>Unique code; letters, numbers and underscores only.</small></label>
+        <label class="span-two">Image Path <input name="categoryImage" [(ngModel)]="categoryImage" placeholder="categories/hot-drinks.jpg" /><small>Optional path to an existing catalogue image.</small></label>
+        <div class="category-order-preview"><span class="material-symbols-outlined">format_list_numbered</span><div><small>DISPLAY POSITION</small><b>{{ nextCategoryDisplayOrder() }}</b></div><p>New categories are added after the current list.</p></div>
+        @if (categoryFormError()) { <p class="category-form-error"><span class="material-symbols-outlined">error</span>{{ categoryFormError() }}</p> }
         <div class="form-actions">
-          <button class="primary-action" type="submit">Add Category</button>
+          <button class="primary-action" type="submit" [disabled]="saving()"><span class="material-symbols-outlined">save</span>{{ saving() ? 'Saving…' : 'Save Category' }}</button>
         </div>
       </form>
     </section>
-    <section class="panel table-panel">
-      <div class="panel-title"><h2>Live Categories</h2></div>
+    <section class="panel table-panel category-list-panel">
+      <div class="panel-title">
+        <div><small>LIVE POS CATALOGUE</small><h2>Category Directory</h2><p>Categories available to this tenant's products and POS filters.</p></div>
+        <span class="directory-count">{{ categories().length }} categories</span>
+      </div>
       <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
         <table>
-          <thead>
-            <tr>
-              <th>Code</th>
-              <th>Name</th>
-              <th>Display Order</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Position</th><th>Category</th><th>Code</th><th>Image</th></tr></thead>
           <tbody>
             @for (row of visibleCategories(); track row.id) {
-              <tr>
-                <td>{{ row.code }}</td>
-                <td>
-                  <b>{{ row.name }}</b>
-                </td>
-                <td>{{ row.display_order }}</td>
-              </tr>
+              <tr><td><span class="category-position">{{ row.display_order }}</span></td><td><b>{{ row.name }}</b></td><td><code>{{ row.code }}</code></td><td>{{ row.image_path || 'Default image' }}</td></tr>
+            } @empty {
+              <tr><td colspan="4"><div class="category-empty"><span class="material-symbols-outlined">category</span><b>No categories yet</b><p>Create the first category using the form.</p></div></td></tr>
             }
           </tbody>
         </table>
       </div>
+    </section>
+  </div>
+}
+
+@if (creditCollectionCustomer(); as customer) {
+  <div class="credit-collection-backdrop" (click)="closeCreditCollection()">
+    <section class="credit-collection-dialog" role="dialog" aria-modal="true" aria-labelledby="credit-collection-title" (click)="$event.stopPropagation()">
+      <header><span class="material-symbols-outlined">account_balance_wallet</span><div><small>CUSTOMER CREDIT</small><h2 id="credit-collection-title">Collect Outstanding</h2></div><button type="button" aria-label="Close" (click)="closeCreditCollection()"><span class="material-symbols-outlined">close</span></button></header>
+      <div class="credit-customer-summary"><div><small>Customer</small><b>{{ customer.name }}</b><span>{{ customer.mobile || 'No mobile number' }}</span></div><div><small>Outstanding</small><b>{{ money(+(creditAccount(customer.id)?.outstanding_balance || 0)) }}</b><span>{{ creditAccount(customer.id)?.open_bill_count || 0 }} open bills</span></div></div>
+      <div class="credit-collection-fields">
+        <label>Collection Amount *<input type="number" min="0.01" [max]="+(creditAccount(customer.id)?.outstanding_balance || 0)" step="0.01" [(ngModel)]="creditCollectionAmount" /></label>
+        <label>Payment Mode *<select [(ngModel)]="creditSettlementMode"><option value="CASH">Cash</option><option value="UPI">UPI</option><option value="CARD">Card</option></select></label>
+      </div>
+      <div class="credit-after"><span>Balance after collection</span><b>{{ money(creditCollectionRemaining(customer.id)) }}</b></div>
+      <p><span class="material-symbols-outlined">info</span>Enter any amount up to the outstanding balance. Use the full amount to close all credit bills.</p>
+      <footer><button type="button" (click)="closeCreditCollection()">Cancel</button><button class="confirm" type="button" [disabled]="!!settlingCustomerId()" (click)="settleCredit()"><span class="material-symbols-outlined">payments</span>{{ settlingCustomerId() ? 'Collecting…' : 'Collect Payment' }}</button></footer>
     </section>
   </div>
 }

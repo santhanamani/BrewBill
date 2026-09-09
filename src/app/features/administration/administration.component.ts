@@ -10,7 +10,12 @@ import { SessionService } from '../../core/session.service';
 type AdminTab = 'tenants' | 'outlets' | 'products' | 'users' | 'branding';
 type ModalType = 'tenant' | 'tenant-edit' | 'outlet' | 'outlet-edit' | 'user' | 'product' | null;
 
-@Component({ selector: 'app-administration', imports: [NgTemplateOutlet], templateUrl: './administration.component.html' })
+@Component({
+  selector: 'app-administration',
+  imports: [NgTemplateOutlet],
+  templateUrl: './administration.component.html',
+  styleUrl: './administration.component.css',
+})
 export class AdministrationComponent {
   private readonly api = inject(BrewBillApiService);
   private readonly session = inject(SessionService);

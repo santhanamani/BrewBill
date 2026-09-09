@@ -50,17 +50,37 @@ def test_repeated_credit_bills_accumulate_and_full_settlement_clears_balance() -
                 assert response.status_code == 201, response.text
                 assert response.json()['payment_status'] == 'CREDIT'
 
+            partial_bill = client.post('/api/orders', json={
+                'order_id': str(uuid4()), 'terminal_code': 'POS01',
+                'items': [{'product_id': product.id, 'quantity': 1}],
+                'payments': [{'mode': 'CASH', 'amount': '10.00'}],
+                'credit_customer_id': customer.id,
+                'credit_due_days': 10, 'order_type': 'DIRECT',
+            })
+            assert partial_bill.status_code == 201, partial_bill.text
+            assert partial_bill.json()['payment_status'] == 'PARTIAL_CREDIT'
+
             account = client.get('/api/customers/credit-accounts')
             assert account.status_code == 200, account.text
-            assert account.json()[0]['outstanding_balance'] == '120.00'
-            assert account.json()[0]['open_bill_count'] == 2
+            assert account.json()[0]['outstanding_balance'] == '150.00'
+            assert account.json()[0]['open_bill_count'] == 3
+
+            partly_settled = client.post(
+                f'/api/customers/{customer.id}/credit/settle',
+                json={'payment_mode': 'UPI', 'amount': '50.00'},
+            )
+            assert partly_settled.status_code == 200, partly_settled.text
+            assert partly_settled.json()['outstanding_balance'] == '100.00'
+
+            with sessions() as db:
+                assert {row.payment_status for row in db.query(Order).filter_by(customer_id=customer.id)} == {'CREDIT', 'PARTIAL_CREDIT'}
 
             settled = client.post(f'/api/customers/{customer.id}/credit/settle', json={'payment_mode': 'CASH'})
             assert settled.status_code == 200, settled.text
             assert settled.json()['outstanding_balance'] == '0.00'
 
         with sessions() as db:
-            assert db.query(CustomerCreditEntry).filter_by(customer_id=customer.id).count() == 3
+            assert db.query(CustomerCreditEntry).filter_by(customer_id=customer.id).count() == 5
             assert {row.payment_status for row in db.query(Order).filter_by(customer_id=customer.id)} == {'SETTLED'}
     finally:
         app.dependency_overrides.clear()
