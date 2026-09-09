@@ -13,6 +13,7 @@ import {
   IngredientInventoryItem,
   IngredientMovement,
   Customer,
+  CustomerCreditAccount,
   KotTicket,
   LicenseEnvelope,
   LoginResponse,
@@ -526,6 +527,29 @@ export class BrewBillApiService {
     return this.post<Customer>(accessToken, '/customers', body);
   }
 
+  listCustomerCreditAccounts(accessToken: string): Promise<CustomerCreditAccount[]> {
+    return this.get<CustomerCreditAccount[]>(accessToken, '/customers/credit-accounts');
+  }
+
+  listTenantUsers(accessToken: string): Promise<AdminUser[]> {
+    return this.get<AdminUser[]>(accessToken, '/platform/users');
+  }
+
+  createTenantUser(
+    accessToken: string,
+    body: { tenant_id: string; outlet_id: string | null; role_code: 'ADMIN' | 'CASHIER'; username: string; display_name: string; email: string | null; phone: string | null; password: string },
+  ): Promise<AdminUser> {
+    return this.post<AdminUser>(accessToken, '/platform/users', body);
+  }
+
+  settleCustomerCredit(
+    accessToken: string,
+    customerId: string,
+    body: { payment_mode: 'CASH' | 'UPI' | 'CARD'; reference?: string; notes?: string },
+  ): Promise<CustomerCreditAccount> {
+    return this.post<CustomerCreditAccount>(accessToken, `/customers/${customerId}/credit/settle`, body);
+  }
+
   listClosings(accessToken: string): Promise<DailyClosing[]> {
     return this.get<DailyClosing[]>(accessToken, '/closings');
   }
@@ -579,11 +603,11 @@ export class BrewBillApiService {
     return this.get<TenantSubscription>(accessToken, `/platform/admin/tenants/${tenantId}/subscription`);
   }
 
-  updateTenantSubscription(accessToken: string, tenantId: string, endsAt: string, graceEndsAt: string): Promise<TenantSubscription> {
+  updateTenantSubscription(accessToken: string, tenantId: string, endsAt: string, graceEndsAt: string, planCode: 'PROFESSIONAL' | 'ULTRA_PROFESSIONAL'): Promise<TenantSubscription> {
     return this.request(
       this.http.put<TenantSubscription>(
         this.runtime.apiUrl(`/platform/admin/tenants/${tenantId}/subscription`),
-        { ends_at: endsAt, grace_ends_at: graceEndsAt },
+        { ends_at: endsAt, grace_ends_at: graceEndsAt, plan_code: planCode },
         { headers: this.authHeaders(accessToken) },
       ),
       5000,

@@ -27,7 +27,7 @@ from ..schemas import (
 from ..currency import currency_read, resolve_currency, tenant_currency
 from ..security import hash_password
 from ..subscriptions import (
-    active_subscription, grace_end, subscription_lifecycle, utc,
+    active_subscription, grace_end, require_plan_feature, subscription_lifecycle, utc,
 )
 
 router = APIRouter(prefix='/api/platform', tags=['platform'])
@@ -304,6 +304,11 @@ def update_tenant_subscription(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Grace end must be after the subscription expiry.')
     subscription.ends_at = end
     subscription.grace_ends_at = grace
+    if body.plan_code:
+        plan = session.scalar(select(SubscriptionPlan).where(SubscriptionPlan.code == body.plan_code))
+        if plan is None:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Subscription plan not found.')
+        subscription.plan_id = plan.id
     subscription.status = 'ACTIVE'
     session.commit()
     session.refresh(subscription)
@@ -491,6 +496,58 @@ def list_admin_roles(
     session: Session = Depends(get_session),
 ) -> list[Role]:
     return list(session.scalars(select(Role).where(Role.code.in_(['TENANT_ADMIN', 'ADMIN', 'CASHIER'])).order_by(Role.name)).all())
+
+
+@router.get('/users', response_model=list[AdminUserRead])
+def list_tenant_users(
+    user: User = Depends(require_role('ADMIN', 'TENANT_ADMIN')),
+    session: Session = Depends(get_session),
+) -> list[AdminUserRead]:
+    require_plan_feature(user, session, 'tenant_user_management')
+    return [admin_user_read(item, session) for item in session.scalars(
+        select(User)
+        .where(User.tenant_id == user.tenant_id, User.role.has(Role.code != 'SUPER_ADMIN'))
+        .order_by(User.display_name)
+    ).all()]
+
+
+@router.get('/roles', response_model=list[AdminRoleRead])
+def list_tenant_roles(
+    user: User = Depends(require_role('ADMIN', 'TENANT_ADMIN')),
+    session: Session = Depends(get_session),
+) -> list[Role]:
+    require_plan_feature(user, session, 'tenant_user_management')
+    return list(session.scalars(
+        select(Role).where(Role.code.in_(['ADMIN', 'CASHIER'])).order_by(Role.name)
+    ).all())
+
+
+@router.post('/users', response_model=AdminUserRead, status_code=status.HTTP_201_CREATED)
+def create_tenant_user(
+    body: AdminUserCreate,
+    user: User = Depends(require_role('ADMIN', 'TENANT_ADMIN')),
+    session: Session = Depends(get_session),
+) -> AdminUserRead:
+    require_plan_feature(user, session, 'tenant_user_management')
+    if body.tenant_id != user.tenant_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Users can be added only to your own tenant.')
+    if body.role_code not in ('ADMIN', 'CASHIER'):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Tenant admins may create only Admin or Cashier users.')
+    return create_admin_user(body, user, session)
+
+
+@router.patch('/users/{user_id}', response_model=AdminUserRead)
+def update_tenant_user(
+    user_id: str,
+    body: AdminUserUpdate,
+    user: User = Depends(require_role('ADMIN', 'TENANT_ADMIN')),
+    session: Session = Depends(get_session),
+) -> AdminUserRead:
+    require_plan_feature(user, session, 'tenant_user_management')
+    item = session.get(User, user_id)
+    if item is None or item.tenant_id != user.tenant_id or item.role_code == 'SUPER_ADMIN':
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Tenant user not found.')
+    return update_admin_user(user_id, body, user, session)
 
 
 @router.patch('/admin/tenants/{tenant_id}/branding', response_model=TenantAdminRead)

@@ -34,6 +34,11 @@ from .models import (
 from .security import hash_password
 
 FIXTURE_DIRECTORY = Path(__file__).resolve().parent.parent / 'seed_data'
+ULTRA_FEATURES = {
+    'inventory': True, 'purchases': True, 'customer_credit': True,
+    'expenses': True, 'reports': True, 'tenant_user_management': True,
+    'marketplace_integrations': True, 'scheduled_reports': True,
+}
 
 
 def decimal(value: object, default: str = '0.000') -> Decimal:
@@ -84,6 +89,22 @@ def import_fixture(session, fixture: dict) -> tuple[str, int, int]:
         },
         code=plan_data['code'],
     )
+    plan.name = 'Professional'
+    plan.max_terminals = int(plan_data['max_terminals'])
+    plan.feature_json = json.dumps(plan_data.get('features', {}), separators=(',', ':'))
+    ultra_plan = get_or_create(
+        session,
+        SubscriptionPlan,
+        {
+            'name': 'Ultra Professional',
+            'max_terminals': 10,
+            'feature_json': json.dumps(ULTRA_FEATURES, separators=(',', ':')),
+        },
+        code='ULTRA_PROFESSIONAL',
+    )
+    ultra_plan.name = 'Ultra Professional'
+    ultra_plan.max_terminals = 10
+    ultra_plan.feature_json = json.dumps(ULTRA_FEATURES, separators=(',', ':'))
     if not session.scalar(select(Subscription.id).where(Subscription.tenant_id == tenant.id)):
         session.add(Subscription(
             id=str(uuid4()), tenant_id=tenant.id, plan_id=plan.id, status='ACTIVE',

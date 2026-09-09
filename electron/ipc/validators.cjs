@@ -20,7 +20,7 @@ const receiptSchema = z.object({
   taxMinor: z.number().int().nonnegative(),
   roundOffMinor: z.number().int().default(0),
   grandTotalMinor: z.number().int().positive(),
-  paymentMode: z.enum(['CASH', 'UPI', 'CARD', 'SPLIT']),
+  paymentMode: z.enum(['CASH', 'UPI', 'CARD', 'SPLIT', 'CREDIT']),
   orderType: z.enum(['DIRECT', 'KOT', 'TAKEAWAY']).default('DIRECT'),
   serviceReference: z.string().max(80).nullable().default(null),
   currency: z.object({

@@ -1,6 +1,6 @@
 {
   "tenant": { "code": "BHV-RSP", "name": "Brew Haven – RS Puram", "status": "ACTIVE", "tagline": "Good Coffee. Better People.", "primary_color": "#5A2D18", "secondary_color": "#C8874A" },
-  "plan": { "code": "PROFESSIONAL", "name": "Professional", "max_terminals": 3, "features": { "inventory": true, "purchases": true, "expenses": true, "reports": true } },
+  "plan": { "code": "PROFESSIONAL", "name": "Professional", "max_terminals": 3, "features": { "inventory": true, "purchases": true, "customer_credit": true, "expenses": true, "reports": true, "tenant_user_management": false, "marketplace_integrations": false, "scheduled_reports": false } },
   "subscription_days": 365,
   "outlets": [
     { "code": "MDU01", "name": "Brew Haven – RS Puram", "address": "RS Puram, Coimbatore, Tamil Nadu" },

@@ -7,8 +7,13 @@ const { openLocalDatabase } = require('./database/local-database.cjs');
 const { receiptSchema, parse } = require('./ipc/validators.cjs');
 const { installLicense, verifyLicense } = require('./license/license-service.cjs');
 const { printReceipt } = require('./printer/receipt-printer.cjs');
-const { isHardReloadShortcut } = require('./keyboard-shortcuts.cjs');
+const { isHardReloadShortcut, isZoomShortcut } = require('./keyboard-shortcuts.cjs');
 const { collectPayment, terminalStatus } = require('./payment/terminal-adapter.cjs');
+
+// Keep the rendered CSS viewport identical on Windows laptops that use
+// different 100%, 125% or 150% display-scaling settings. Application zoom is
+// locked separately below so every installed terminal uses the same UI scale.
+app.commandLine.appendSwitch('force-device-scale-factor', '1');
 
 let mainWindow;
 let db;
@@ -42,8 +47,18 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.cjs'),
     },
   });
+  // Every terminal opens with the same application zoom.
+  mainWindow.maximize();
+  mainWindow.webContents.setZoomFactor(1);
+  void mainWindow.webContents.setVisualZoomLevelLimits(1, 1);
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow?.webContents.setZoomFactor(1);
+  });
+  mainWindow.webContents.on('zoom-changed', () => {
+    mainWindow?.webContents.setZoomFactor(1);
+  });
   mainWindow.webContents.on('before-input-event', (event, input) => {
-    if (isHardReloadShortcut(input)) event.preventDefault();
+    if (isHardReloadShortcut(input) || isZoomShortcut(input)) event.preventDefault();
   });
   if (app.isPackaged)
     mainWindow.loadFile(

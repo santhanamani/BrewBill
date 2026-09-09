@@ -1,7 +1,9 @@
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import case, cast, func, Integer, select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from .deps import current_user
 from ..database import get_session
@@ -9,6 +11,30 @@ from ..models import Category, Inventory, Order, OrderItem, Payment, Product, Us
 from ..schemas import DashboardRead, DashboardSeriesPoint, DashboardTopProduct
 
 router = APIRouter(prefix='/api/dashboard', tags=['dashboard'])
+BUSINESS_TIMEZONE = ZoneInfo('Asia/Kolkata')
+
+
+def business_today(now: datetime | None = None) -> date:
+    """Return the cafe's current calendar date, independent of server timezone."""
+    instant = now or datetime.now(UTC)
+    if instant.tzinfo is None:
+        instant = instant.replace(tzinfo=UTC)
+    return instant.astimezone(BUSINESS_TIMEZONE).date()
+
+
+def business_date_bounds(range_start: date, range_end: date) -> tuple[datetime, datetime]:
+    """Convert inclusive cafe-local dates to a half-open UTC timestamp range."""
+    starts_at = datetime.combine(range_start, time.min, tzinfo=BUSINESS_TIMEZONE).astimezone(UTC)
+    ends_before = datetime.combine(
+        range_end + timedelta(days=1), time.min, tzinfo=BUSINESS_TIMEZONE
+    ).astimezone(UTC)
+    return starts_at, ends_before
+
+
+def business_local_datetime(value: datetime) -> datetime:
+    """Normalise DB datetimes before rendering local date/hour dashboard labels."""
+    instant = value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+    return instant.astimezone(BUSINESS_TIMEZONE)
 
 
 @router.get('', response_model=DashboardRead)
@@ -19,7 +45,7 @@ def dashboard(
     session: Session = Depends(get_session),
 ) -> DashboardRead:
     """Return only metrics scoped to the signed-in tenant and outlet."""
-    today = datetime.now(UTC).date()
+    today = business_today()
     range_start = from_date or today
     range_end = to_date or range_start
     if range_end < range_start:
@@ -28,8 +54,7 @@ def dashboard(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Dashboard dates cannot be in the future.')
     if (range_end - range_start).days > 366:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Dashboard date range cannot exceed 367 days.')
-    starts_at = datetime.combine(range_start, time.min, tzinfo=UTC)
-    ends_before = datetime.combine(range_end + timedelta(days=1), time.min, tzinfo=UTC)
+    starts_at, ends_before = business_date_bounds(range_start, range_end)
     completed = (
         Order.tenant_id == user.tenant_id,
         Order.outlet_id == user.outlet_id,
@@ -72,30 +97,28 @@ def dashboard(
         .order_by(func.sum(OrderItem.line_total).desc())
         .limit(5)
     ).all()
-    date_key = func.date(Order.created_at).label('period')
-    date_rows = session.execute(
-        select(date_key, func.coalesce(func.sum(Order.grand_total), Decimal('0.00')))
+    order_rows = session.execute(
+        select(Order.created_at, Order.grand_total)
         .where(*completed)
-        .group_by(date_key)
-        .order_by(date_key)
+        .order_by(Order.created_at)
     ).all()
-    date_points = [
-        DashboardSeriesPoint(
-            label=(period.strftime('%d %b') if hasattr(period, 'strftime') else date.fromisoformat(str(period)).strftime('%d %b')),
-            value=value,
+    date_totals: dict[date, Decimal] = {}
+    hour_totals: dict[int, Decimal] = {}
+    for created_at, value in order_rows:
+        local_created_at = business_local_datetime(created_at)
+        date_totals[local_created_at.date()] = (
+            date_totals.get(local_created_at.date(), Decimal('0.00')) + value
         )
-        for period, value in date_rows
+        hour_totals[local_created_at.hour] = (
+            hour_totals.get(local_created_at.hour, Decimal('0.00')) + value
+        )
+    date_points = [
+        DashboardSeriesPoint(label=period.strftime('%d %b'), value=value)
+        for period, value in sorted(date_totals.items())
     ]
-    hour_key = func.extract('hour', Order.created_at).label('period')
-    hour_rows = session.execute(
-        select(hour_key, func.coalesce(func.sum(Order.grand_total), Decimal('0.00')))
-        .where(*completed)
-        .group_by(hour_key)
-        .order_by(hour_key)
-    ).all()
     hour_points = [
-        DashboardSeriesPoint(label=f'{int(period):02d}:00', value=value)
-        for period, value in hour_rows
+        DashboardSeriesPoint(label=f'{period:02d}:00', value=value)
+        for period, value in sorted(hour_totals.items())
     ]
     # Keep the existing response field stable for older desktop builds.
     trend_points = hour_points if range_start == range_end else date_points

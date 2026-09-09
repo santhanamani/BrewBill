@@ -8,10 +8,24 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.api.dashboard import business_date_bounds, business_local_datetime, business_today
 from app.api.deps import current_user
 from app.database import Base, get_session
 from app.main import app
 from app.models import Category, Order, OrderItem, Outlet, Payment, Product, Tenant
+
+
+def test_dashboard_business_day_uses_india_timezone() -> None:
+    utc_after_india_midnight = datetime(2026, 9, 8, 19, 15, tzinfo=UTC)
+
+    assert business_today(utc_after_india_midnight).isoformat() == '2026-09-09'
+    assert business_local_datetime(utc_after_india_midnight).isoformat() == '2026-09-09T00:45:00+05:30'
+
+    starts_at, ends_before = business_date_bounds(
+        datetime(2026, 9, 9).date(), datetime(2026, 9, 9).date()
+    )
+    assert starts_at.isoformat() == '2026-09-08T18:30:00+00:00'
+    assert ends_before.isoformat() == '2026-09-09T18:30:00+00:00'
 
 
 def test_dashboard_filters_a_tenant_outlet_date_range() -> None:
@@ -75,7 +89,7 @@ def test_dashboard_filters_a_tenant_outlet_date_range() -> None:
             assert body['card_sales'] == '0.00'
             assert [point['label'] for point in body['hourly_sales']] == ['01 Aug', '02 Aug']
             assert [point['label'] for point in body['date_sales']] == ['01 Aug', '02 Aug']
-            assert [point['label'] for point in body['hour_sales']] == ['10:00', '11:00']
+            assert [point['label'] for point in body['hour_sales']] == ['15:00', '16:00']
             assert [point['value'] for point in body['hour_sales']] == ['105.00', '210.00']
             assert body['top_products'][0]['quantity_sold'] == 2
 

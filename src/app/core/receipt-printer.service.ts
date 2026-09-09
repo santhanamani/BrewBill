@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { CurrencyDefinition } from './models/api.models';
 
-export type ReceiptPaymentMode = 'CASH' | 'UPI' | 'CARD' | 'SPLIT';
+export type ReceiptPaymentMode = 'CASH' | 'UPI' | 'CARD' | 'SPLIT' | 'CREDIT';
 
 export interface ReceiptPayload {
   cafeName: string;

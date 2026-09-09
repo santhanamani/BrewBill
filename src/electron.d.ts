@@ -47,7 +47,7 @@ declare global {
             taxMinor: number;
             roundOffMinor: number;
             grandTotalMinor: number;
-            paymentMode: 'CASH' | 'UPI' | 'CARD' | 'SPLIT';
+            paymentMode: 'CASH' | 'UPI' | 'CARD' | 'SPLIT' | 'CREDIT';
             orderType: 'DIRECT' | 'KOT' | 'TAKEAWAY';
             serviceReference: string | null;
             currency: {

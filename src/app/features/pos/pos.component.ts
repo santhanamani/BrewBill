@@ -4,7 +4,7 @@ import { Component, HostListener, computed, inject, signal } from '@angular/core
 import { BrewBillApiService } from '../../core/brew-bill-api.service';
 import { CatalogService } from '../../core/catalog.service';
 import { HeldCartService } from '../../core/held-cart.service';
-import { CartLine, Category, Product, ProductVariant, TenantPaymentPolicy } from '../../core/models/api.models';
+import { CartLine, Category, Customer, Product, ProductVariant, TenantPaymentPolicy } from '../../core/models/api.models';
 import { RuntimeConfigService } from '../../core/runtime-config.service';
 import { SessionService } from '../../core/session.service';
 import { ReceiptPayload, ReceiptPrinterService } from '../../core/receipt-printer.service';
@@ -50,6 +50,13 @@ export class PosComponent {
   readonly paymentProcessingMode = signal<TenantPaymentPolicy['payment_processing_mode'] | null>(null);
   readonly terminalRequired = computed(() => this.paymentProcessingMode() === 'TERMINAL_REQUIRED');
   readonly showSplit = signal(false);
+  readonly showCredit = signal(false);
+  readonly customers = signal<Customer[]>([]);
+  readonly selectedCreditCustomerId = signal('');
+  readonly creditDueDays = signal(10);
+  readonly newCreditCustomerName = signal('');
+  readonly newCreditCustomerMobile = signal('');
+  readonly selectedCreditCustomer = computed(() => this.customers().find(customer => customer.id === this.selectedCreditCustomerId()) ?? null);
   readonly splitCash = signal('0.00');
   readonly splitUpi = signal('0.00');
   readonly splitCard = signal('0.00');
@@ -264,9 +271,54 @@ export class PosComponent {
     await this.checkout(payments, 'SPLIT');
   }
 
+  async openCredit(): Promise<void> {
+    if (!this.cart().length || this.submitting()) return;
+    const token = this.session.accessToken();
+    if (!token) return;
+    try {
+      this.customers.set(await this.api.listCustomers(token));
+      this.selectedCreditCustomerId.set(this.customers()[0]?.id ?? '');
+      this.creditDueDays.set(10);
+      this.showCredit.set(true);
+    } catch (error) {
+      this.notify(this.errorMessage(error, 'Unable to load customers.'));
+    }
+  }
+
+  async addCreditCustomer(): Promise<void> {
+    const token = this.session.accessToken();
+    const name = this.newCreditCustomerName().trim();
+    const mobile = this.newCreditCustomerMobile().trim();
+    if (!token || !name || mobile.length < 7) {
+      this.notify('Enter the customer name and a valid mobile number.');
+      return;
+    }
+    try {
+      const customer = await this.api.createCustomer(token, { name, mobile, email: null });
+      this.customers.update(rows => [...rows, customer].sort((a, b) => a.name.localeCompare(b.name)));
+      this.selectedCreditCustomerId.set(customer.id);
+      this.newCreditCustomerName.set('');
+      this.newCreditCustomerMobile.set('');
+      this.notify(`${customer.name} added and selected.`);
+    } catch (error) {
+      this.notify(this.errorMessage(error, 'Unable to add customer.'));
+    }
+  }
+
+  async confirmCredit(): Promise<void> {
+    if (!this.selectedCreditCustomerId()) {
+      this.notify('Select a customer before saving this credit bill.');
+      return;
+    }
+    this.showCredit.set(false);
+    await this.checkout([], 'CREDIT', this.selectedCreditCustomerId(), this.creditDueDays());
+  }
+
   private async checkout(
     payments: Array<{ mode: 'CASH' | 'UPI' | 'CARD'; amount: number }>,
-    receiptMode: 'CASH' | 'UPI' | 'CARD' | 'SPLIT',
+    receiptMode: 'CASH' | 'UPI' | 'CARD' | 'SPLIT' | 'CREDIT',
+    creditCustomerId?: string,
+    creditDueDays = 10,
   ): Promise<void> {
     if (!this.cart().length || this.submitting()) return;
     if (!(await this.canCreateBills())) return;
@@ -275,7 +327,7 @@ export class PosComponent {
     this.submitting.set(true);
     try {
       const orderId = crypto.randomUUID();
-      const capturedPayments = await Promise.all(
+      const capturedPayments = creditCustomerId ? [] : await Promise.all(
         payments.map((payment) => this.capturePayment(payment, orderId)),
       );
       const saleLines = this.cart();
@@ -293,6 +345,7 @@ export class PosComponent {
           quantity: line.quantity,
         })),
         payments: capturedPayments,
+        ...(creditCustomerId ? { credit_customer_id: creditCustomerId, credit_due_days: creditDueDays } : {}),
         order_type: this.orderType(),
         service_reference: this.serviceReference().trim() || null,
         discount_percent: this.discountPercent().toFixed(2),
@@ -328,9 +381,9 @@ export class PosComponent {
       this.resumedHoldId.set(null);
       this.discountPercent.set(0);
       this.serviceReference.set('');
-      this.notify(
-        `Payment received. Invoice ${invoiceNumber} was saved. You can now print the bill.`,
-      );
+      this.notify(creditCustomerId
+        ? `Credit invoice ${invoiceNumber} added to ${this.selectedCreditCustomer()?.name ?? 'the customer'}'s outstanding balance.`
+        : `Payment received. Invoice ${invoiceNumber} was saved. You can now print the bill.`);
       await this.loadCatalog();
     } catch (error) {
       this.notify(this.errorMessage(error, 'Unable to complete payment.'));

@@ -1,7 +1,8 @@
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
@@ -9,11 +10,12 @@ from .deps import current_user, require_role
 from .platform import active_subscription
 from ..database import get_session
 from ..inventory_service import adjust_stock
-from ..models import AuditLog, HeldOrder, KotHeader, KotItem, Order, OrderItem, Outlet, OutletProductMapping, Payment, PosTerminal, Product, ProductVariant, TenantSetting, User
+from ..models import AuditLog, Customer, CustomerCreditEntry, HeldOrder, KotHeader, KotItem, Order, OrderItem, Outlet, OutletProductMapping, Payment, PosTerminal, Product, ProductVariant, TenantSetting, User
 from ..schemas import OrderCreate, OrderListItemRead, OrderRead, OrderVoidRequest, SyncOrderCreate
 
 router = APIRouter(prefix='/api/orders', tags=['orders'])
 MONEY = Decimal('0.01')
+INDIA = ZoneInfo('Asia/Kolkata')
 
 
 def money(value: Decimal) -> Decimal:
@@ -48,12 +50,14 @@ def list_orders(
             round_off=order.round_off,
             grand_total=order.grand_total,
             status=order.status,
+            payment_status=order.payment_status,
+            customer_id=order.customer_id,
             order_type=order.order_type,
             service_reference=order.service_reference,
             created_at=order.created_at,
             cashier_name=cashiers.get(order.cashier_id, 'Unknown'),
             item_count=sum(item.quantity for item in order.items),
-            payment_modes=sorted({payment.payment_mode for payment in order.payments}),
+            payment_modes=(['CREDIT'] if order.payment_status == 'CREDIT' else sorted({payment.payment_mode for payment in order.payments})),
             items=[
                 {
                     'product_name': item.product_name,
@@ -78,6 +82,14 @@ def create_order(
     if existing is not None:
         return existing
     active_subscription(user, session)
+    credit_customer = None
+    if body.credit_customer_id:
+        credit_customer = session.scalar(select(Customer).where(
+            Customer.id == body.credit_customer_id,
+            Customer.tenant_id == user.tenant_id,
+        ))
+        if credit_customer is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Credit customer not found for this tenant.')
     held_order = None
     if body.held_order_id:
         held_order = session.scalar(select(HeldOrder).where(
@@ -177,7 +189,7 @@ def create_order(
     round_off = money(rounded_total - before_rounding)
     grand_total = money(before_rounding + round_off)
     paid_total = money(sum((payment.amount for payment in body.payments), Decimal('0.00')))
-    if paid_total != grand_total:
+    if credit_customer is None and paid_total != grand_total:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Payment total must exactly equal the grand total.')
 
     sequence = session.query(Order).filter(Order.tenant_id == user.tenant_id).count() + 1
@@ -187,10 +199,11 @@ def create_order(
     invoice_number = f'BH-{outlet.code}-{terminal.terminal_code}-{datetime.now(UTC).year}-{sequence:06d}'
     order = Order(
         id=body.order_id, tenant_id=user.tenant_id, outlet_id=terminal.outlet_id,
-        terminal_id=terminal.id, cashier_id=user.id, invoice_number=invoice_number,
+        terminal_id=terminal.id, cashier_id=user.id, customer_id=credit_customer.id if credit_customer else None,
+        invoice_number=invoice_number,
         order_type=body.order_type, service_reference=body.service_reference,
         subtotal=subtotal, discount=discount, tax=tax, round_off=round_off,
-        grand_total=grand_total, status='COMPLETED',
+        grand_total=grand_total, status='COMPLETED', payment_status='CREDIT' if credit_customer else 'PAID',
     )
     order.items = order_lines
     order.payments = [
@@ -205,6 +218,15 @@ def create_order(
     # KOT rows reference the order and order-item rows. Flush those parent
     # records first so PostgreSQL foreign-key validation always succeeds.
     session.flush()
+    if credit_customer is not None:
+        session.add(CustomerCreditEntry(
+            id=str(uuid4()), tenant_id=user.tenant_id, outlet_id=terminal.outlet_id,
+            customer_id=credit_customer.id, order_id=order.id, entry_type='PURCHASE',
+            amount=grand_total,
+            due_date=datetime.now(INDIA).date() + timedelta(days=body.credit_due_days),
+            payment_mode=None, reference=None,
+            notes=f'Credit invoice {invoice_number}', created_by=user.id,
+        ))
     kot_lines = [
         KotItem(
             id=str(uuid4()),
@@ -258,6 +280,8 @@ def void_order(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Invoice not found.')
     if order.status != 'COMPLETED':
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Only completed invoices can be voided.')
+    if order.payment_status == 'SETTLED':
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='A settled credit invoice cannot be voided.')
     product_ids = [item.product_id for item in order.items]
     products = session.scalars(
         select(Product)
@@ -283,6 +307,14 @@ def void_order(
     order.cancellation_reason = body.reason.strip()
     order.voided_at = datetime.now(UTC)
     order.voided_by = user.id
+    if order.payment_status == 'CREDIT' and order.customer_id:
+        session.add(CustomerCreditEntry(
+            id=str(uuid4()), tenant_id=user.tenant_id, outlet_id=order.outlet_id,
+            customer_id=order.customer_id, order_id=order.id, entry_type='REVERSAL',
+            amount=-money(order.grand_total), due_date=None, payment_mode=None,
+            reference=None, notes=f'Voided: {body.reason.strip()}', created_by=user.id,
+        ))
+        order.payment_status = 'VOID'
     session.add(AuditLog(
         id=str(uuid4()), tenant_id=user.tenant_id, actor_user_id=user.id,
         action='VOID', entity_type='ORDER', entity_id=order.id,

@@ -37,6 +37,7 @@ export class AdministrationComponent {
   readonly subscriptionFeedback = signal('');
   readonly subscriptionExpiryDraft = signal('');
   readonly subscriptionGraceDraft = signal('');
+  readonly subscriptionPlanDraft = signal<'PROFESSIONAL' | 'ULTRA_PROFESSIONAL'>('PROFESSIONAL');
   readonly productMenu = signal<string | null>(null);
   readonly tenants = signal<TenantAdmin[]>([]);
   readonly outlets = signal<AdminOutlet[]>([]);
@@ -193,6 +194,7 @@ export class AdministrationComponent {
         this.tenantSubscription.set(subscription);
         this.subscriptionExpiryDraft.set(this.toDateTimeInput(subscription.ends_at));
         this.subscriptionGraceDraft.set(this.toDateTimeInput(subscription.grace_ends_at));
+        this.subscriptionPlanDraft.set(subscription.plan_code === 'ULTRA_PROFESSIONAL' ? 'ULTRA_PROFESSIONAL' : 'PROFESSIONAL');
       }
     }catch(error){
       if(this.selected()?.id===tenantId&&version===this.brandSelectionVersion)this.subscriptionFeedback.set(this.errorMessage(error));
@@ -219,7 +221,7 @@ export class AdministrationComponent {
     if(grace<=expiry){this.subscriptionFeedback.set('Grace end must be later than the subscription expiry.');return;}
     this.subscriptionSaving.set(true);this.subscriptionFeedback.set('');
     try{
-      const saved=await this.api.updateTenantSubscription(token,tenant.id,expiry.toISOString(),grace.toISOString());
+      const saved=await this.api.updateTenantSubscription(token,tenant.id,expiry.toISOString(),grace.toISOString(),this.subscriptionPlanDraft());
       if(this.selected()?.id===tenant.id&&version===this.brandSelectionVersion){
         this.tenantSubscription.set(saved);
         this.subscriptionExpiryDraft.set(this.toDateTimeInput(saved.ends_at));

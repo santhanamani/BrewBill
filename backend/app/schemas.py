@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Literal
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class LoginRequest(BaseModel):
@@ -280,6 +280,7 @@ class TenantSubscriptionRead(BaseModel):
 class TenantSubscriptionUpdate(BaseModel):
     ends_at: datetime
     grace_ends_at: datetime
+    plan_code: str | None = Field(default=None, pattern=r'^(PROFESSIONAL|ULTRA_PROFESSIONAL)$')
 
 
 class TenantCreate(BaseModel):
@@ -456,12 +457,22 @@ class OrderCreate(BaseModel):
     order_id: str = Field(min_length=36, max_length=36)
     terminal_code: str = Field(min_length=2, max_length=64)
     items: list[OrderLineCreate] = Field(min_length=1, max_length=100)
-    payments: list[PaymentCreate] = Field(min_length=1, max_length=3)
+    payments: list[PaymentCreate] = Field(default_factory=list, max_length=3)
+    credit_customer_id: str | None = Field(default=None, min_length=36, max_length=36)
+    credit_due_days: int = Field(default=10, ge=1, le=365)
     held_order_id: str | None = Field(default=None, min_length=36, max_length=36)
     discount_percent: Decimal = Field(default=Decimal('0.00'), ge=0, le=50, max_digits=5, decimal_places=2)
     round_to_rupee: bool = True
     order_type: str = Field(default='KOT', pattern=r'^(DIRECT|KOT|TAKEAWAY)$')
     service_reference: str | None = Field(default=None, max_length=80)
+
+    @model_validator(mode='after')
+    def validate_payment_choice(self) -> 'OrderCreate':
+        if self.credit_customer_id and self.payments:
+            raise ValueError('A credit sale cannot also contain immediate payments.')
+        if not self.credit_customer_id and not self.payments:
+            raise ValueError('Provide a payment or select a credit customer.')
+        return self
 
 
 class OrderVoidRequest(BaseModel):
@@ -491,6 +502,8 @@ class OrderRead(BaseModel):
     round_off: Decimal
     grand_total: Decimal
     status: str
+    payment_status: str
+    customer_id: str | None
     order_type: str
     service_reference: str | None
 
@@ -710,6 +723,34 @@ class CustomerRead(CustomerCreate):
     id: str
     loyalty_points: int
     created_at: datetime
+
+
+class CustomerCreditEntryRead(BaseModel):
+    id: str
+    order_id: str | None
+    invoice_number: str | None
+    entry_type: str
+    amount: Decimal
+    due_date: date | None
+    payment_mode: str | None
+    reference: str | None
+    notes: str | None
+    created_at: datetime
+
+
+class CustomerCreditAccountRead(BaseModel):
+    customer: CustomerRead
+    outstanding_balance: Decimal
+    overdue_amount: Decimal
+    oldest_due_date: date | None
+    open_bill_count: int
+    entries: list[CustomerCreditEntryRead]
+
+
+class CustomerCreditSettlementCreate(BaseModel):
+    payment_mode: str = Field(pattern=r'^(CASH|UPI|CARD)$')
+    reference: str | None = Field(default=None, max_length=128)
+    notes: str | None = Field(default=None, max_length=1000)
 
 
 class DailyClosingCreate(BaseModel):

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .database import Base
 
@@ -257,6 +257,7 @@ class Order(Base, Timestamped):
     # Nullable only for orders created before the cashier migration. Every new
     # API order always stores the authenticated user below.
     cashier_id: Mapped[str | None] = mapped_column(ForeignKey('users.id'), index=True)
+    customer_id: Mapped[str | None] = mapped_column(ForeignKey('customers.id'), index=True)
     invoice_number: Mapped[str] = mapped_column(String(80), unique=True)
     order_type: Mapped[str] = mapped_column(String(24), default='KOT', index=True)
     service_reference: Mapped[str | None] = mapped_column(String(80))
@@ -266,6 +267,7 @@ class Order(Base, Timestamped):
     round_off: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal('0.00'))
     grand_total: Mapped[Decimal] = mapped_column(Numeric(18, 2))
     status: Mapped[str] = mapped_column(String(24), default='COMPLETED')
+    payment_status: Mapped[str] = mapped_column(String(24), default='PAID', index=True)
     cancellation_reason: Mapped[str | None] = mapped_column(Text)
     voided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     voided_by: Mapped[str | None] = mapped_column(ForeignKey('users.id'))
@@ -409,6 +411,29 @@ class Customer(Base, Timestamped):
     email: Mapped[str | None] = mapped_column(String(255))
     loyalty_points: Mapped[int] = mapped_column(Integer, default=0)
     __table_args__ = (UniqueConstraint('tenant_id', 'mobile', name='uq_customer_tenant_mobile'),)
+
+
+class CustomerCreditEntry(Base):
+    """Immutable customer-credit ledger.
+
+    PURCHASE and REVERSAL entries belong to an order. PAYMENT entries record a
+    later full settlement, so repeated credit purchases naturally accumulate.
+    """
+
+    __tablename__ = 'customer_credit_entries'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id'), index=True)
+    outlet_id: Mapped[str] = mapped_column(ForeignKey('outlets.id'), index=True)
+    customer_id: Mapped[str] = mapped_column(ForeignKey('customers.id'), index=True)
+    order_id: Mapped[str | None] = mapped_column(ForeignKey('orders.id'), index=True)
+    entry_type: Mapped[str] = mapped_column(String(24), index=True)
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 2))
+    due_date: Mapped[date | None] = mapped_column(Date, index=True)
+    payment_mode: Mapped[str | None] = mapped_column(String(24))
+    reference: Mapped[str | None] = mapped_column(String(128))
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_by: Mapped[str] = mapped_column(ForeignKey('users.id'))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
 
 
 class DailyClosing(Base, Timestamped):

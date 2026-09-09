@@ -334,7 +334,7 @@
     <section class="panel table-panel">
       <div class="panel-title">
         <h2>Customer Directory</h2>
-        <span>{{ customers().length }} customers</span>
+        <div class="credit-collection-mode"><label>Collect credit by <select [(ngModel)]="creditSettlementMode"><option value="CASH">Cash</option><option value="UPI">UPI</option><option value="CARD">Card</option></select></label><span>{{ customers().length }} customers</span></div>
       </div>
       <div class="table-scroll lazy-table" (scroll)="onTableScroll($event)">
         <table>
@@ -344,6 +344,9 @@
               <th>Mobile</th>
               <th>Email</th>
               <th>Loyalty Points</th>
+              <th>Credit Outstanding</th>
+              <th>Oldest Due</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -355,6 +358,9 @@
                 <td>{{ row.mobile || '—' }}</td>
                 <td>{{ row.email || '—' }}</td>
                 <td>{{ row.loyalty_points }}</td>
+                <td><b class="credit-balance" [class.clear]="!creditAccount(row.id) || +creditAccount(row.id)!.outstanding_balance === 0">{{ money(+(creditAccount(row.id)?.outstanding_balance || 0)) }}</b><small class="credit-bills">{{ creditAccount(row.id)?.open_bill_count || 0 }} open bills</small></td>
+                <td>{{ creditAccount(row.id)?.oldest_due_date || '—' }}</td>
+                <td><button class="settle-credit" type="button" [disabled]="!creditAccount(row.id) || +creditAccount(row.id)!.outstanding_balance === 0 || !!settlingCustomerId()" (click)="settleCredit(row)">{{ settlingCustomerId() === row.id ? 'Collecting…' : 'Collect Full' }}</button></td>
               </tr>
             }
           </tbody>
@@ -535,6 +541,19 @@
         <span class="material-symbols-outlined">point_of_sale</span>Save &amp; Test Terminal
       </button>
     </div>
+  </section>
+  <section class="panel form-panel ultra-settings" [class.locked]="!ultraEnabled()">
+    <div class="panel-title"><div><small>SUBSCRIPTION FEATURES</small><h2>Ultra Professional</h2><p>Tenant users, marketplace channels and scheduled mobile reports.</p></div><span class="plan-access-badge">{{ ultraEnabled() ? 'Enabled' : 'Upgrade required' }}</span></div>
+    @if (ultraEnabled()) {
+      <div class="ultra-grid">
+        <article><h3><span class="material-symbols-outlined">group_add</span>Tenant Users</h3><div class="form-grid three-columns"><label>Full name<input [(ngModel)]="newUserName" /></label><label>Username<input [(ngModel)]="newUsername" /></label><label>Role<select [(ngModel)]="newUserRole"><option value="CASHIER">Cashier</option><option value="ADMIN">Admin</option></select></label><label>Password<input type="password" minlength="8" [(ngModel)]="newUserPassword" /></label><button class="primary-action" type="button" (click)="addTenantUser()">Add User</button></div><p>{{ tenantUsers().length }} tenant users configured.</p></article>
+        <article><h3><span class="material-symbols-outlined">storefront</span>Marketplace Sales</h3><div class="form-grid"><label>Swiggy Merchant ID<input [(ngModel)]="swiggyMerchantId" placeholder="SWG-merchant-id" /></label><label>Zepto Merchant ID<input [(ngModel)]="zeptoMerchantId" placeholder="ZEP-merchant-id" /></label></div><p>Merchant mapping is saved per tenant. Live order/product sync activates after the provider supplies partner API credentials.</p></article>
+        <article><h3><span class="material-symbols-outlined">send_to_mobile</span>Daily Report Delivery</h3><div class="form-grid"><label>Mobile number<input [(ngModel)]="dailyReportPhone" placeholder="+91 98765 43210" /></label><label>Send time<input type="time" [(ngModel)]="dailyReportTime" /></label></div><p>This number and schedule are tenant-scoped. A WhatsApp/SMS provider connection is required for delivery.</p></article>
+      </div>
+      <button class="primary-action" type="button" [disabled]="saving()" (click)="saveUltraSettings()"><span class="material-symbols-outlined">save</span>Save Ultra Settings</button>
+    } @else {
+      <p class="ultra-upgrade"><span class="material-symbols-outlined">lock</span>Professional keeps all current POS and management features. Upgrade this tenant from Super Admin → Subscription to enable these additional tools.</p>
+    }
   </section>
   <div class="simple-management">
     <section class="panel form-panel">

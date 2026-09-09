@@ -9,12 +9,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from .deps import require_role
+from ..subscriptions import require_plan_feature
 from ..database import get_session
 from ..inventory_service import adjust_stock
 from ..models import (
     AuditLog,
     Currency,
     Customer,
+    CustomerCreditEntry,
     DailyClosing,
     Expense,
     Order,
@@ -29,6 +31,9 @@ from ..models import (
 )
 from ..schemas import (
     CustomerCreate,
+    CustomerCreditAccountRead,
+    CustomerCreditEntryRead,
+    CustomerCreditSettlementCreate,
     CustomerRead,
     DailyClosingCreate,
     DailyClosingRead,
@@ -350,6 +355,113 @@ def create_customer(
     return customer
 
 
+def credit_account_read(
+    session: Session,
+    customer: Customer,
+    outlet_id: str,
+) -> CustomerCreditAccountRead:
+    entries = list(session.scalars(
+        select(CustomerCreditEntry)
+        .where(
+            CustomerCreditEntry.tenant_id == customer.tenant_id,
+            CustomerCreditEntry.outlet_id == outlet_id,
+            CustomerCreditEntry.customer_id == customer.id,
+        )
+        .order_by(CustomerCreditEntry.created_at.desc())
+    ))
+    order_ids = {entry.order_id for entry in entries if entry.order_id}
+    invoices = {
+        order.id: order.invoice_number
+        for order in session.scalars(select(Order).where(Order.id.in_(order_ids))).all()
+    } if order_ids else {}
+    balance = money(sum((Decimal(entry.amount) for entry in entries), Decimal('0.00')))
+    purchases = [entry for entry in entries if entry.entry_type == 'PURCHASE']
+    due_dates = [entry.due_date for entry in purchases if entry.due_date]
+    today = datetime.now(INDIA).date()
+    oldest_due = min(due_dates) if due_dates and balance > 0 else None
+    return CustomerCreditAccountRead(
+        customer=CustomerRead.model_validate(customer),
+        outstanding_balance=max(balance, Decimal('0.00')),
+        overdue_amount=balance if oldest_due and oldest_due < today and balance > 0 else Decimal('0.00'),
+        oldest_due_date=oldest_due,
+        open_bill_count=len({entry.order_id for entry in purchases if entry.order_id}) if balance > 0 else 0,
+        entries=[CustomerCreditEntryRead(
+            id=entry.id,
+            order_id=entry.order_id,
+            invoice_number=invoices.get(entry.order_id),
+            entry_type=entry.entry_type,
+            amount=entry.amount,
+            due_date=entry.due_date,
+            payment_mode=entry.payment_mode,
+            reference=entry.reference,
+            notes=entry.notes,
+            created_at=entry.created_at,
+        ) for entry in entries],
+    )
+
+
+@router.get('/customers/credit-accounts', response_model=list[CustomerCreditAccountRead])
+def list_customer_credit_accounts(
+    user: User = Depends(require_role('ADMIN', 'CASHIER')),
+    session: Session = Depends(get_session),
+) -> list[CustomerCreditAccountRead]:
+    outlet_id = outlet_id_for(user)
+    customers = session.scalars(
+        select(Customer)
+        .join(CustomerCreditEntry, CustomerCreditEntry.customer_id == Customer.id)
+        .where(
+            Customer.tenant_id == user.tenant_id,
+            CustomerCreditEntry.outlet_id == outlet_id,
+        )
+        .distinct()
+        .order_by(Customer.name)
+    ).all()
+    return [credit_account_read(session, customer, outlet_id) for customer in customers]
+
+
+@router.post('/customers/{customer_id}/credit/settle', response_model=CustomerCreditAccountRead)
+def settle_customer_credit(
+    customer_id: str,
+    body: CustomerCreditSettlementCreate,
+    user: User = Depends(require_role('ADMIN', 'CASHIER')),
+    session: Session = Depends(get_session),
+) -> CustomerCreditAccountRead:
+    outlet_id = outlet_id_for(user)
+    customer = session.scalar(select(Customer).where(
+        Customer.id == customer_id,
+        Customer.tenant_id == user.tenant_id,
+    ).with_for_update())
+    if customer is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Customer not found.')
+    entries = session.scalars(select(CustomerCreditEntry).where(
+        CustomerCreditEntry.tenant_id == user.tenant_id,
+        CustomerCreditEntry.outlet_id == outlet_id,
+        CustomerCreditEntry.customer_id == customer.id,
+    ).with_for_update()).all()
+    balance = money(sum((Decimal(entry.amount) for entry in entries), Decimal('0.00')))
+    if balance <= 0:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='This customer has no outstanding credit.')
+    settlement = CustomerCreditEntry(
+        id=str(uuid4()), tenant_id=user.tenant_id, outlet_id=outlet_id,
+        customer_id=customer.id, order_id=None, entry_type='PAYMENT', amount=-balance,
+        due_date=None, payment_mode=body.payment_mode, reference=body.reference,
+        notes=body.notes or 'Full outstanding settlement', created_by=user.id,
+    )
+    session.add(settlement)
+    credit_orders = session.scalars(select(Order).where(
+        Order.tenant_id == user.tenant_id,
+        Order.outlet_id == outlet_id,
+        Order.customer_id == customer.id,
+        Order.status == 'COMPLETED',
+        Order.payment_status == 'CREDIT',
+    )).all()
+    for order in credit_orders:
+        order.payment_status = 'SETTLED'
+    audit(session, user, 'SETTLE', 'CUSTOMER_CREDIT', customer.id)
+    session.commit()
+    return credit_account_read(session, customer, outlet_id)
+
+
 @router.get('/closings', response_model=list[DailyClosingRead])
 def list_closings(
     user: User = Depends(require_role('ADMIN')),
@@ -454,6 +566,10 @@ def update_setting(
 ) -> TenantSetting:
     if not setting_key.replace('_', '').replace('-', '').isalnum() or len(setting_key) > 120:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Invalid setting key.')
+    if setting_key.startswith(('swiggy_', 'zepto_')):
+        require_plan_feature(user, session, 'marketplace_integrations')
+    if setting_key.startswith('daily_report_'):
+        require_plan_feature(user, session, 'scheduled_reports')
     setting = session.get(TenantSetting, (user.tenant_id, setting_key))
     if setting is None:
         setting = TenantSetting(tenant_id=user.tenant_id, setting_key=setting_key, setting_value=body.setting_value)

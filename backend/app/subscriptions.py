@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import json
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -103,3 +104,18 @@ def active_subscription(user: User, session: Session) -> tuple[Subscription, Sub
     if lifecycle.plan is None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Subscription plan is unavailable.')
     return lifecycle.subscription, lifecycle.plan
+
+
+def require_plan_feature(user: User, session: Session, feature: str) -> SubscriptionPlan:
+    """Enforce subscription capabilities server-side; hiding a UI control is not security."""
+    _, plan = active_subscription(user, session)
+    try:
+        enabled = bool(json.loads(plan.feature_json or '{}').get(feature, False))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        enabled = False
+    if not enabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f'{feature.replace("_", " ").title()} requires the Ultra Professional plan.',
+        )
+    return plan

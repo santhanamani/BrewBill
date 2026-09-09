@@ -124,6 +124,7 @@
 .payment-grid .upi { background:#8526c5; }
 .payment-grid .card { background:#2455d6; }
 .payment-grid .split { background:#f68a00; }
+.payment-grid .credit { background:#7b573d; }
 .payment-grid button:disabled { opacity:1; cursor:default; }
 .terminal-status { display:flex; align-items:center; justify-content:center; min-height:33px; margin:0 13px 9px; padding:4px 8px; background:#f1ebe4; color:#795f4c; border-radius:8px; font-size:12px; }
 .terminal-status .material-symbols-outlined { font-size:19px; }
@@ -301,3 +302,73 @@
 .terminal-status.required:not(.connected) { background:#fff2df; color:#8a4c12; border:1px solid #f0d7b4; }
 .payment-grid .cash.policy-blocked { background:#8d8378; box-shadow:none; filter:saturate(.45); }
 .payment-grid .cash.policy-blocked:hover { transform:none; }
+
+/*
+ * Device-independent POS layout. Electron normalises the operating-system DPI
+ * scale; these rules keep the approved five-card catalogue and control sizes
+ * invariant on every installed terminal.
+ */
+.pos-layout {
+  grid-template-columns:minmax(0,1.75fr) minmax(420px,1fr);
+  gap:clamp(10px,1vw,18px);
+}
+.catalog { container-type:inline-size; }
+.product-grid { grid-template-columns:repeat(5,minmax(0,1fr)); }
+.product-card .product-photo {
+  width:100%;
+  aspect-ratio:1.2;
+  object-fit:cover;
+}
+.payment-grid {
+  grid-template-columns:repeat(5,minmax(64px,1fr));
+}
+.payment-grid button {
+  min-width:0;
+  overflow:hidden;
+  line-height:1.15;
+  white-space:nowrap;
+}
+.payment-grid .material-symbols-outlined,
+.payment-grid small { flex:none; }
+.bill-actions button { min-width:0; white-space:nowrap; }
+
+/* These final values deliberately override width/height media queries above. */
+.product-grid { grid-template-columns:repeat(5,minmax(0,1fr)); }
+.catalog-toolbar h1 { font-size:22px; }
+.catalog-toolbar .order-mode-bar > button b { font-size:12px; }
+.catalog-search .search input,.favourites-filter,.category-card em { font-size:13px; }
+.product-copy b { height:36px; min-height:36px; font-size:15px; line-height:18px; }
+.product-copy strong { font-size:20px; line-height:24px; }
+.product-copy small { font-size:11px; line-height:14px; }
+.product-favourite { width:28px; height:28px; }
+.product-favourite .material-symbols-outlined { font-size:18px; }
+.bill-head h2 { font-size:25px; }
+.bill-columns,.cart-line { font-size:13px; }
+.cart-product b { font-size:14px; }
+.cart-product small { font-size:12px; }
+.totals > div { font-size:13px; }
+.totals .grand { font-size:20px; }
+.totals .grand b { font-size:27px; }
+.payment-grid button { font-size:15px; }
+.payment-grid .material-symbols-outlined { font-size:29px; }
+.payment-grid small,.terminal-status { font-size:12px; }
+.bill-actions button { font-size:17px; }
+.bill-actions .material-symbols-outlined { font-size:27px; }
+
+.credit-dialog { width:min(500px,calc(100vw - 32px)); }
+.credit-dialog label { display:grid; gap:7px; color:#463226; font-size:13px; font-weight:700; }
+.credit-dialog select,.credit-dialog input { width:100%; min-height:44px; box-sizing:border-box; border:1px solid #dfd2c5; border-radius:8px; padding:0 12px; background:#fff; color:#281d17; font:inherit; }
+.credit-total { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-radius:9px; background:#f7eee4; }
+.credit-total b { font-size:23px; }
+.credit-due { display:grid; grid-template-columns:1fr 70px; align-items:center; gap:8px; }
+.credit-due b { text-align:center; }
+.quick-customer { display:grid; grid-template-columns:1fr 1fr auto; gap:8px; padding-top:8px; border-top:1px solid #eee4d9; }
+.quick-customer strong { grid-column:1/-1; font-size:13px; }
+.quick-customer button { display:flex; align-items:center; gap:5px; border:0; border-radius:8px; padding:0 12px; background:#efe2d3; color:#653c20; font-weight:700; }
+.credit-note { display:flex; gap:8px; align-items:flex-start; margin:0; color:#76665b; font-size:12px; line-height:1.45; }
+.credit-note .material-symbols-outlined { font-size:18px; }
+@media(max-width:1450px) {
+  .payment-grid { grid-template-columns:repeat(5,minmax(56px,1fr)); }
+  .payment-grid button { font-size:12px; }
+  .payment-grid .material-symbols-outlined { font-size:23px; }
+}

@@ -7,7 +7,9 @@ import { RouterLink } from '@angular/router';
 import { BrewBillApiService } from '../../core/brew-bill-api.service';
 import {
   Category,
+  AdminUser,
   Customer,
+  CustomerCreditAccount,
   DailyClosing,
   Expense,
   Product,
@@ -77,10 +79,15 @@ export class ManagementComponent {
   readonly purchases = signal<Purchase[]>([]);
   readonly expenses = signal<Expense[]>([]);
   readonly customers = signal<Customer[]>([]);
+  readonly creditAccounts = signal<CustomerCreditAccount[]>([]);
+  readonly settlingCustomerId = signal('');
+  creditSettlementMode: 'CASH' | 'UPI' | 'CARD' = 'CASH';
   readonly closings = signal<DailyClosing[]>([]);
   readonly settings = signal<TenantSetting[]>([]);
   readonly currencies = signal<CurrencyDefinition[]>([]);
   readonly categories = signal<Category[]>([]);
+  readonly tenantUsers = signal<AdminUser[]>([]);
+  readonly ultraEnabled = computed(() => this.session.context()?.plan_code === 'ULTRA_PROFESSIONAL');
   readonly search = signal('');
   readonly visibleLimit = signal(10);
   readonly purchaseFilter = signal('');
@@ -196,6 +203,14 @@ export class ManagementComponent {
   readonly paymentPolicyMessage = signal('');
   currencyCode = 'INR';
   readonly currencyMessage = signal('');
+  swiggyMerchantId = '';
+  zeptoMerchantId = '';
+  dailyReportPhone = '';
+  dailyReportTime = '22:00';
+  newUserName = '';
+  newUsername = '';
+  newUserPassword = '';
+  newUserRole: 'ADMIN' | 'CASHIER' = 'CASHIER';
 
   constructor() {
     this.route.paramMap.subscribe((params) => {
@@ -250,9 +265,15 @@ export class ManagementComponent {
         case 'expenses':
           this.expenses.set(await this.api.listExpenses(token));
           break;
-        case 'customers':
-          this.customers.set(await this.api.listCustomers(token));
+        case 'customers': {
+          const [customers, creditAccounts] = await Promise.all([
+            this.api.listCustomers(token),
+            this.api.listCustomerCreditAccounts(token),
+          ]);
+          this.customers.set(customers);
+          this.creditAccounts.set(creditAccounts);
           break;
+        }
         case 'closing':
           this.closings.set(await this.api.listClosings(token));
           break;
@@ -263,6 +284,11 @@ export class ManagementComponent {
             this.api.listCurrencies(token),
           ]);
           this.settings.set(settings);
+          this.swiggyMerchantId = this.setting('swiggy_merchant_id');
+          this.zeptoMerchantId = this.setting('zepto_merchant_id');
+          this.dailyReportPhone = this.setting('daily_report_phone');
+          this.dailyReportTime = this.setting('daily_report_time') || '22:00';
+          if (this.ultraEnabled()) this.tenantUsers.set(await this.api.listTenantUsers(token));
           this.paymentProcessingMode = policy.payment_processing_mode;
           this.currencies.set(currencies);
           this.currencyCode = this.currency.code();
@@ -277,6 +303,73 @@ export class ManagementComponent {
       this.error.set(this.message(error));
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  setting(key: string): string {
+    return this.settings().find(row => row.setting_key === key)?.setting_value ?? '';
+  }
+
+  async saveUltraSettings(): Promise<void> {
+    if (!this.ultraEnabled()) {
+      this.error.set('Marketplace integrations and scheduled reports require Ultra Professional.');
+      return;
+    }
+    await this.save('Ultra Professional settings saved.', async token => {
+      await Promise.all([
+        this.api.updateSetting(token, 'swiggy_merchant_id', this.swiggyMerchantId.trim()),
+        this.api.updateSetting(token, 'zepto_merchant_id', this.zeptoMerchantId.trim()),
+        this.api.updateSetting(token, 'daily_report_phone', this.dailyReportPhone.trim()),
+        this.api.updateSetting(token, 'daily_report_time', this.dailyReportTime),
+      ]);
+      this.settings.set(await this.api.listSettings(token));
+    });
+  }
+
+  async addTenantUser(): Promise<void> {
+    const context = this.session.context();
+    if (!context || !this.newUserName.trim() || !this.newUsername.trim() || this.newUserPassword.length < 8) {
+      this.error.set('Name, username and a password of at least 8 characters are required.');
+      return;
+    }
+    await this.save('Tenant user added.', async token => {
+      await this.api.createTenantUser(token, {
+        tenant_id: context.tenant_id,
+        outlet_id: context.outlet_id,
+        role_code: this.newUserRole,
+        username: this.newUsername.trim(),
+        display_name: this.newUserName.trim(),
+        email: null,
+        phone: null,
+        password: this.newUserPassword,
+      });
+      this.tenantUsers.set(await this.api.listTenantUsers(token));
+      this.newUserName = this.newUsername = this.newUserPassword = '';
+    });
+  }
+
+  creditAccount(customerId: string): CustomerCreditAccount | undefined {
+    return this.creditAccounts().find(account => account.customer.id === customerId);
+  }
+
+  async settleCredit(customer: Customer): Promise<void> {
+    const token = this.requireCloudToken();
+    const account = this.creditAccount(customer.id);
+    if (!token || !account || Number(account.outstanding_balance) <= 0 || this.settlingCustomerId()) return;
+    if (!window.confirm(`Collect the full ${this.money(Number(account.outstanding_balance))} from ${customer.name} by ${this.creditSettlementMode}?`)) return;
+    this.settlingCustomerId.set(customer.id);
+    this.error.set('');
+    try {
+      const saved = await this.api.settleCustomerCredit(token, customer.id, {
+        payment_mode: this.creditSettlementMode,
+        notes: 'Full outstanding collected from Customer Management',
+      });
+      this.creditAccounts.update(accounts => accounts.map(row => row.customer.id === customer.id ? saved : row));
+      this.success.set(`${customer.name}'s full outstanding amount was collected.`);
+    } catch (error) {
+      this.error.set(this.message(error));
+    } finally {
+      this.settlingCustomerId.set('');
     }
   }
 

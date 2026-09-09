@@ -269,6 +269,8 @@ export interface OrderCreate {
     capture_source?: 'MANUAL' | 'PAYMENT_TERMINAL';
     provider?: string;
   }>;
+  credit_customer_id?: string;
+  credit_due_days?: number;
   held_order_id?: string;
   discount_percent?: string;
   round_to_rupee?: boolean;
@@ -288,6 +290,8 @@ export interface OrderResult {
   invoice_number: string;
   grand_total: string;
   status: string;
+  payment_status: 'PAID' | 'CREDIT' | 'SETTLED' | 'VOID';
+  customer_id: string | null;
   order_type: 'DIRECT' | 'KOT' | 'TAKEAWAY';
   service_reference: string | null;
 }
@@ -443,6 +447,28 @@ export interface Customer {
   email: string | null;
   loyalty_points: number;
   created_at: string;
+}
+
+export interface CustomerCreditEntry {
+  id: string;
+  order_id: string | null;
+  invoice_number: string | null;
+  entry_type: 'PURCHASE' | 'PAYMENT' | 'REVERSAL';
+  amount: string;
+  due_date: string | null;
+  payment_mode: 'CASH' | 'UPI' | 'CARD' | null;
+  reference: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface CustomerCreditAccount {
+  customer: Customer;
+  outstanding_balance: string;
+  overdue_amount: string;
+  oldest_due_date: string | null;
+  open_bill_count: number;
+  entries: CustomerCreditEntry[];
 }
 
 export interface DailyClosing {
