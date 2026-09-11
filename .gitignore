@@ -53,9 +53,13 @@ out/
 .env
 .venv/
 __pycache__/
+*.py[cod]
 backend/storage/tenant-branding/
 backend/storage/tenant-products/
 logs/
 backend/logs/
+.tmp/
+backups/
+exports/
 .downloads/
 *.egg-info/
