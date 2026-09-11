@@ -51,6 +51,11 @@ function installLicense(db, safeStorage, envelope) {
   writeSecure(db, safeStorage, 'license.public-key', envelope.public_key);
   writeSecure(db, safeStorage, 'license.last-server-time', envelope.payload.issued_at);
   writeSecure(db, safeStorage, 'license.last-successful-validation', new Date().toISOString());
+  if (typeof envelope.payload.terminal_code === 'string') {
+    db.prepare(
+      "INSERT INTO local_settings (key,value) VALUES ('terminal.code',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=CURRENT_TIMESTAMP",
+    ).run(envelope.payload.terminal_code);
+  }
   return verifyLicense(db, safeStorage);
 }
 

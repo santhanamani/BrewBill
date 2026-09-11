@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, 
 from fastapi.responses import FileResponse
 from typing import Literal
 from ..branding_media import LIMITS, save_image, media_path, validate_branding_url
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -15,6 +15,9 @@ from .deps import current_user, require_role
 from ..database import get_session, settings
 from ..licensing import public_key_pem, sign_payload
 from ..models import LicenseEvent, Outlet, PosTerminal, Role, Subscription, SubscriptionPlan, Tenant, TenantSetting, User
+from ..owner_access import owner_setting_key, owner_tenant_ids
+from ..outlet_codes import next_outlet_code
+from ..outlet_scope import resolve_operational_outlet
 from ..schemas import (
     AdminOutletCreate, AdminOutletRead, AdminOutletUpdate, AdminRoleRead,
     AdminUserCreate, AdminUserRead, AdminUserUpdate, DeviceActivationRequest,
@@ -22,7 +25,7 @@ from ..schemas import (
     TenantCreate, TenantResolveRead, TenantUpdate,
     TenantPaymentPolicyRead, TenantPaymentPolicyUpdate,
     TenantSubscriptionRead, TenantSubscriptionUpdate,
-    CurrencyRead, TenantCurrencyUpdate,
+    CurrencyRead, OwnerTenantRead, TenantCurrencyUpdate,
 )
 from ..currency import currency_read, resolve_currency, tenant_currency
 from ..security import hash_password
@@ -131,11 +134,10 @@ def create_tenant(
 ) -> TenantAdminRead:
     code = body.code.strip().upper()
     name = body.name.strip()
-    outlet_code = body.outlet_code.strip().upper()
     outlet_name = body.outlet_name.strip()
     admin_username = body.admin_username.strip()
     admin_display_name = body.admin_display_name.strip()
-    if not all((code, name, outlet_code, outlet_name, admin_username, admin_display_name)):
+    if not all((code, name, outlet_name, admin_username, admin_display_name)):
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Required tenant fields cannot be blank.')
 
     if session.scalar(select(Tenant.id).where(func.upper(Tenant.code) == code)):
@@ -161,6 +163,7 @@ def create_tenant(
         # These models carry foreign-key IDs directly and do not declare ORM relationships
         # that SQLAlchemy can otherwise use to infer the required flush order.
         session.flush()
+        outlet_code = next_outlet_code(session)
         outlet = Outlet(
             id=str(uuid4()), tenant_id=tenant.id, code=outlet_code,
             name=outlet_name, address=body.outlet_address.strip() if body.outlet_address else None,
@@ -179,6 +182,9 @@ def create_tenant(
         session.flush()
         session.add_all([admin, subscription])
         session.commit()
+    except ValueError as error:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
     except IntegrityError as error:
         session.rollback()
         constraint = getattr(getattr(error.orig, 'diag', None), 'constraint_name', '') or ''
@@ -186,7 +192,7 @@ def create_tenant(
             'tenants_code_key': f'Tenant code "{code}" already exists.',
             'ix_tenants_code': f'Tenant code "{code}" already exists.',
             'tenants_name_key': f'Café name "{name}" already exists.',
-            'uq_outlet_tenant_code': f'Outlet code "{outlet_code}" already exists for this tenant.',
+            'uq_outlets_code': 'The automatic outlet code was already used. Please retry.',
             'uq_user_tenant_username': f'Admin username "{admin_username}" already exists for this tenant.',
         }.get(constraint, 'Tenant could not be created because related data is invalid.')
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail) from error
@@ -364,6 +370,19 @@ def list_admin_outlets(
     return list(session.scalars(query).all())
 
 
+@router.get('/outlets', response_model=list[AdminOutletRead])
+def list_tenant_outlets(
+    user: User = Depends(require_role('ADMIN', 'CASHIER')),
+    session: Session = Depends(get_session),
+) -> list[Outlet]:
+    query = select(Outlet).where(Outlet.tenant_id == user.tenant_id)
+    if user.outlet_id:
+        query = query.where(Outlet.id == user.outlet_id)
+    elif user.role_code not in ('ADMIN', 'TENANT_ADMIN'):
+        return []
+    return list(session.scalars(query.order_by(Outlet.name, Outlet.code)).all())
+
+
 @router.post('/admin/outlets', response_model=AdminOutletRead, status_code=status.HTTP_201_CREATED)
 def create_admin_outlet(
     body: AdminOutletCreate,
@@ -372,13 +391,20 @@ def create_admin_outlet(
 ) -> Outlet:
     if session.get(Tenant, body.tenant_id) is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Tenant not found.')
-    outlet = Outlet(id=str(uuid4()), tenant_id=body.tenant_id, code=body.code.upper(), name=body.name, address=body.address)
+    try:
+        outlet_code = next_outlet_code(session)
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+    outlet = Outlet(
+        id=str(uuid4()), tenant_id=body.tenant_id, code=outlet_code,
+        name=body.name.strip(), address=body.address.strip() if body.address else None,
+    )
     session.add(outlet)
     try:
         session.commit()
     except IntegrityError as error:
         session.rollback()
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Outlet code already exists for this tenant.') from error
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='The automatic outlet code was already used. Please retry.') from error
     session.refresh(outlet)
     return outlet
 
@@ -402,13 +428,37 @@ def update_admin_outlet(
 def admin_user_read(item: User, session: Session) -> AdminUserRead:
     tenant = session.get(Tenant, item.tenant_id)
     outlet = session.get(Outlet, item.outlet_id) if item.outlet_id else None
+    assigned_ids = owner_tenant_ids(session, item) if item.role_code == 'OWNER' else set()
+    owner_tenants = session.scalars(
+        select(Tenant).where(Tenant.id.in_(assigned_ids)).order_by(Tenant.name)
+    ).all() if assigned_ids else []
     return AdminUserRead(
         id=item.id, tenant_id=item.tenant_id, tenant_name=tenant.name if tenant else '',
         outlet_id=item.outlet_id, outlet_name=outlet.name if outlet else None,
         username=item.username, display_name=item.display_name, email=item.email,
-        phone=item.phone, role_code=item.role_code, is_active=item.is_active,
+        phone=item.phone, role_code=item.role_code,
+        owner_tenant_ids=[row.id for row in owner_tenants],
+        owner_tenant_names=[row.name for row in owner_tenants],
+        is_active=item.is_active,
         last_active=item.updated_at,
     )
+
+
+def validated_owner_tenants(session: Session, primary_tenant_id: str, requested: list[str]) -> list[str]:
+    tenant_ids = list(dict.fromkeys([primary_tenant_id, *requested]))
+    found = set(session.scalars(select(Tenant.id).where(Tenant.id.in_(tenant_ids))).all())
+    if found != set(tenant_ids):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='One or more owner tenants were not found.')
+    return tenant_ids
+
+
+def replace_owner_access(session: Session, item: User, tenant_ids: list[str]) -> None:
+    key = owner_setting_key(item.id)
+    setting = session.get(TenantSetting, (item.tenant_id, key))
+    if setting is None:
+        setting = TenantSetting(tenant_id=item.tenant_id, setting_key=key, setting_value='[]')
+        session.add(setting)
+    setting.setting_value = json.dumps(tenant_ids)
 
 
 @router.get('/admin/users', response_model=list[AdminUserRead])
@@ -448,12 +498,15 @@ def create_admin_user(
             detail=f'Username "{username}" already exists for this tenant.',
         )
     item = User(
-        id=str(uuid4()), tenant_id=tenant.id, outlet_id=body.outlet_id, role_id=role.id,
+        id=str(uuid4()), tenant_id=tenant.id, outlet_id=None if body.role_code == 'OWNER' else body.outlet_id, role_id=role.id,
         username=username, display_name=body.display_name.strip(), email=body.email, phone=body.phone,
         password_hash=hash_password(body.password), is_active=True,
     )
     session.add(item)
     try:
+        session.flush()
+        if body.role_code == 'OWNER':
+            replace_owner_access(session, item, validated_owner_tenants(session, tenant.id, body.owner_tenant_ids))
         session.commit()
     except IntegrityError as error:
         session.rollback()
@@ -470,18 +523,33 @@ def update_admin_user(
     item = session.get(User, user_id)
     if item is None or item.role_code == 'SUPER_ADMIN':
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Tenant user not found.')
+    was_owner = item.role_code == 'OWNER'
     values = body.model_dump(exclude_unset=True)
     role_code = values.pop('role_code', None)
     password = values.pop('password', None)
+    requested_owner_tenants = values.pop('owner_tenant_ids', None)
     if role_code:
         role = session.scalar(select(Role).where(Role.code == role_code))
         if role is None:
             raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Role not found.')
         item.role_id = role.id
+        item.role = role
     if password:
         item.password_hash = hash_password(password)
     for field, value in values.items():
         setattr(item, field, value)
+    if item.role_code == 'OWNER':
+        item.outlet_id = None
+        if requested_owner_tenants is not None or not was_owner:
+            replace_owner_access(
+                session, item,
+                validated_owner_tenants(session, item.tenant_id, requested_owner_tenants or []),
+            )
+    else:
+        session.execute(delete(TenantSetting).where(
+            TenantSetting.tenant_id == item.tenant_id,
+            TenantSetting.setting_key == owner_setting_key(item.id),
+        ))
     if item.outlet_id:
         outlet = session.get(Outlet, item.outlet_id)
         if outlet is None or outlet.tenant_id != item.tenant_id:
@@ -495,7 +563,30 @@ def list_admin_roles(
     user: User = Depends(require_role('SUPER_ADMIN')),
     session: Session = Depends(get_session),
 ) -> list[Role]:
-    return list(session.scalars(select(Role).where(Role.code.in_(['TENANT_ADMIN', 'ADMIN', 'CASHIER'])).order_by(Role.name)).all())
+    return list(session.scalars(select(Role).where(Role.code.in_(['TENANT_ADMIN', 'ADMIN', 'CASHIER', 'OWNER'])).order_by(Role.name)).all())
+
+
+@router.get('/owner/tenants', response_model=list[OwnerTenantRead])
+def list_owner_tenants(
+    user: User = Depends(require_role('OWNER')),
+    session: Session = Depends(get_session),
+) -> list[OwnerTenantRead]:
+    assigned_ids = owner_tenant_ids(session, user)
+    tenants = session.scalars(
+        select(Tenant)
+        .where(Tenant.id.in_(assigned_ids), Tenant.status == 'ACTIVE')
+        .order_by(Tenant.name)
+    ).all() if assigned_ids else []
+    return [
+        OwnerTenantRead(
+            tenant_id=tenant.id,
+            tenant_code=tenant.code or '',
+            tenant_name=tenant.name,
+            currency=currency_read(tenant_currency(session, tenant)),
+            outlets=list(session.scalars(select(Outlet).where(Outlet.tenant_id == tenant.id).order_by(Outlet.name)).all()),
+        )
+        for tenant in tenants
+    ]
 
 
 @router.get('/users', response_model=list[AdminUserRead])
@@ -506,7 +597,7 @@ def list_tenant_users(
     require_plan_feature(user, session, 'tenant_user_management')
     return [admin_user_read(item, session) for item in session.scalars(
         select(User)
-        .where(User.tenant_id == user.tenant_id, User.role.has(Role.code != 'SUPER_ADMIN'))
+        .where(User.tenant_id == user.tenant_id, User.role.has(Role.code.not_in(('SUPER_ADMIN', 'OWNER'))))
         .order_by(User.display_name)
     ).all()]
 
@@ -544,8 +635,10 @@ def update_tenant_user(
     session: Session = Depends(get_session),
 ) -> AdminUserRead:
     require_plan_feature(user, session, 'tenant_user_management')
+    if body.role_code is not None and body.role_code not in ('ADMIN', 'CASHIER'):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Tenant admins may assign only Admin or Cashier roles.')
     item = session.get(User, user_id)
-    if item is None or item.tenant_id != user.tenant_id or item.role_code == 'SUPER_ADMIN':
+    if item is None or item.tenant_id != user.tenant_id or item.role_code in ('SUPER_ADMIN', 'OWNER'):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Tenant user not found.')
     return update_admin_user(user_id, body, user, session)
 
@@ -602,8 +695,9 @@ def activate_device(
     user: User = Depends(current_user),
     session: Session = Depends(get_session),
 ) -> LicenseEnvelope:
-    if user.outlet_id is None:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='An outlet must be assigned before activation.')
+    if user.role_code == 'OWNER':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Owner access is read only.')
+    outlet_id = resolve_operational_outlet(session, user, body.outlet_id)
     subscription, plan = active_subscription(user, session)
     now = datetime.now(UTC)
     # A single desktop installation may serve more than one tenant. Scope the
@@ -613,14 +707,31 @@ def activate_device(
     device_hash = hashlib.sha256(
         f'{user.tenant_id}:{body.installation_id}'.encode('utf-8')
     ).hexdigest()
-    terminal = session.scalar(
+    # Resolve by the tenant-scoped installation fingerprint first. Every laptop
+    # ships with POS01 as its initial label, so terminal-code lookup alone made
+    # a second laptop incorrectly look like a device takeover.
+    existing_device = session.scalar(
+        select(PosTerminal)
+        .where(PosTerminal.tenant_id == user.tenant_id, PosTerminal.device_key_hash == device_hash)
+        .with_for_update()
+    )
+    terminal = existing_device or session.scalar(
         select(PosTerminal)
         .where(PosTerminal.tenant_id == user.tenant_id, PosTerminal.terminal_code == body.terminal_code)
         .with_for_update()
     )
-    existing_device = session.scalar(select(PosTerminal).where(PosTerminal.device_key_hash == device_hash))
-    if existing_device is not None and (terminal is None or existing_device.id != terminal.id):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='This device is already assigned to another terminal.')
+    requested_code = body.terminal_code
+    if terminal is not None and existing_device is None:
+        claimable_code = terminal.device_key_hash.startswith('development-only') or terminal.device_key_hash == legacy_device_hash
+        if not claimable_code:
+            # The label is occupied by another laptop. Allocate a stable code
+            # to this installation instead of failing license verification.
+            requested_code = f'{body.terminal_code[:52]}-{device_hash[:6].upper()}'
+            terminal = session.scalar(
+                select(PosTerminal)
+                .where(PosTerminal.tenant_id == user.tenant_id, PosTerminal.terminal_code == requested_code)
+                .with_for_update()
+            )
     if terminal is None:
         active_count = session.scalar(
             select(func.count(PosTerminal.id)).where(
@@ -633,8 +744,8 @@ def activate_device(
         terminal = PosTerminal(
             id=str(uuid4()),
             tenant_id=user.tenant_id,
-            outlet_id=user.outlet_id,
-            terminal_code=body.terminal_code,
+            outlet_id=outlet_id,
+            terminal_code=requested_code,
             terminal_name=body.terminal_name,
             device_key_hash=device_hash,
             activated_at=now,
@@ -643,7 +754,7 @@ def activate_device(
         )
         session.add(terminal)
     else:
-        claimable = (
+        claimable = existing_device is not None or (
             terminal.device_key_hash.startswith('development-only')
             or terminal.device_key_hash == device_hash
             or terminal.device_key_hash == legacy_device_hash
@@ -652,7 +763,7 @@ def activate_device(
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='This terminal is activated on another device.')
         terminal.device_key_hash = device_hash
         terminal.terminal_name = body.terminal_name
-        terminal.outlet_id = user.outlet_id
+        terminal.outlet_id = outlet_id
         terminal.activated_at = terminal.activated_at or now
         terminal.last_seen_at = now
         terminal.status = 'ACTIVE'
@@ -663,7 +774,7 @@ def activate_device(
     offline_until = min(now + timedelta(hours=settings.offline_license_hours), grace_end(subscription))
     payload = {
         'tenant_id': user.tenant_id,
-        'outlet_id': user.outlet_id,
+        'outlet_id': outlet_id,
         'terminal_id': terminal.id,
         'terminal_code': terminal.terminal_code,
         'plan_code': plan.code,

@@ -3,7 +3,7 @@ import { EChartsCoreOption } from 'echarts/core';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import { BrewBillApiService } from '../../core/brew-bill-api.service';
 import { CatalogService } from '../../core/catalog.service';
-import { DashboardMetric, MarketplaceSummary, Product } from '../../core/models/api.models';
+import { DashboardMetric, MarketplaceSummary, OwnerTenantScope, Product } from '../../core/models/api.models';
 import { SessionService } from '../../core/session.service';
 import { CurrencyService } from '../../core/currency.service';
 import { Router } from '@angular/router';
@@ -23,6 +23,7 @@ interface CalendarDay {
   selector: 'app-dashboard',
   imports: [NgxEchartsDirective],
   templateUrl: './dashboard.component.html',
+  styleUrl: './dashboard.component.css',
 })
 export class DashboardComponent {
   private readonly api = inject(BrewBillApiService);
@@ -35,7 +36,13 @@ export class DashboardComponent {
   readonly products = signal<Product[]>([]);
   readonly metrics = signal<DashboardMetric | null>(null);
   readonly marketplace = signal<MarketplaceSummary | null>(null);
-  readonly marketplaceEnabled = computed(()=>this.session.context()?.plan_code==='ULTRA_PROFESSIONAL');
+  readonly marketplaceEnabled = computed(()=>!this.session.isOwner() && this.session.context()?.plan_code==='ULTRA_PROFESSIONAL');
+  readonly ownerScopes = signal<OwnerTenantScope[]>([]);
+  readonly selectedTenantId = signal('');
+  readonly selectedOutletId = signal('');
+  readonly selectedOwnerScope = computed(() =>
+    this.ownerScopes().find(scope => scope.tenant_id === this.selectedTenantId()) ?? null,
+  );
   readonly loading = signal(true);
   readonly error = signal('');
   readonly rangeError = signal('');
@@ -181,12 +188,26 @@ export class DashboardComponent {
     this.loading.set(true);
     this.error.set('');
     try {
-      const [catalog, metrics, marketplace] = await Promise.all([
-        this.catalog.load(token),
-        this.api.getDashboard(token, this.appliedFromDate(), this.appliedToDate()),
+      if (this.session.isOwner() && !this.ownerScopes().length) {
+        const scopes = await this.api.listOwnerTenants(token);
+        this.ownerScopes.set(scopes);
+        const homeTenant = this.session.user()?.tenant_id;
+        this.selectedTenantId.set(
+          scopes.some(scope => scope.tenant_id === homeTenant) ? String(homeTenant) : (scopes[0]?.tenant_id ?? ''),
+        );
+        this.currency.configure(scopes.find(scope => scope.tenant_id === this.selectedTenantId())?.currency);
+      }
+      const tenantId = this.session.isOwner() ? this.selectedTenantId() || undefined : undefined;
+      const outletId = this.session.isOwner() ? this.selectedOutletId() || undefined : undefined;
+      // Tenant-wide admins have no single outlet_id. Dashboard metrics can be
+      // aggregated for the tenant, but the POS catalogue remains outlet-specific.
+      const canLoadOutletCatalog = !this.session.isOwner() && !!this.session.user()?.outlet_id;
+      const catalog = canLoadOutletCatalog ? await this.catalog.load(token) : null;
+      const [metrics, marketplace] = await Promise.all([
+        this.api.getDashboard(token, this.appliedFromDate(), this.appliedToDate(), tenantId, outletId),
         this.marketplaceEnabled()?this.api.getMarketplaceSummary(token,this.appliedFromDate(),this.appliedToDate()):Promise.resolve(null),
       ]);
-      this.products.set(catalog.products);
+      this.products.set(catalog?.products ?? []);
       this.metrics.set(metrics);
       this.marketplace.set(marketplace);
     } catch (error) {
@@ -319,7 +340,13 @@ export class DashboardComponent {
     this.loading.set(true);
     this.error.set('');
     try {
-      this.metrics.set(await this.api.getDashboard(token, this.appliedFromDate(), this.appliedToDate()));
+      this.metrics.set(await this.api.getDashboard(
+        token,
+        this.appliedFromDate(),
+        this.appliedToDate(),
+        this.session.isOwner() ? this.selectedTenantId() || undefined : undefined,
+        this.session.isOwner() ? this.selectedOutletId() || undefined : undefined,
+      ));
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to load dashboard data.');
     } finally {
@@ -359,6 +386,46 @@ export class DashboardComponent {
   }
 
   viewAllSales(): void {
-    void this.router.navigate(['/operations/reports']);
+    void this.router.navigate(['/operations/reports'], { queryParams: this.ownerScopeQuery() });
+  }
+
+  openMetric(target: 'reports' | 'cash' | 'upi' | 'card' | 'inventory'): void {
+    if (target === 'inventory') {
+      if (this.session.isOwner()) {
+        void this.router.navigate(['/operations/reports'], { queryParams: this.ownerScopeQuery() });
+        return;
+      }
+      void this.router.navigate(['/operations/inventory']);
+      return;
+    }
+    void this.router.navigate(['/operations/reports'], {
+      queryParams: {
+        from: this.appliedFromDate(),
+        to: this.appliedToDate(),
+        payment: target === 'reports' ? null : target.toUpperCase(),
+        ...this.ownerScopeQuery(),
+      },
+    });
+  }
+
+  changeOwnerTenant(tenantId: string): void {
+    if (!tenantId || tenantId === this.selectedTenantId()) return;
+    this.selectedTenantId.set(tenantId);
+    this.selectedOutletId.set('');
+    this.currency.configure(this.ownerScopes().find(scope => scope.tenant_id === tenantId)?.currency);
+    void this.loadMetrics();
+  }
+
+  changeOwnerOutlet(outletId: string): void {
+    this.selectedOutletId.set(outletId);
+    void this.loadMetrics();
+  }
+
+  private ownerScopeQuery(): Record<string, string> {
+    if (!this.session.isOwner()) return {};
+    return {
+      tenant: this.selectedTenantId(),
+      ...(this.selectedOutletId() ? { outlet: this.selectedOutletId() } : {}),
+    };
   }
 }

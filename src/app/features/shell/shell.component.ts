@@ -1,10 +1,11 @@
-import { Component, HostListener, inject, signal } from '@angular/core';
+import { Component, DestroyRef, HostListener, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationCancel, NavigationEnd, NavigationError, NavigationStart, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { SessionService } from '../../core/session.service';
 import { ClockService } from '../../core/clock.service';
 import { RuntimeConfigService } from '../../core/runtime-config.service';
 import { BrewBillApiService } from '../../core/brew-bill-api.service';
+import { OutletContextService } from '../../core/outlet-context.service';
 
 @Component({
   selector: 'app-shell',
@@ -14,12 +15,15 @@ import { BrewBillApiService } from '../../core/brew-bill-api.service';
 export class ShellComponent {
   readonly session = inject(SessionService);
   readonly clock = inject(ClockService);
+  readonly outletContext = inject(OutletContextService);
   private readonly runtime = inject(RuntimeConfigService);
   private readonly router = inject(Router);
   private readonly api = inject(BrewBillApiService);
+  private readonly destroyRef = inject(DestroyRef);
   readonly navigationError = signal('');
   readonly navigating = signal(false);
   readonly marketplaceUnread = signal(0);
+  readonly messageUnread = signal(0);
   private failedPath = '';
 
   constructor() {
@@ -37,11 +41,25 @@ export class ShellComponent {
     });
     if (this.marketplaceEnabled()) {
       void this.pollMarketplace();
-      window.setInterval(() => void this.pollMarketplace(), 15000);
+      void this.pollMessages();
+      const marketplaceTimer=window.setInterval(() => void this.pollMarketplace(), 15000);
+      const messagesTimer=window.setInterval(() => void this.pollMessages(), 15000);
+      this.destroyRef.onDestroy(()=>{window.clearInterval(marketplaceTimer);window.clearInterval(messagesTimer);});
     }
+    const contextTimer=window.setInterval(()=>void this.session.refreshContext().catch(()=>{}),30000);
+    this.destroyRef.onDestroy(()=>window.clearInterval(contextTimer));
   }
 
-  marketplaceEnabled(): boolean { return !this.session.isSuperAdmin() && this.session.context()?.plan_code === 'ULTRA_PROFESSIONAL'; }
+  private async pollMessages(): Promise<void> {
+    const token = this.session.accessToken();
+    if (!token || !this.marketplaceEnabled()) return;
+    try {
+      const messages = await this.api.listMessages(token);
+      this.messageUnread.set(messages.filter(message => !message.read_at).length);
+    } catch { /* Message polling must never interrupt billing. */ }
+  }
+
+  marketplaceEnabled(): boolean { return !this.session.isSuperAdmin() && !this.session.isOwner() && this.session.context()?.plan_code === 'ULTRA_PROFESSIONAL'; }
 
   private async pollMarketplace(): Promise<void> {
     const token=this.session.accessToken();const userId=this.session.user()?.id;
@@ -78,6 +96,11 @@ export class ShellComponent {
     window.location.reload();
   }
 
+  changeOperationalOutlet(outletId: string): void {
+    if (!this.outletContext.select(outletId, this.session.user())) return;
+    window.location.reload();
+  }
+
   isActive(path: string): boolean {
     return this.router.url === path;
   }
@@ -86,6 +109,7 @@ export class ShellComponent {
     const role = this.session.user()?.role_code;
     if (role === 'SUPER_ADMIN') return 'Super Administrator';
     if (role === 'ADMIN' || role === 'TENANT_ADMIN') return 'Administrator';
+    if (role === 'OWNER') return 'Multi-Tenant Owner';
     return 'Cashier';
   }
 
@@ -120,6 +144,7 @@ export class ShellComponent {
       F9: '/management/settings',
     };
     const route = routes[event.key];
+    if (this.session.isOwner() && !['F1', 'F8'].includes(event.key)) return;
     if (!route || (!this.session.isAdmin() && ['F4', 'F5', 'F6', 'F7', 'F9'].includes(event.key))) return;
     event.preventDefault();
     void this.openPage(route);

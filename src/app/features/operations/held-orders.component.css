@@ -104,3 +104,8 @@
   :host([data-view='holds']) .preview-totals > strong { padding:10px; }
   :host([data-view='holds']) .preview-actions { margin-top:8px; }
 }
+.kot-filter-bar { display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:16px; }
+.kot-filter-bar .status-tabs { margin-bottom:0; }
+.kot-completed-date { display:grid;gap:4px;color:#75401f; }
+.kot-completed-date small { color:#8b796c;font-size:9px;text-transform:uppercase;letter-spacing:.08em; }
+@media(max-width:800px){.kot-filter-bar{align-items:stretch;flex-direction:column}.kot-filter-bar .status-tabs{overflow-x:auto}.kot-completed-date{width:max-content}}

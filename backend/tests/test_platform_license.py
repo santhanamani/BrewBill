@@ -25,7 +25,7 @@ def test_device_activation_issues_verifiable_tenant_license() -> None:
     now = datetime.now(UTC)
     with testing_session() as session:
         tenant = Tenant(id=str(uuid4()), name='License Tenant', status='ACTIVE')
-        outlet = Outlet(id=str(uuid4()), tenant_id=tenant.id, code='LIC01', name='License Outlet')
+        outlet = Outlet(id=str(uuid4()), tenant_id=tenant.id, code='LICA', name='License Outlet')
         role = Role(id=str(uuid4()), code='LICENSE_ADMIN', name='License Admin')
         user = User(
             id=str(uuid4()), tenant_id=tenant.id, outlet_id=outlet.id, role_id=role.id,

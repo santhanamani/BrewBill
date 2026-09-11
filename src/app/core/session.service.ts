@@ -3,16 +3,20 @@ import { BrewBillApiService } from './brew-bill-api.service';
 import { CurrentUser, MfaChallenge, PlatformContext } from './models/api.models';
 import { AuthTokenStoreService } from './auth-token-store.service';
 import { CurrencyService } from './currency.service';
+import { OutletContextService } from './outlet-context.service';
 
 @Injectable({ providedIn: 'root' })
 export class SessionService {
   private readonly tokenStore = inject(AuthTokenStoreService);
   private readonly currency = inject(CurrencyService);
+  private readonly outletContext = inject(OutletContextService);
   readonly accessToken = this.tokenStore.accessToken;
   readonly refreshToken = this.tokenStore.refreshToken;
   readonly user = signal<CurrentUser | null>(null);
   readonly context = signal<PlatformContext | null>(null);
   readonly licenseMessage = signal('');
+  readonly licensedTerminalCode = signal('');
+  readonly licensedOutletId = signal('');
   readonly restoreMessage = signal('');
   private lifecycle = 0;
   readonly isAuthenticated = computed(() => this.accessToken() !== null && this.user() !== null);
@@ -20,6 +24,7 @@ export class SessionService {
     ['ADMIN', 'TENANT_ADMIN', 'SUPER_ADMIN'].includes(this.user()?.role_code ?? ''),
   );
   readonly isSuperAdmin = computed(() => this.user()?.role_code === 'SUPER_ADMIN');
+  readonly isOwner = computed(() => this.user()?.role_code === 'OWNER');
   private licenseRefreshTimer: number | undefined;
   private licenseRefreshPromise: Promise<boolean> | null = null;
 
@@ -104,12 +109,15 @@ export class SessionService {
     root.style.setProperty('--brand-secondary', context.branding.secondary_color ?? '#C8874A');
     this.currency.configure(context.currency);
     this.licenseMessage.set('');
-    if(verifyLicense)void this.ensureDesktopLicense();
+    this.licensedTerminalCode.set('');
+    this.licensedOutletId.set('');
+    this.outletContext.clear();
+    if(verifyLicense && user.role_code !== 'OWNER' && !!user.outlet_id)void this.ensureDesktopLicense(user.outlet_id);
     if (this.licenseRefreshTimer) window.clearInterval(this.licenseRefreshTimer);
-    this.licenseRefreshTimer = window.setInterval(
-      () => void this.ensureDesktopLicense(),
+    this.licenseRefreshTimer = user.outlet_id ? window.setInterval(
+      () => void this.ensureDesktopLicense(user.outlet_id!),
       6 * 60 * 60 * 1000,
-    );
+    ) : undefined;
   }
 
   clear(): void {
@@ -121,9 +129,25 @@ export class SessionService {
     this.context.set(null);
     this.currency.reset();
     this.licenseMessage.set('');
+    this.licensedTerminalCode.set('');
+    this.licensedOutletId.set('');
+    this.outletContext.clear();
   }
 
-  async ensureDesktopLicense(): Promise<boolean> {
+  async refreshContext():Promise<void> {
+    const token=this.accessToken(),user=this.user();
+    if(!token||!user||this.isSuperAdmin()||this.isOwner())return;
+    const context=await this.api.getPlatformContext(token);
+    this.validateContext(user,context);
+    this.context.set(context);
+    const root=document.documentElement;
+    root.style.setProperty('--brand-primary',context.branding.primary_color??'#5A2D18');
+    root.style.setProperty('--brand-secondary',context.branding.secondary_color??'#C8874A');
+    this.currency.configure(context.currency);
+  }
+
+  async ensureDesktopLicense(outletId?: string): Promise<boolean> {
+    if (this.isOwner()) return true;
     if (!window.brewBill) return true;
     const accessToken = this.accessToken();
     if (!accessToken) {
@@ -133,7 +157,7 @@ export class SessionService {
     if (this.licenseRefreshPromise) return this.licenseRefreshPromise;
 
     const lifecycle = this.lifecycle;
-    const refresh = this.activateDesktopLicense(accessToken, lifecycle);
+    const refresh = this.activateDesktopLicense(accessToken, lifecycle, outletId);
     this.licenseRefreshPromise = refresh;
     try {
       return await refresh;
@@ -142,24 +166,29 @@ export class SessionService {
     }
   }
 
-  private async activateDesktopLicense(accessToken: string, lifecycle: number): Promise<boolean> {
+  private async activateDesktopLicense(accessToken: string, lifecycle: number, outletId?: string): Promise<boolean> {
     try {
       const identity = await window.brewBill!.license.identity();
       const envelope = await this.api.activateDevice(accessToken, {
         installation_id: identity.installationId,
         terminal_code: identity.terminalCode,
         terminal_name: `BrewBill ${identity.terminalCode}`,
+        ...(outletId ? { outlet_id: outletId } : {}),
       });
       if (lifecycle !== this.lifecycle || accessToken !== this.accessToken()) return false;
       const license = await window.brewBill!.license.install(envelope);
       if (lifecycle !== this.lifecycle || accessToken !== this.accessToken()) return false;
       this.licenseMessage.set(license.message);
+      this.licensedTerminalCode.set(String(envelope.payload['terminal_code'] ?? identity.terminalCode));
+      this.licensedOutletId.set(String(envelope.payload['outlet_id'] ?? outletId ?? ''));
       return license.canCreateBills;
     } catch (error) {
       if (lifecycle === this.lifecycle) {
-        this.licenseMessage.set(
-          error instanceof Error ? error.message : 'Device license verification failed.',
-        );
+        const response = error as { error?: { detail?: unknown } | string; message?: string };
+        const detail = typeof response?.error === 'string'
+          ? response.error
+          : typeof response?.error?.detail === 'string' ? response.error.detail : response?.message;
+        this.licenseMessage.set(detail || 'Device license verification failed.');
       }
       return false;
     }

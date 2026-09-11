@@ -1,6 +1,10 @@
-:host .tenant-login-hero { background:#faf7f2; }
+:host .tenant-login-screen { background:#fff; }
+:host .tenant-login-hero { background:#fffaf5; }
 .tenant-hero-image { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-:host .tenant-login-hero::before { content:''; position:absolute; inset:0; z-index:1; background:linear-gradient(90deg,#faf7f2f2 0%,#faf7f2b0 42%,transparent 90%); pointer-events:none; }
+:host .tenant-login-hero::before { content:''; position:absolute; inset:0; z-index:1; background:linear-gradient(90deg,rgba(255,255,255,.98) 0%,rgba(255,251,246,.88) 48%,rgba(255,255,255,.28) 100%); pointer-events:none; }
+:host .tenant-login-main { background:linear-gradient(135deg,#fff 0%,#fffcf8 100%); }
+:host .tenant-login-card { background:rgba(255,255,255,.98); border-color:#eadfd5; box-shadow:0 22px 65px rgba(74,44,25,.10); }
+:host .selected-tenant { background:#fff; }
 :host .tenant-login-hero .login-brand,:host .tenant-login-hero .hero-copy { z-index:2; }
 :host .login-brand b { overflow-wrap:anywhere; line-height:1.15; }
 :host .login-brand .brand-mark { object-fit:contain; border-radius:50%; background:#fff; }

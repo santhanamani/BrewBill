@@ -3,7 +3,8 @@ param(
   [string]$AppUser = 'brewbill',
   [string]$DatabaseName = 'brewbill',
   [string]$DatabaseHost = '127.0.0.1',
-  [int]$DatabasePort = 5432
+  [int]$DatabasePort = 5432,
+  [switch]$SkipSeed
 )
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
@@ -28,8 +29,10 @@ try {
   Push-Location $backendRoot
   & $python -m alembic upgrade head
   if ($LASTEXITCODE -ne 0) { throw 'Alembic migration failed.' }
-  & $python -m app.seed
-  if ($LASTEXITCODE -ne 0) { throw 'Database seed failed.' }
+  if (-not $SkipSeed) {
+    & $python -m app.seed
+    if ($LASTEXITCODE -ne 0) { throw 'Database seed failed.' }
+  }
 
   $grantFile = New-TemporaryFile
   try {

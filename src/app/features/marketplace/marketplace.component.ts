@@ -3,6 +3,7 @@ import { BrewBillApiService } from '../../core/brew-bill-api.service';
 import { CurrencyService } from '../../core/currency.service';
 import { MarketplaceOrder, MarketplaceOrderStatus, MarketplaceProvider, MarketplaceSummary } from '../../core/models/api.models';
 import { SessionService } from '../../core/session.service';
+import { timedSignal } from '../../core/timed-signal';
 
 @Component({ selector:'app-marketplace', templateUrl:'./marketplace.component.html', styleUrl:'./marketplace.component.css' })
 export class MarketplaceComponent {
@@ -14,7 +15,7 @@ export class MarketplaceComponent {
   readonly loading=signal(true);
   readonly working=signal('');
   readonly error=signal('');
-  readonly notice=signal('');
+  readonly notice=timedSignal();
   readonly notificationPermission=signal<NotificationPermission>(
     'Notification' in window ? Notification.permission : 'denied',
   );

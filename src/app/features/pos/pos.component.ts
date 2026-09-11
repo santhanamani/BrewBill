@@ -9,6 +9,8 @@ import { RuntimeConfigService } from '../../core/runtime-config.service';
 import { SessionService } from '../../core/session.service';
 import { ReceiptPayload, ReceiptPrinterService } from '../../core/receipt-printer.service';
 import { CurrencyService } from '../../core/currency.service';
+import { timedSignal } from '../../core/timed-signal';
+import { OutletContextService } from '../../core/outlet-context.service';
 
 @Component({
   selector: 'app-pos',
@@ -23,10 +25,12 @@ export class PosComponent {
   private readonly session = inject(SessionService);
   private readonly heldCart = inject(HeldCartService);
   private readonly receiptPrinter = inject(ReceiptPrinterService);
+  private readonly outletContext = inject(OutletContextService);
   readonly currency = inject(CurrencyService);
 
   readonly products = signal<Product[]>([]);
   readonly categories = signal<Category[]>([]);
+  readonly selectedOutletId = this.outletContext.selectedOutletId;
   readonly activeCategoryId = signal<string | null>(null);
   readonly search = signal('');
   readonly favouritesOnly = signal(false);
@@ -35,7 +39,7 @@ export class PosComponent {
   readonly loading = signal(true);
   readonly submitting = signal(false);
   readonly error = signal('');
-  readonly notice = signal('');
+  readonly notice = timedSignal();
   readonly billExpanded = signal(false);
   readonly resumedHoldId = signal<string | null>(null);
   readonly selectedProduct = signal<Product | null>(null);
@@ -95,8 +99,7 @@ export class PosComponent {
   );
 
   constructor() {
-    void this.loadCatalog();
-    void this.loadPaymentTerminal();
+    void Promise.all([this.loadCatalog(), this.loadPaymentTerminal()]);
   }
 
   @HostListener('document:keydown.escape')
@@ -130,7 +133,11 @@ export class PosComponent {
     this.loading.set(true);
     this.error.set('');
     try {
-      const catalog = await this.catalog.load(token);
+      const outletId = this.selectedOutletId();
+      if (this.outletContext.canSelect() && !outletId) {
+        throw new Error('No active outlet is available for this tenant. Create an outlet before using POS.');
+      }
+      const catalog = await this.catalog.load(token, outletId || undefined);
       this.categories.set(catalog.categories);
       this.products.set(catalog.products);
       const held = this.heldCart.take();
@@ -170,7 +177,7 @@ export class PosComponent {
     if (!token || this.savingFavourites().has(product.id)) return;
     this.savingFavourites.update(ids => new Set([...ids, product.id]));
     try {
-      const saved = await this.api.setProductFavourite(token, product.id, !product.is_favourite);
+      const saved = await this.api.setProductFavourite(token, product.id, !product.is_favourite, this.selectedOutletId() || undefined);
       this.products.update(products => products.map(row => row.id === product.id ? { ...row, is_favourite: saved.is_favourite } : row));
       this.notify(`${product.name} ${saved.is_favourite ? 'added to' : 'removed from'} favourites.`);
     } catch (error) {
@@ -357,7 +364,8 @@ export class PosComponent {
       const saleRoundOff = this.roundOff();
       const result = await this.api.createOrder(token, {
         order_id: orderId,
-        terminal_code: this.runtime.config().terminalCode,
+        terminal_code: this.session.licensedTerminalCode() || this.runtime.config().terminalCode,
+        ...(this.selectedOutletId() ? { outlet_id: this.selectedOutletId() } : {}),
         items: saleLines.map((line) => ({
           product_id: line.id,
           variant_id: line.selected_variant_id,
@@ -463,7 +471,8 @@ export class PosComponent {
     this.submitting.set(true);
     try {
       const result = await this.api.createHold(token, {
-        terminal_code: this.runtime.config().terminalCode,
+        terminal_code: this.session.licensedTerminalCode() || this.runtime.config().terminalCode,
+        ...(this.selectedOutletId() ? { outlet_id: this.selectedOutletId() } : {}),
         items: this.cart().map((line) => ({
           product_id: line.id,
           variant_id: line.selected_variant_id,
@@ -483,7 +492,7 @@ export class PosComponent {
 
   private async canCreateBills(): Promise<boolean> {
     if (!window.brewBill) return true;
-    if (!(await this.session.ensureDesktopLicense())) {
+    if (!(await this.session.ensureDesktopLicense(this.selectedOutletId() || undefined))) {
       this.notify(this.session.licenseMessage() || 'Unable to activate this POS terminal.');
       return false;
     }
@@ -523,7 +532,6 @@ export class PosComponent {
 
   private notify(message: string): void {
     this.notice.set(message);
-    window.setTimeout(() => this.notice.set(''), 3500);
   }
 
   private errorMessage(error: unknown, fallback: string): string {

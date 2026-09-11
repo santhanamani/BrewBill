@@ -1,6 +1,6 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, firstValueFrom, timeout } from 'rxjs';
+import { Observable, catchError, firstValueFrom, throwError, timeout } from 'rxjs';
 import {
   Category,
   CurrentUser,
@@ -43,13 +43,18 @@ import {
   MarketplaceOrderStatus,
   MarketplaceProvider,
   MarketplaceSummary,
+  TenantMessage,
+  TenantMessageUser,
+  OwnerTenantScope,
 } from './models/api.models';
 import { RuntimeConfigService } from './runtime-config.service';
+import { OutletContextService } from './outlet-context.service';
 
 @Injectable({ providedIn: 'root' })
 export class BrewBillApiService {
   private readonly http = inject(HttpClient);
   private readonly runtime = inject(RuntimeConfigService);
+  private readonly outletContext = inject(OutletContextService);
 
   login(username: string, password: string, tenantCode?: string): Promise<LoginResponse | MfaChallenge> {
     return this.request(
@@ -193,7 +198,7 @@ export class BrewBillApiService {
   createTenant(
     accessToken: string,
     body: {
-      code: string; name: string; outlet_code: string; outlet_name: string;
+      code: string; name: string; outlet_name: string;
       outlet_address: string | null; admin_username: string; admin_password: string;
       admin_display_name: string; plan_code: string; currency_code?: string;
     },
@@ -209,7 +214,11 @@ export class BrewBillApiService {
     return this.get<AdminOutlet[]>(accessToken, `/platform/admin/outlets${tenantId ? `?tenant_id=${encodeURIComponent(tenantId)}` : ''}`);
   }
 
-  createAdminOutlet(accessToken: string, body: {tenant_id:string;code:string;name:string;address:string|null}): Promise<AdminOutlet> {
+  listTenantOutlets(accessToken: string): Promise<AdminOutlet[]> {
+    return this.get<AdminOutlet[]>(accessToken, '/platform/outlets');
+  }
+
+  createAdminOutlet(accessToken: string, body: {tenant_id:string;name:string;address:string|null}): Promise<AdminOutlet> {
     return this.post<AdminOutlet>(accessToken, '/platform/admin/outlets', body);
   }
 
@@ -221,15 +230,19 @@ export class BrewBillApiService {
     return this.get<AdminUser[]>(accessToken,`/platform/admin/users${tenantId ? `?tenant_id=${encodeURIComponent(tenantId)}` : ''}`);
   }
 
-  createAdminUser(accessToken:string, body:{tenant_id:string;outlet_id:string|null;role_code:AdminUser['role_code'];username:string;display_name:string;email:string|null;phone:string|null;password:string}):Promise<AdminUser>{
+  createAdminUser(accessToken:string, body:{tenant_id:string;outlet_id:string|null;role_code:AdminUser['role_code'];owner_tenant_ids?:string[];username:string;display_name:string;email:string|null;phone:string|null;password:string}):Promise<AdminUser>{
     return this.post<AdminUser>(accessToken,'/platform/admin/users',body);
   }
 
-  updateAdminUser(accessToken:string,userId:string,body:Partial<{outlet_id:string|null;role_code:AdminUser['role_code'];display_name:string;email:string|null;phone:string|null;password:string;is_active:boolean}>):Promise<AdminUser>{
+  updateAdminUser(accessToken:string,userId:string,body:Partial<{outlet_id:string|null;role_code:AdminUser['role_code'];owner_tenant_ids:string[];display_name:string;email:string|null;phone:string|null;password:string;is_active:boolean}>):Promise<AdminUser>{
     return this.request(this.http.patch<AdminUser>(this.runtime.apiUrl(`/platform/admin/users/${userId}`),body,{headers:this.authHeaders(accessToken)}),5000);
   }
 
   listAdminRoles(accessToken:string):Promise<AdminRole[]>{ return this.get<AdminRole[]>(accessToken,'/platform/admin/roles'); }
+
+  listOwnerTenants(accessToken:string):Promise<OwnerTenantScope[]>{
+    return this.get<OwnerTenantScope[]>(accessToken,'/platform/owner/tenants');
+  }
 
   updateGlobalProduct(accessToken:string,productId:string,body:Partial<Omit<GlobalProduct,'id'|'code'>>):Promise<GlobalProduct>{
     return this.request(this.http.patch<GlobalProduct>(this.runtime.apiUrl(`/products/master/${productId}`),body,{headers:this.authHeaders(accessToken)}),5000);
@@ -271,9 +284,9 @@ export class BrewBillApiService {
     );
   }
 
-  listProducts(accessToken: string): Promise<Product[]> {
+  listProducts(accessToken: string, outletId?: string): Promise<Product[]> {
     return this.request(
-      this.http.get<Product[]>(this.runtime.apiUrl('/products'), {
+      this.http.get<Product[]>(this.runtime.apiUrl(`/products${outletId ? `?outlet_id=${encodeURIComponent(outletId)}` : ''}`), {
         headers: this.authHeaders(accessToken),
       }),
       5000,
@@ -289,9 +302,9 @@ export class BrewBillApiService {
     );
   }
 
-  setProductFavourite(accessToken: string, productId: string, favourite: boolean): Promise<Product> {
+  setProductFavourite(accessToken: string, productId: string, favourite: boolean, outletId?: string): Promise<Product> {
     return this.request(this.http.patch<Product>(
-      this.runtime.apiUrl(`/products/${productId}/favourite`),
+      this.runtime.apiUrl(`/products/${productId}/favourite${outletId ? `?outlet_id=${encodeURIComponent(outletId)}` : ''}`),
       { is_favourite: favourite }, { headers: this.authHeaders(accessToken) },
     ), 5000);
   }
@@ -334,7 +347,7 @@ export class BrewBillApiService {
 
   activateDevice(
     accessToken: string,
-    body: { installation_id: string; terminal_code: string; terminal_name: string },
+    body: { installation_id: string; terminal_code: string; terminal_name: string; outlet_id?: string },
   ): Promise<LicenseEnvelope> {
     return this.post<LicenseEnvelope>(accessToken, '/platform/device/activate', body);
   }
@@ -357,9 +370,15 @@ export class BrewBillApiService {
     );
   }
 
-  listOrders(accessToken: string): Promise<OrderListItem[]> {
+  listOrders(accessToken: string, fromDate?: string, toDate?: string, tenantId?: string, outletId?: string): Promise<OrderListItem[]> {
+    const params = new URLSearchParams();
+    if (fromDate) params.set('from_date', fromDate);
+    if (toDate) params.set('to_date', toDate);
+    if (tenantId) params.set('tenant_id', tenantId);
+    if (outletId) params.set('outlet_id', outletId);
+    const query = params.size ? `?${params.toString()}` : '';
     return this.request(
-      this.http.get<OrderListItem[]>(this.runtime.apiUrl('/orders'), {
+      this.http.get<OrderListItem[]>(this.runtime.apiUrl(`/orders${query}`), {
         headers: this.authHeaders(accessToken),
       }),
       2500,
@@ -389,9 +408,10 @@ export class BrewBillApiService {
     return this.post<OrderResult>(accessToken, `/orders/${orderId}/void`, { reason });
   }
 
-  listKots(accessToken: string): Promise<KotTicket[]> {
+  listKots(accessToken: string, completedDate?: string): Promise<KotTicket[]> {
+    const query = completedDate ? `?completed_date=${encodeURIComponent(completedDate)}` : '';
     return this.request(
-      this.http.get<KotTicket[]>(this.runtime.apiUrl('/kot'), {
+      this.http.get<KotTicket[]>(this.runtime.apiUrl(`/kot${query}`), {
         headers: this.authHeaders(accessToken),
       }),
       2500,
@@ -406,6 +426,7 @@ export class BrewBillApiService {
     accessToken: string,
     body: {
       terminal_code: string;
+      outlet_id?: string;
       items: Array<{ product_id: string; variant_id?: string | null; quantity: number }>;
     },
   ): Promise<HeldBill> {
@@ -503,10 +524,13 @@ export class BrewBillApiService {
     );
   }
 
-  getDashboard(accessToken: string, fromDate?: string, toDate?: string): Promise<DashboardMetric> {
-    const range = fromDate && toDate
-      ? `?from_date=${encodeURIComponent(fromDate)}&to_date=${encodeURIComponent(toDate)}`
-      : '';
+  getDashboard(accessToken: string, fromDate?: string, toDate?: string, tenantId?: string, outletId?: string): Promise<DashboardMetric> {
+    const params = new URLSearchParams();
+    if (fromDate) params.set('from_date', fromDate);
+    if (toDate) params.set('to_date', toDate);
+    if (tenantId) params.set('tenant_id', tenantId);
+    if (outletId) params.set('outlet_id', outletId);
+    const range = params.size ? `?${params.toString()}` : '';
     return this.request(
       this.http.get<DashboardMetric>(this.runtime.apiUrl(`/dashboard${range}`), {
         headers: this.authHeaders(accessToken),
@@ -529,6 +553,17 @@ export class BrewBillApiService {
 
   createPurchase(accessToken: string, body: PurchaseCreate): Promise<Purchase> {
     return this.post<Purchase>(accessToken, '/purchases', body);
+  }
+
+  updatePurchase(accessToken: string, purchaseId: string, body: PurchaseCreate): Promise<Purchase> {
+    return this.request(
+      this.http.patch<Purchase>(
+        this.runtime.apiUrl(`/purchases/${purchaseId}`),
+        body,
+        { headers: this.authHeaders(accessToken) },
+      ),
+      5000,
+    );
   }
 
   listExpenses(accessToken: string): Promise<Expense[]> {
@@ -655,6 +690,30 @@ export class BrewBillApiService {
     return this.post<Category>(accessToken, '/categories', body);
   }
 
+  listMessageUsers(accessToken: string): Promise<TenantMessageUser[]> {
+    return this.get<TenantMessageUser[]>(accessToken, '/messages/users');
+  }
+
+  listMessages(accessToken: string): Promise<TenantMessage[]> {
+    return this.get<TenantMessage[]>(accessToken, '/messages');
+  }
+
+  listSentMessages(accessToken: string): Promise<TenantMessage[]> {
+    return this.get<TenantMessage[]>(accessToken, '/messages/sent');
+  }
+
+  sendMessage(accessToken: string, body: { audience: 'DIRECT' | 'GROUP'; recipient_user_id: string | null; subject: string; body: string; reply_to_id?: string | null }): Promise<{ delivered: number }> {
+    return this.post<{ delivered: number }>(accessToken, '/messages', body);
+  }
+
+  markMessageRead(accessToken: string, messageId: string): Promise<TenantMessage> {
+    return this.post<TenantMessage>(accessToken, `/messages/${messageId}/read`, {});
+  }
+
+  reactToMessage(accessToken: string, messageId: string, emoji: string): Promise<TenantMessage> {
+    return this.post<TenantMessage>(accessToken, `/messages/${messageId}/reactions`, { emoji });
+  }
+
   private get<T>(accessToken: string, path: string): Promise<T> {
     return this.request(
       this.http.get<T>(this.runtime.apiUrl(path), { headers: this.authHeaders(accessToken) }),
@@ -672,10 +731,29 @@ export class BrewBillApiService {
   }
 
   private authHeaders(accessToken: string): HttpHeaders {
-    return new HttpHeaders({ Authorization: `Bearer ${accessToken}` });
+    const outletId = this.outletContext.selectedOutletId();
+    return new HttpHeaders({
+      Authorization: `Bearer ${accessToken}`,
+      ...(outletId ? { 'X-BrewBill-Outlet': outletId } : {}),
+    });
   }
 
   private request<T>(request: Observable<T>, timeoutMs: number): Promise<T> {
-    return firstValueFrom(request.pipe(timeout({ first: timeoutMs })));
+    return firstValueFrom(request.pipe(
+      timeout({ first: timeoutMs }),
+      catchError((error: unknown) => {
+        if (error instanceof HttpErrorResponse) {
+          const detail = typeof error.error?.detail === 'string' ? error.error.detail : null;
+          if (detail) return throwError(() => new Error(detail));
+          if (error.status === 0) {
+            return throwError(() => new Error(
+              'Unable to connect to the BrewBill backend. Confirm the backend service is running, then retry.',
+            ));
+          }
+          return throwError(() => new Error(`Request failed (${error.status}). Please retry.`));
+        }
+        return throwError(() => error);
+      }),
+    ));
   }
 }

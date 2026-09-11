@@ -24,7 +24,7 @@ def catalogue(tmp_path):
         other = Tenant(id=str(uuid4()), code='OTHER', name='Other Cafe', status='ACTIVE')
         master = GlobalProduct(id=str(uuid4()), code='CAP', name='Cappuccino', category_name='Coffee', base_unit='pcs', default_gst=Decimal('5.00'), status='ACTIVE')
         users = []
-        for cafe, code in [(tenant, 'RS-PURAM'), (tenant, 'GANDHIPURAM'), (other, 'MAIN')]:
+        for cafe, code in [(tenant, 'RAAA'), (tenant, 'GAAA'), (other, 'MAAA')]:
             outlet = Outlet(id=str(uuid4()), tenant_id=cafe.id, code=code, name=code)
             user = User(id=str(uuid4()), tenant_id=cafe.id, outlet_id=outlet.id, role_id=role.id, username=code, display_name=code, password_hash='x', is_active=True)
             user.role = role
@@ -107,3 +107,32 @@ def test_auth_and_untrusted_context_and_missing_expected_stock(catalogue):
     active['user'].role = Role(id=str(uuid4()),code='CASHIER',name='Cashier')
     assert client.patch(url, json={'stock_quantity':'35','expected_stock_quantity':'40'}).status_code == 403
     assert client.get('/api/products/catalogue').json()[0]['stock_quantity'] == '40.000'
+
+
+def test_all_outlet_admin_can_select_only_an_outlet_in_own_tenant(catalogue):
+    client, active, users, mappings, _, _ = catalogue
+    all_outlet_admin = users[0]
+    first_outlet_id = all_outlet_admin.outlet_id
+    all_outlet_admin.outlet_id = None
+    active['user'] = all_outlet_admin
+
+    outlets = client.get('/api/platform/outlets')
+    assert outlets.status_code == 200, outlets.text
+    own_outlet_ids = {row['id'] for row in outlets.json()}
+    assert own_outlet_ids == {first_outlet_id, users[1].outlet_id}
+
+    selected_outlet_id = users[1].outlet_id
+    products = client.get('/api/products', params={'outlet_id': selected_outlet_id})
+    assert products.status_code == 200, products.text
+    assert products.json()[0]['stock_quantity'] == '25.000'
+
+    favourite = client.patch(
+        f'/api/products/{mappings[1]["legacy_product_id"]}/favourite',
+        params={'outlet_id': selected_outlet_id},
+        json={'is_favourite': True},
+    )
+    assert favourite.status_code == 200, favourite.text
+    assert favourite.json()['is_favourite'] is True
+
+    cross_tenant = client.get('/api/products', params={'outlet_id': users[2].outlet_id})
+    assert cross_tenant.status_code == 422

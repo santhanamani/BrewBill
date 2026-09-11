@@ -6,6 +6,11 @@
 :host([data-view='reports']) .title-with-icon > span { display:grid; place-items:center; width:58px; height:60px; border-radius:14px; color:#805735; background:#f2eade; font-size:33px; }
 :host([data-view='reports']) .view-head .search-box { display:none; }
 :host([data-view='reports']) .filter-row button { min-height:44px; padding:0 18px; background:#fff; border:1px solid #e4d9cb; border-radius:9px; color:#795437; font-weight:650; box-shadow:none; }
+:host([data-view='reports']) .owner-report-scope { display:flex; gap:8px; }
+:host([data-view='reports']) .owner-report-scope label { min-width:170px; display:grid; gap:2px; padding:5px 9px; border:1px solid #e4d9cb; border-radius:9px; background:#fff; }
+:host([data-view='reports']) .owner-report-scope small { color:#8b7767; font-size:8px; font-weight:750; letter-spacing:.05em; text-transform:uppercase; }
+:host([data-view='reports']) .owner-report-scope select { min-height:23px; padding:0 22px 0 0; border:0; background-color:transparent; color:#4b3525; font-size:11px; font-weight:700; }
+:host([data-view='reports']) .owner-read-only { color:#8a796a; font-size:11px; font-weight:700; }
 :host([data-view='reports']) .metric-grid { gap:14px; margin-bottom:20px; }
 :host([data-view='reports']) .metric { min-width:0; min-height:106px; padding:16px; gap:15px; border:1px solid #e9e0d5; border-radius:13px; background:#fff; box-shadow:0 3px 12px #60402005; }
 :host([data-view='reports']) .metric-icon { width:56px; height:58px; border-radius:13px; flex-shrink:0; color:#805735; background:#f4eee5; }
@@ -27,10 +32,12 @@
 :host([data-view='reports']) .report-picker summary > span { font-size:19px; }
 :host([data-view='reports']) .report-picker[open] { z-index:30; }
 :host([data-view='reports']) .report-picker[open] summary { background:#f4eadb; }
-:host([data-view='reports']) .report-filter-menu { position:absolute; top:calc(100% + 8px); right:0; width:225px; padding:14px; display:grid; gap:12px; border:1px solid #e1d2bf; border-radius:12px; background:#fffdfa; box-shadow:0 8px 24px #6040201c; }
+:host([data-view='reports']) .report-filter-menu { position:absolute; top:calc(100% + 8px); right:0; width:320px; padding:14px; display:grid; gap:12px; border:1px solid #e1d2bf; border-radius:12px; background:#fffdfa; box-shadow:0 8px 24px #6040201c; }
 :host([data-view='reports']) .report-filter-menu label { display:grid; gap:6px; color:#856a51; font-size:12px; }
-:host([data-view='reports']) .report-filter-menu select { width:100%; min-height:36px; padding:7px; background:white; border:1px solid #e4d9cb; border-radius:7px; color:#584635; }
+:host([data-view='reports']) .report-filter-menu select,:host([data-view='reports']) .report-filter-menu input { width:100%; min-height:36px; padding:7px; background:white; border:1px solid #e4d9cb; border-radius:7px; color:#584635; }
 :host([data-view='reports']) .report-filter-menu button { min-height:34px; border:1px solid #dcc8ad; border-radius:7px; background:#f4ebdd; color:#805735; }
+:host([data-view='reports']) .report-date-fields,:host([data-view='reports']) .report-filter-actions { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+:host([data-view='reports']) .report-filter-actions .apply { color:#fff; background:#754019; }
 :host([data-view='reports']) .table-scroll { max-height:calc(100dvh - 425px); min-height:120px; overflow:auto; border-radius:9px; }
 :host([data-view='reports']) table { width:100%; border-collapse:collapse; }
 :host([data-view='reports']) th { position:sticky; top:0; z-index:1; padding:13px 10px; background:#f6f2ed; color:#6b5441; font-size:12px; font-weight:700; white-space:nowrap; }
@@ -57,15 +64,11 @@
 :host([data-view='reports']) button:disabled { opacity:.45; }
 :host([data-view='reports']) button:focus-visible,:host([data-view='reports']) input:focus-visible,:host([data-view='reports']) select:focus-visible,:host([data-view='reports']) summary:focus-visible { outline:2px solid #af895e; outline-offset:2px; }
 @media(max-width:900px) { :host([data-view='reports']) .metric-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } :host([data-view='reports']) .table-scroll { max-height:480px; } }
+@media(max-width:1100px) { :host([data-view='reports']) .owner-report-scope { width:100%; } :host([data-view='reports']) .owner-report-scope label { min-width:0; flex:1; } }
 
 @media(min-width:1200px) {
-  :host([data-view='reports']) { height:calc(100dvh - 208px); min-height:0; display:flex; flex-direction:column; }
-  :host([data-view='reports']) > .view-head,:host([data-view='reports']) > .metric-grid { flex-shrink:0; }
-  :host([data-view='reports']) .reports-table { display:flex; flex-direction:column; flex:0 1 auto; min-height:0; }
-  :host([data-view='reports']) .report-list-title,:host([data-view='reports']) .report-pagination { flex-shrink:0; }
-  :host([data-view='reports']) .table-scroll { min-height:0; max-height:none; flex:1 1 auto; }
+  :host([data-view='reports']) .table-scroll { min-height:360px; max-height:560px; }
 }
-@media(min-width:1200px) and (max-width:1599px) { :host([data-view='reports']) { height:calc(100dvh - 174px); } }
 
 :host([data-view='reports']) .marketplace-report { margin-top:14px; padding:16px; border:1px solid #e7ded2; border-radius:14px; background:#fff; box-shadow:none; }
 :host([data-view='reports']) .marketplace-report > header { display:flex; align-items:center; gap:14px; margin-bottom:12px; }

@@ -35,7 +35,7 @@ def test_super_admin_can_create_tenant_outlet_and_tenant_user() -> None:
     try:
         with TestClient(app) as client:
             tenant_response = client.post('/api/platform/admin/tenants', json={
-                'code':'BHV-CBE','name':'Brew Haven Coimbatore','outlet_code':'MAIN',
+                'code':'BHV-CBE','name':'Brew Haven Coimbatore',
                 'outlet_name':'RS Puram','outlet_address':'Coimbatore',
                 'admin_username':'admin','admin_password':'Temporary@123',
                 'admin_display_name':'Tenant Admin','plan_code':'PROFESSIONAL',
@@ -45,7 +45,7 @@ def test_super_admin_can_create_tenant_outlet_and_tenant_user() -> None:
             assert tenant['code'] == 'BHV-CBE'
 
             same_username_response = client.post('/api/platform/admin/tenants', json={
-                'code':'BHV-MDU','name':'Brew Haven Madurai','outlet_code':'MAIN',
+                'code':'BHV-MDU','name':'Brew Haven Madurai',
                 'outlet_name':'Anna Nagar','outlet_address':'Madurai',
                 'admin_username':'admin','admin_password':'Temporary@123',
                 'admin_display_name':'Madurai Admin','plan_code':'PROFESSIONAL',
@@ -53,7 +53,7 @@ def test_super_admin_can_create_tenant_outlet_and_tenant_user() -> None:
             assert same_username_response.status_code == 201, same_username_response.text
 
             duplicate_code = client.post('/api/platform/admin/tenants', json={
-                'code':'bhv-cbe','name':'A Different Café','outlet_code':'MAIN',
+                'code':'bhv-cbe','name':'A Different Café',
                 'outlet_name':'Main','outlet_address':None,
                 'admin_username':'different','admin_password':'Temporary@123',
                 'admin_display_name':'Different Admin','plan_code':'PROFESSIONAL',
@@ -62,7 +62,7 @@ def test_super_admin_can_create_tenant_outlet_and_tenant_user() -> None:
             assert duplicate_code.json()['detail'] == 'Tenant code "BHV-CBE" already exists.'
 
             duplicate_name = client.post('/api/platform/admin/tenants', json={
-                'code':'OTHER','name':'brew haven coimbatore','outlet_code':'MAIN',
+                'code':'OTHER','name':'brew haven coimbatore',
                 'outlet_name':'Main','outlet_address':None,
                 'admin_username':'different','admin_password':'Temporary@123',
                 'admin_display_name':'Different Admin','plan_code':'PROFESSIONAL',
@@ -71,6 +71,15 @@ def test_super_admin_can_create_tenant_outlet_and_tenant_user() -> None:
             assert duplicate_name.json()['detail'] == 'Café name "brew haven coimbatore" already exists.'
             outlets = client.get(f"/api/platform/admin/outlets?tenant_id={tenant['id']}").json()
             assert len(outlets) == 1
+            all_outlets = client.get('/api/platform/admin/outlets').json()
+            assert len({row['code'] for row in all_outlets}) == len(all_outlets)
+            assert all(len(row['code']) == 4 for row in all_outlets)
+            new_outlet = client.post('/api/platform/admin/outlets', json={
+                'tenant_id': tenant['id'], 'name': 'Race Course', 'address': 'Coimbatore',
+            })
+            assert new_outlet.status_code == 201, new_outlet.text
+            assert len(new_outlet.json()['code']) == 4
+            assert new_outlet.json()['code'] not in {row['code'] for row in all_outlets}
             user_response = client.post('/api/platform/admin/users', json={
                 'tenant_id':tenant['id'],'outlet_id':outlets[0]['id'],'role_code':'CASHIER',
                 'username':'cashier2','display_name':'Cashier Two','email':None,'phone':'9876543210',

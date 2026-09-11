@@ -3,8 +3,8 @@
   "plan": { "code": "PROFESSIONAL", "name": "Professional", "max_terminals": 3, "features": { "inventory": true, "purchases": true, "customer_credit": true, "expenses": true, "reports": true, "tenant_user_management": false, "marketplace_integrations": false, "scheduled_reports": false } },
   "subscription_days": 365,
   "outlets": [
-    { "code": "MDU01", "name": "Brew Haven – RS Puram", "address": "RS Puram, Coimbatore, Tamil Nadu" },
-    { "code": "CHE01", "name": "Brew Haven Chennai", "address": "Chennai, Tamil Nadu" }
+      { "code": "AAAA", "name": "Brew Haven – RS Puram", "address": "RS Puram, Coimbatore, Tamil Nadu" },
+      { "code": "AAAB", "name": "Brew Haven Chennai", "address": "Chennai, Tamil Nadu" }
   ],
   "roles": [
     { "code": "ADMIN", "name": "Administrator" },
@@ -12,11 +12,11 @@
   ],
   "users": [
     { "role_code": "SUPER_ADMIN", "username": "superadmin", "display_name": "Platform Admin", "password": "SuperAdmin@123" },
-    { "outlet_code": "MDU01", "role_code": "ADMIN", "username": "admin", "display_name": "Admin", "password": "Admin@123" },
-    { "outlet_code": "MDU01", "role_code": "CASHIER", "username": "cashier", "display_name": "Cashier", "password": "Cashier@123" }
+      { "outlet_code": "AAAA", "role_code": "ADMIN", "username": "admin", "display_name": "Admin", "password": "Admin@123" },
+      { "outlet_code": "AAAA", "role_code": "CASHIER", "username": "cashier", "display_name": "Cashier", "password": "Cashier@123" }
   ],
   "terminals": [
-    { "outlet_code": "MDU01", "code": "POS01", "name": "RS Puram POS 01", "device_key_hash": "development-only-replace-before-production" }
+      { "outlet_code": "AAAA", "code": "POS01", "name": "RS Puram POS 01", "device_key_hash": "development-only-replace-before-production" }
   ],
   "categories": [
     { "code": "COFFEE", "name": "Coffee", "image_path": "products/photos/filter-coffee.jpg" },

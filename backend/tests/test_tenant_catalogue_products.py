@@ -41,8 +41,8 @@ def tenant_catalogue(tmp_path, monkeypatch):
         super_role = Role(id=str(uuid4()), code='SUPER_ADMIN', name='Platform Admin')
         first_tenant = Tenant(id=str(uuid4()), code='FIRST', name='First Cafe', status='ACTIVE')
         other_tenant = Tenant(id=str(uuid4()), code='OTHER', name='Other Cafe', status='ACTIVE')
-        first_outlet = Outlet(id=str(uuid4()), tenant_id=first_tenant.id, code='MAIN', name='First Main')
-        other_outlet = Outlet(id=str(uuid4()), tenant_id=other_tenant.id, code='MAIN', name='Other Main')
+        first_outlet = Outlet(id=str(uuid4()), tenant_id=first_tenant.id, code='MAAA', name='First Main')
+        other_outlet = Outlet(id=str(uuid4()), tenant_id=other_tenant.id, code='MAAB', name='Other Main')
         first_category = Category(
             id=str(uuid4()), tenant_id=first_tenant.id, code='SPECIALS', name='Specials',
             display_order=1, is_active=True,

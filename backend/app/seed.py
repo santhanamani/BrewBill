@@ -31,13 +31,14 @@ from .models import (
     Tenant,
     User,
 )
+from .outlet_codes import next_outlet_code
 from .security import hash_password
 
 FIXTURE_DIRECTORY = Path(__file__).resolve().parent.parent / 'seed_data'
 ULTRA_FEATURES = {
     'inventory': True, 'purchases': True, 'customer_credit': True,
     'expenses': True, 'reports': True, 'tenant_user_management': True,
-    'marketplace_integrations': True, 'scheduled_reports': True,
+    'marketplace_integrations': True, 'scheduled_reports': True, 'tenant_messaging': True,
 }
 
 
@@ -114,11 +115,17 @@ def import_fixture(session, fixture: dict) -> tuple[str, int, int]:
 
     outlets: dict[str, Outlet] = {}
     for row in fixture.get('outlets', []):
-        outlet = get_or_create(
-            session, Outlet,
-            {'name': row['name'], 'address': row.get('address')},
-            tenant_id=tenant.id, code=row['code'],
-        )
+        outlet = session.scalar(select(Outlet).where(
+            Outlet.tenant_id == tenant.id,
+            Outlet.name == row['name'],
+        ))
+        if outlet is None:
+            outlet = Outlet(
+                id=str(uuid4()), tenant_id=tenant.id, code=next_outlet_code(session),
+                name=row['name'], address=row.get('address'),
+            )
+            session.add(outlet)
+            session.flush()
         outlet.name = row['name']
         outlet.address = row.get('address')
         outlets[row['code']] = outlet
@@ -128,6 +135,7 @@ def import_fixture(session, fixture: dict) -> tuple[str, int, int]:
         roles[row['code']] = get_or_create(session, Role, {'name': row['name']}, code=row['code'])
     roles['SUPER_ADMIN'] = get_or_create(session, Role, {'name': 'Super Administrator'}, code='SUPER_ADMIN')
     roles['TENANT_ADMIN'] = get_or_create(session, Role, {'name': 'Tenant Administrator'}, code='TENANT_ADMIN')
+    roles['OWNER'] = get_or_create(session, Role, {'name': 'Multi-Tenant Owner'}, code='OWNER')
 
     for row in fixture.get('users', []):
         get_or_create(

@@ -12,11 +12,11 @@ export interface CatalogResult {
 export class CatalogService {
   private readonly api = inject(BrewBillApiService);
 
-  async load(accessToken: string): Promise<CatalogResult> {
+  async load(accessToken: string, outletId?: string): Promise<CatalogResult> {
     if (!accessToken) throw new Error('Sign in to load the PostgreSQL catalogue.');
     const [categories, products] = await Promise.all([
       this.api.listCategories(accessToken),
-      this.api.listProducts(accessToken),
+      this.api.listProducts(accessToken, outletId),
     ]);
     return {
       source: 'cloud',

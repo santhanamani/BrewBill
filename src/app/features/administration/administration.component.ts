@@ -6,6 +6,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { BrewBillApiService } from '../../core/brew-bill-api.service';
 import { AdminOutlet, AdminUser, CurrencyDefinition, GlobalProduct, TenantAdmin, TenantPaymentPolicy, TenantSubscription } from '../../core/models/api.models';
 import { SessionService } from '../../core/session.service';
+import { timedSignal } from '../../core/timed-signal';
 
 type AdminTab = 'tenants' | 'outlets' | 'products' | 'users' | 'branding';
 type ModalType = 'tenant' | 'tenant-edit' | 'outlet' | 'outlet-edit' | 'user' | 'product' | null;
@@ -57,9 +58,10 @@ export class AdministrationComponent {
   readonly pageIndex = signal(0);
   readonly pageSize = signal(10);
   readonly loading = signal(true);
-  readonly notice = signal('');
+  readonly notice = timedSignal();
   readonly modal = signal<ModalType>(null);
   readonly form = signal<Record<string, string | boolean>>({});
+  readonly ownerTenantIds = signal<string[]>([]);
   readonly draft = signal({ name:'', tagline:'', primary_color:'#5A2D18', secondary_color:'#C8874A', logo_url:'', cover_image_url:'', phone:'', email:'', website:'' });
 
   readonly filteredTenants = computed(() => this.filter(this.tenants(), row => `${row.name} ${row.code} ${row.status}`).filter(row => this.matchesStatus(row.status)));
@@ -78,6 +80,7 @@ export class AdministrationComponent {
   readonly productRows = computed(() => this.page(this.filteredProducts()));
   readonly activeTenants = computed(() => this.tenants().filter(row => row.status === 'ACTIVE').length);
   readonly adminUsers = computed(() => this.users().filter(row => ['ADMIN','TENANT_ADMIN'].includes(row.role_code) && row.is_active).length);
+  readonly cashierUsers = computed(() => this.users().filter(row => row.role_code === 'CASHIER' && row.is_active).length);
   readonly activeUsers = computed(() => this.users().filter(row => row.is_active).length);
   readonly activeProducts = computed(() => this.products().filter(row => row.status === 'ACTIVE').length);
   readonly inactiveProducts = computed(() => this.products().filter(row => row.status !== 'ACTIVE').length);
@@ -162,16 +165,18 @@ export class AdministrationComponent {
   async saveTenantCurrency():Promise<void>{
     const token=this.token(),tenant=this.selected(),version=this.brandSelectionVersion;
     if(!token||!tenant||this.currencySaving())return;
-    const selectedCurrency=this.currencies().find(row=>row.code===this.tenantCurrencyCode());
+    const requestedCode=this.tenantCurrencyCode();
+    const selectedCurrency=this.currencies().find(row=>row.code===requestedCode);
     if(!selectedCurrency){this.currencyFeedback.set('Choose a valid currency from the master list.');return;}
     this.currencySaving.set(true);this.currencyFeedback.set('');
     try{
       const saved=await this.api.updateTenantCurrency(token,tenant.id,selectedCurrency.code);
+      if(saved.code!==requestedCode)throw new Error(`Server saved ${saved.code} instead of ${requestedCode}. Please retry.`);
       if(this.selected()?.id===tenant.id&&version===this.brandSelectionVersion){
         const changed={...tenant,currency_code:saved.code};
         this.selected.set(changed);this.tenants.update(rows=>rows.map(row=>row.id===tenant.id?changed:row));
         this.tenantCurrencyCode.set(saved.code);
-        this.currencyFeedback.set(`${saved.name} (${saved.code}) saved for ${tenant.code} only.`);
+        this.currencyFeedback.set(`${saved.name} (${saved.code}) saved for ${tenant.code}. Tenant screens will refresh automatically.`);
       }
     }catch(error){
       if(this.selected()?.id===tenant.id&&version===this.brandSelectionVersion)this.currencyFeedback.set(this.errorMessage(error));
@@ -243,16 +248,35 @@ export class AdministrationComponent {
   }
   setTab(tab:AdminTab):void{this.tab.set(tab);this.resetFilters();this.filtersOpen.set(false);}
   patchDraft(field:keyof ReturnType<typeof this.draft>,value:string):void{this.draft.update(row=>({...row,[field]:value}));}
-  patchForm(field:string,value:string|boolean):void{this.formError.set('');this.form.update(row=>({...row,[field]:value,...(field==='tenant_id'?{outlet_id:''}:{})}));}
+  patchForm(field:string,value:string|boolean):void{
+    this.formError.set('');this.form.update(row=>({...row,[field]:value,...(field==='tenant_id'?{outlet_id:''}:{})}));
+    if(field==='tenant_id' && this.form()['role_code']==='OWNER')this.ownerTenantIds.update(ids=>[...new Set([String(value),...ids])]);
+  }
+  changeTenantCurrency(code:string):void{
+    const currency=this.currencies().find(row=>row.code===code);
+    if(!currency)return;
+    this.tenantCurrencyCode.set(currency.code);
+    this.currencyFeedback.set(`${currency.name} (${currency.code}) selected — click Save Currency to apply.`);
+  }
+  changeUserRole(value:string):void{
+    this.patchForm('role_code',value);
+    if(value==='OWNER')this.ownerTenantIds.set([String(this.form()['tenant_id'])].filter(Boolean));
+    else this.ownerTenantIds.set([]);
+  }
+  toggleOwnerTenant(tenantId:string,checked:boolean):void{
+    const primary=String(this.form()['tenant_id']);
+    if(tenantId===primary&&!checked)return;
+    this.ownerTenantIds.update(ids=>checked?[...new Set([...ids,tenantId])]:ids.filter(id=>id!==tenantId));
+  }
   editOutlet(row:AdminOutlet):void { this.open('outlet-edit');this.form.set({id:row.id,tenant_id:row.tenant_id,code:row.code,name:row.name,address:row.address??''}); }
 
   open(type:Exclude<ModalType,null>, item?:TenantAdmin):void{
     this.editingProductId.set(null); this.formError.set('');
     this.modal.set(type);
-    if(type==='tenant')this.form.set({code:'',name:'',outlet_code:'MAIN',outlet_name:'',outlet_address:'',admin_username:'admin',admin_password:'',admin_display_name:'',plan_code:'PROFESSIONAL',currency_code:'INR'});
+    if(type==='tenant')this.form.set({code:'',name:'',outlet_name:'',outlet_address:'',admin_username:'admin',admin_password:'',admin_display_name:'',plan_code:'PROFESSIONAL',currency_code:'INR'});
     if(type==='tenant-edit' && item)this.form.set({id:item.id,name:item.name,status:item.status});
-    if(type==='outlet')this.form.set({tenant_id:this.selected()?.id??'',code:'',name:'',address:''});
-    if(type==='user')this.form.set({tenant_id:this.selected()?.id??'',outlet_id:'',role_code:'CASHIER',username:'',display_name:'',email:'',phone:'',password:''});
+    if(type==='outlet')this.form.set({tenant_id:this.selected()?.id??'',name:'',address:''});
+    if(type==='user'){this.form.set({tenant_id:this.selected()?.id??'',outlet_id:'',role_code:'CASHIER',username:'',display_name:'',email:'',phone:'',password:''});this.ownerTenantIds.set([]);}
     if(type==='product')this.form.set({code:'',name:'',category_name:'Coffee',base_unit:'Cup',default_gst:'5.00',image_path:'',description:'',status:'ACTIVE'});
   }
   editProduct(row:GlobalProduct):void {
@@ -278,11 +302,6 @@ export class AdministrationComponent {
       if(this.tenants().some(row=>row.code?.trim().toUpperCase()===code)) return `Tenant code "${code}" already exists.`;
       if(this.tenants().some(row=>row.name.trim().toLocaleLowerCase()===name)) return `Café name "${String(f['name']).trim()}" already exists.`;
     }
-    if(type==='outlet') {
-      const tenantId=String(f['tenant_id']);
-      const code=String(f['code']).trim().toUpperCase();
-      if(this.outlets().some(row=>row.tenant_id===tenantId && row.code.trim().toUpperCase()===code)) return `Outlet code "${code}" already exists for this tenant.`;
-    }
     if(type==='user') {
       const tenantId=String(f['tenant_id']);
       const username=String(f['username']).trim().toLocaleLowerCase();
@@ -296,11 +315,11 @@ export class AdministrationComponent {
     if(duplicateError){this.formError.set(duplicateError);return;}
     this.saving.set(true); this.formError.set('');
     try{
-      if(type==='tenant')await this.api.createTenant(token,{code:String(f['code']).trim().toUpperCase(),name:String(f['name']).trim(),outlet_code:String(f['outlet_code']).trim().toUpperCase(),outlet_name:String(f['outlet_name']).trim(),outlet_address:String(f['outlet_address']).trim()||null,admin_username:String(f['admin_username']).trim(),admin_password:String(f['admin_password']),admin_display_name:String(f['admin_display_name']).trim(),plan_code:String(f['plan_code']).trim().toUpperCase(),currency_code:String(f['currency_code']||'INR').toUpperCase()});
+      if(type==='tenant')await this.api.createTenant(token,{code:String(f['code']).trim().toUpperCase(),name:String(f['name']).trim(),outlet_name:String(f['outlet_name']).trim(),outlet_address:String(f['outlet_address']).trim()||null,admin_username:String(f['admin_username']).trim(),admin_password:String(f['admin_password']),admin_display_name:String(f['admin_display_name']).trim(),plan_code:String(f['plan_code']).trim().toUpperCase(),currency_code:String(f['currency_code']||'INR').toUpperCase()});
       if(type==='tenant-edit')await this.api.updateTenant(token,String(f['id']),{name:String(f['name']),status:String(f['status']) as 'ACTIVE'|'INACTIVE'});
-      if(type==='outlet')await this.api.createAdminOutlet(token,{tenant_id:String(f['tenant_id']),code:String(f['code']).toUpperCase(),name:String(f['name']),address:String(f['address'])||null});
+      if(type==='outlet')await this.api.createAdminOutlet(token,{tenant_id:String(f['tenant_id']),name:String(f['name']),address:String(f['address'])||null});
       if(type==='outlet-edit')await this.api.updateAdminOutlet(token,String(f['id']),{name:String(f['name']).trim(),address:String(f['address']).trim()||null});
-      if(type==='user')await this.api.createAdminUser(token,{tenant_id:String(f['tenant_id']),outlet_id:String(f['outlet_id'])||null,role_code:String(f['role_code']) as AdminUser['role_code'],username:String(f['username']),display_name:String(f['display_name']),email:String(f['email'])||null,phone:String(f['phone'])||null,password:String(f['password'])});
+      if(type==='user')await this.api.createAdminUser(token,{tenant_id:String(f['tenant_id']),outlet_id:String(f['role_code'])==='OWNER'?null:String(f['outlet_id'])||null,role_code:String(f['role_code']) as AdminUser['role_code'],owner_tenant_ids:String(f['role_code'])==='OWNER'?this.ownerTenantIds():[],username:String(f['username']),display_name:String(f['display_name']),email:String(f['email'])||null,phone:String(f['phone'])||null,password:String(f['password'])});
       if(type==='product') {
         const body={code:String(f['code']).trim().toUpperCase(),name:String(f['name']).trim(),category_name:String(f['category_name']).trim(),base_unit:String(f['base_unit']).trim(),default_gst:Number(f['default_gst']).toFixed(2),image_path:String(f['image_path'])||null,description:String(f['description'])||null,status:String(f['status']) as 'ACTIVE'|'INACTIVE'};
         if(this.editingProductId()) { const {code,...changes}=body; await this.api.updateGlobalProduct(token,this.editingProductId()!,changes); }

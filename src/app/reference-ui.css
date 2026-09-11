@@ -143,6 +143,11 @@ html, body { overflow:hidden; }
 .light-topbar .brand b { font-size:24px; line-height:26px; }
 .light-topbar .brand small { font-size:12px; }
 .light-topbar .outlet-context { flex:0 1 226px; min-width:185px !important; }
+.light-topbar .global-outlet-selector { cursor:pointer; }
+.light-topbar .global-outlet-selector > span:last-child { display:flex; flex-direction:column; min-width:0; width:100%; }
+.light-topbar .global-outlet-selector small { color:#8a7567; font-size:9px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; }
+.light-topbar .global-outlet-selector select { width:100%; min-width:0; height:25px; margin:0; padding:0 22px 0 0; border:0; background-color:transparent; color:#24170f; font:700 12px/25px 'DM Sans',Arial,sans-serif; cursor:pointer; text-overflow:ellipsis; }
+.light-topbar .global-outlet-selector select:focus-visible { outline:2px solid #b97c4a; outline-offset:2px; border-radius:4px; }
 .light-topbar .top-meta { flex:0 1 auto; min-width:0; gap:10px; padding-right:17px; font-size:13px; }
 .light-topbar .top-meta b,.light-topbar .top-meta span { white-space:nowrap; }
 .light-topbar .profile { min-width:128px; }

@@ -19,6 +19,9 @@ from ..models import (
     CustomerCreditEntry,
     DailyClosing,
     Expense,
+    Ingredient,
+    IngredientStock,
+    IngredientTransaction,
     Order,
     Payment,
     Product,
@@ -160,20 +163,155 @@ def list_purchases(
         .order_by(Purchase.purchase_date.desc())
         .limit(limit)
     ).all()
-    return [
-        PurchaseRead(
-            id=purchase.id,
-            supplier_name=purchase.supplier.name,
-            invoice_number=purchase.invoice_number,
-            purchase_date=purchase.purchase_date,
-            subtotal=purchase.subtotal,
-            tax=purchase.tax,
-            total=purchase.total,
-            payment_status=purchase.payment_status,
-            item_count=len(purchase.items),
+    return [purchase_view(purchase) for purchase in purchases]
+
+
+def purchase_view(purchase: Purchase) -> PurchaseRead:
+    return PurchaseRead(
+        id=purchase.id,
+        supplier_id=purchase.supplier_id,
+        supplier_name=purchase.supplier.name,
+        invoice_number=purchase.invoice_number,
+        purchase_date=purchase.purchase_date,
+        subtotal=purchase.subtotal,
+        tax=purchase.tax,
+        total=purchase.total,
+        payment_status=purchase.payment_status,
+        item_count=len(purchase.items),
+        notes=purchase.notes,
+        items=[{
+            'product_id': item.product_id,
+            'ingredient_id': item.ingredient_id,
+            'item_name': item.product_name,
+            'quantity': item.quantity,
+            'unit_cost': item.unit_cost,
+            'tax_percent': item.tax_percent,
+            'line_total': item.line_total,
+        } for item in purchase.items],
+    )
+
+
+def ingredient_purchase_stock(
+    session: Session,
+    *,
+    user: User,
+    outlet_id: str,
+    ingredient: Ingredient,
+    quantity_delta: Decimal,
+    transaction_type: str,
+    reference: str,
+) -> None:
+    stock = session.scalar(
+        select(IngredientStock)
+        .where(
+            IngredientStock.tenant_id == user.tenant_id,
+            IngredientStock.outlet_id == outlet_id,
+            IngredientStock.ingredient_id == ingredient.id,
         )
-        for purchase in purchases
-    ]
+        .with_for_update()
+    )
+    if stock is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Inventory stock is not configured for {ingredient.name} in this outlet.',
+        )
+    balance = stock.available_quantity + quantity_delta
+    if balance < 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f'Cannot edit this purchase because {ingredient.name} stock has already been used.',
+        )
+    stock.available_quantity = balance
+    if transaction_type == 'PURCHASE_REVERSAL':
+        stock.stock_added = max(Decimal('0.000'), stock.stock_added + quantity_delta)
+    else:
+        stock.stock_added += quantity_delta
+    session.add(IngredientTransaction(
+        id=str(uuid4()),
+        tenant_id=user.tenant_id,
+        outlet_id=outlet_id,
+        ingredient_id=ingredient.id,
+        transaction_type=transaction_type,
+        quantity_delta=quantity_delta,
+        balance_after=balance,
+        reference=reference,
+        notes='Purchase entry stock update',
+        created_by=user.id,
+    ))
+
+
+def prepare_purchase_items(
+    session: Session,
+    *,
+    body: PurchaseCreate,
+    user: User,
+    outlet_id: str,
+) -> tuple[Decimal, Decimal, list[PurchaseItem]]:
+    product_ids = [line.product_id for line in body.items if line.product_id]
+    ingredient_ids = [line.ingredient_id for line in body.items if line.ingredient_id]
+    products = session.scalars(
+        select(Product)
+        .where(
+            Product.tenant_id == user.tenant_id,
+            Product.id.in_(product_ids),
+            (Product.outlet_id == outlet_id) | (Product.outlet_id.is_(None)),
+        )
+        .with_for_update()
+    ).all() if product_ids else []
+    ingredients = session.scalars(
+        select(Ingredient)
+        .where(
+            Ingredient.tenant_id == user.tenant_id,
+            Ingredient.id.in_(ingredient_ids),
+            Ingredient.is_active.is_(True),
+        )
+        .with_for_update()
+    ).all() if ingredient_ids else []
+    product_by_id = {product.id: product for product in products}
+    ingredient_by_id = {ingredient.id: ingredient for ingredient in ingredients}
+    if len(product_by_id) != len(set(product_ids)):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='One or more products are unavailable for this outlet.')
+    if len(ingredient_by_id) != len(set(ingredient_ids)):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='One or more ingredients are unavailable for this outlet.')
+
+    subtotal = Decimal('0.00')
+    tax = Decimal('0.00')
+    purchase_items: list[PurchaseItem] = []
+    for line in body.items:
+        line_subtotal = money(line.quantity * line.unit_cost)
+        line_tax = money(line_subtotal * line.tax_percent / Decimal('100'))
+        line_total = money(line_subtotal + line_tax)
+        subtotal += line_subtotal
+        tax += line_tax
+        product = product_by_id.get(line.product_id) if line.product_id else None
+        ingredient = ingredient_by_id.get(line.ingredient_id) if line.ingredient_id else None
+        if product is not None:
+            product.purchase_price = line.unit_cost
+            try:
+                adjust_stock(
+                    session, user=user, outlet_id=outlet_id, product=product,
+                    quantity_delta=line.quantity, transaction_type='PURCHASE',
+                    reference_type='PURCHASE', reference_id=body.invoice_number.strip(),
+                )
+            except ValueError as error:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+        elif ingredient is not None:
+            ingredient_purchase_stock(
+                session, user=user, outlet_id=outlet_id, ingredient=ingredient,
+                quantity_delta=line.quantity, transaction_type='PURCHASE',
+                reference=body.invoice_number.strip(),
+            )
+        purchase_items.append(PurchaseItem(
+            id=str(uuid4()),
+            product_id=product.id if product else None,
+            ingredient_id=ingredient.id if ingredient else None,
+            product_name=product.name if product else ingredient.name,
+            quantity=line.quantity,
+            unit_cost=line.unit_cost,
+            tax_percent=line.tax_percent,
+            line_total=line_total,
+        ))
+    return money(subtotal), money(tax), purchase_items
 
 
 @router.post('/purchases', response_model=PurchaseRead, status_code=status.HTTP_201_CREATED)
@@ -191,50 +329,9 @@ def create_purchase(
     if supplier is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Supplier not found.')
 
-    product_ids = [line.product_id for line in body.items]
-    products = session.scalars(
-        select(Product)
-        .where(
-            Product.tenant_id == user.tenant_id,
-            Product.id.in_(product_ids),
-            (Product.outlet_id == outlet_id) | (Product.outlet_id.is_(None)),
-        )
-        .with_for_update()
-    ).all()
-    product_by_id = {product.id: product for product in products}
-    if len(product_by_id) != len(set(product_ids)):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='One or more products are unavailable for this outlet.')
-
-    subtotal = Decimal('0.00')
-    tax = Decimal('0.00')
-    purchase_items: list[PurchaseItem] = []
-    for line in body.items:
-        product = product_by_id[line.product_id]
-        line_subtotal = money(line.quantity * line.unit_cost)
-        line_tax = money(line_subtotal * line.tax_percent / Decimal('100'))
-        line_total = money(line_subtotal + line_tax)
-        subtotal += line_subtotal
-        tax += line_tax
-        product.purchase_price = line.unit_cost
-        adjust_stock(
-            session,
-            user=user,
-            outlet_id=outlet_id,
-            product=product,
-            quantity_delta=line.quantity,
-            transaction_type='PURCHASE',
-            reference_type='PURCHASE',
-            reference_id=body.invoice_number.strip(),
-        )
-        purchase_items.append(PurchaseItem(
-            id=str(uuid4()),
-            product_id=product.id,
-            product_name=product.name,
-            quantity=line.quantity,
-            unit_cost=line.unit_cost,
-            tax_percent=line.tax_percent,
-            line_total=line_total,
-        ))
+    subtotal, tax, purchase_items = prepare_purchase_items(
+        session, body=body, user=user, outlet_id=outlet_id,
+    )
 
     purchase = Purchase(
         id=str(uuid4()),
@@ -244,8 +341,8 @@ def create_purchase(
         created_by=user.id,
         invoice_number=body.invoice_number.strip(),
         purchase_date=body.purchase_date,
-        subtotal=money(subtotal),
-        tax=money(tax),
+        subtotal=subtotal,
+        tax=tax,
         total=money(subtotal + tax),
         payment_status=body.payment_status,
         notes=body.notes,
@@ -258,17 +355,86 @@ def create_purchase(
     except IntegrityError as error:
         session.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='This supplier invoice already exists.') from error
-    return PurchaseRead(
-        id=purchase.id,
-        supplier_name=supplier.name,
-        invoice_number=purchase.invoice_number,
-        purchase_date=purchase.purchase_date,
-        subtotal=purchase.subtotal,
-        tax=purchase.tax,
-        total=purchase.total,
-        payment_status=purchase.payment_status,
-        item_count=len(purchase.items),
+    purchase.supplier = supplier
+    return purchase_view(purchase)
+
+
+@router.patch('/purchases/{purchase_id}', response_model=PurchaseRead)
+def update_purchase(
+    purchase_id: str,
+    body: PurchaseCreate,
+    user: User = Depends(require_role('ADMIN')),
+    session: Session = Depends(get_session),
+) -> PurchaseRead:
+    outlet_id = outlet_id_for(user)
+    purchase = session.scalar(
+        select(Purchase)
+        .where(
+            Purchase.id == purchase_id,
+            Purchase.tenant_id == user.tenant_id,
+            Purchase.outlet_id == outlet_id,
+        )
+        .options(selectinload(Purchase.supplier), selectinload(Purchase.items))
+        .with_for_update()
     )
+    if purchase is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Purchase not found.')
+    supplier = session.scalar(select(Supplier).where(
+        Supplier.id == body.supplier_id,
+        Supplier.tenant_id == user.tenant_id,
+        Supplier.status == 'ACTIVE',
+    ))
+    if supplier is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Supplier not found.')
+
+    for old_item in purchase.items:
+        if old_item.ingredient_id:
+            ingredient = session.scalar(select(Ingredient).where(
+                Ingredient.id == old_item.ingredient_id,
+                Ingredient.tenant_id == user.tenant_id,
+            ))
+            if ingredient is not None:
+                ingredient_purchase_stock(
+                    session, user=user, outlet_id=outlet_id, ingredient=ingredient,
+                    quantity_delta=-old_item.quantity, transaction_type='PURCHASE_REVERSAL',
+                    reference=purchase.invoice_number,
+                )
+        elif old_item.product_id:
+            product = session.scalar(select(Product).where(
+                Product.id == old_item.product_id,
+                Product.tenant_id == user.tenant_id,
+            ))
+            if product is not None:
+                try:
+                    adjust_stock(
+                        session, user=user, outlet_id=outlet_id, product=product,
+                        quantity_delta=-old_item.quantity, transaction_type='PURCHASE_REVERSAL',
+                        reference_type='PURCHASE', reference_id=purchase.invoice_number,
+                    )
+                except ValueError as error:
+                    raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+
+    subtotal, tax, items = prepare_purchase_items(
+        session, body=body, user=user, outlet_id=outlet_id,
+    )
+    purchase.supplier_id = supplier.id
+    purchase.supplier = supplier
+    purchase.invoice_number = body.invoice_number.strip()
+    purchase.purchase_date = body.purchase_date
+    purchase.subtotal = subtotal
+    purchase.tax = tax
+    purchase.total = money(subtotal + tax)
+    purchase.payment_status = body.payment_status
+    purchase.notes = body.notes
+    purchase.items.clear()
+    purchase.items.extend(items)
+    audit(session, user, 'UPDATE', 'PURCHASE', purchase.id)
+    try:
+        session.commit()
+    except IntegrityError as error:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='This supplier invoice already exists.') from error
+    return purchase_view(purchase)
 
 
 @router.get('/expenses', response_model=list[ExpenseRead])
@@ -562,7 +728,10 @@ def list_settings(
     session: Session = Depends(get_session),
 ) -> list[TenantSetting]:
     return list(session.scalars(
-        select(TenantSetting).where(TenantSetting.tenant_id == user.tenant_id).order_by(TenantSetting.setting_key)
+        select(TenantSetting).where(
+            TenantSetting.tenant_id == user.tenant_id,
+            ~TenantSetting.setting_key.startswith('__platform_'),
+        ).order_by(TenantSetting.setting_key)
     ))
 
 
@@ -573,6 +742,8 @@ def update_setting(
     user: User = Depends(require_role('ADMIN')),
     session: Session = Depends(get_session),
 ) -> TenantSetting:
+    if setting_key.startswith('__platform_'):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='This is a platform-managed setting.')
     if not setting_key.replace('_', '').replace('-', '').isalnum() or len(setting_key) > 120:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Invalid setting key.')
     if setting_key.startswith(('swiggy_', 'zomato_', 'zepto_')):

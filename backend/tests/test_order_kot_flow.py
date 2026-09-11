@@ -1,6 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
@@ -46,7 +47,7 @@ def test_order_is_listed_and_creates_a_kot() -> None:
             starts_at=datetime.now(UTC) - timedelta(days=1),
             ends_at=datetime.now(UTC) + timedelta(days=30),
         )
-        outlet = Outlet(id=str(uuid4()), tenant_id=tenant.id, code='T01', name='Test Outlet')
+        outlet = Outlet(id=str(uuid4()), tenant_id=tenant.id, code='TEST', name='Test Outlet')
         role = Role(id=str(uuid4()), code='ADMIN', name='Administrator')
         user = User(
             id=str(uuid4()),
@@ -148,7 +149,7 @@ def test_order_is_listed_and_creates_a_kot() -> None:
             )
             assert response.status_code == 201, response.text
             assert response.json()['grand_total'] == '95.00'
-            assert response.json()['invoice_number'].startswith('BH-T01-POS01-')
+            assert response.json()['invoice_number'].startswith('BH-TEST-POS01-')
             assert client.get('/api/holds').json() == []
 
             orders = client.get('/api/orders')
@@ -167,6 +168,18 @@ def test_order_is_listed_and_creates_a_kot() -> None:
             started = client.patch(f"/api/kot/{ticket['id']}/status", json={'status': 'PREPARING'})
             assert started.status_code == 200
             assert started.json()['status'] == 'PREPARING'
+
+            assert client.patch(f"/api/kot/{ticket['id']}/status", json={'status': 'READY'}).status_code == 200
+            assert client.patch(f"/api/kot/{ticket['id']}/status", json={'status': 'SERVED'}).status_code == 200
+            india_today = datetime.now(UTC).astimezone(ZoneInfo('Asia/Kolkata')).date()
+            completed_today = client.get('/api/kot', params={'completed_date': india_today.isoformat()})
+            assert completed_today.status_code == 200
+            assert [row['id'] for row in completed_today.json()] == [ticket['id']]
+            completed_tomorrow = client.get(
+                '/api/kot', params={'completed_date': (india_today + timedelta(days=1)).isoformat()}
+            )
+            assert completed_tomorrow.status_code == 200
+            assert completed_tomorrow.json() == []
 
             voided = client.post(
                 f"/api/orders/{response.json()['id']}/void",

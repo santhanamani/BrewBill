@@ -4,6 +4,12 @@
     <p>{{ module().detail }}</p>
   </div></div>
   <div class="filter-row">
+    @if (key() === 'reports' && session.isOwner()) {
+      <div class="owner-report-scope" aria-label="Owner report scope">
+        <label><small>Tenant branch</small><select [value]="selectedTenantId()" (change)="changeOwnerTenant($any($event.target).value)">@for(scope of ownerScopes();track scope.tenant_id){<option [value]="scope.tenant_id">{{scope.tenant_name}} · {{scope.tenant_code}}</option>}</select></label>
+        <label><small>Outlet</small><select [value]="selectedOutletId()" (change)="changeOwnerOutlet($any($event.target).value)"><option value="">All outlets</option>@for(outlet of selectedOwnerScope()?.outlets??[];track outlet.id){<option [value]="outlet.id">{{outlet.name}} · {{outlet.code}}</option>}</select></label>
+      </div>
+    }
     @if (key() === 'holds' || key() === 'inventory' || key() === 'reports') {
       <input
         class="search-box"
@@ -179,9 +185,9 @@
     </aside>
   </section>
 } @else if (key() === 'kot') {
-  <div class="status-tabs">
+  <div class="kot-filter-bar"><div class="status-tabs">
     <button [class.active]="kotFilter() === 'ALL'" (click)="setKotFilter('ALL')">
-      All Orders <b>{{ kots().length }}</b></button
+      All Orders <b>{{ openKots() }}</b></button
     ><button [class.active]="kotFilter() === 'NEW'" (click)="setKotFilter('NEW')">
       New <b class="red-count">{{ countStatus('NEW') }}</b></button
     ><button [class.active]="kotFilter() === 'PREPARING'" (click)="setKotFilter('PREPARING')">
@@ -189,9 +195,9 @@
     ><button [class.active]="kotFilter() === 'READY'" (click)="setKotFilter('READY')">
       Ready <b class="green-count">{{ countStatus('READY') }}</b></button
     ><button [class.active]="kotFilter() === 'SERVED'" (click)="setKotFilter('SERVED')">
-      Served <b class="blue-count">{{ countStatus('SERVED') }}</b>
+      Completed <b class="blue-count">{{ completedKots().length }}</b>
     </button>
-  </div>
+  </div>@if(kotFilter()==='SERVED'){<label class="kot-completed-date"><small>Completed date</small><input type="date" [value]="completedKotDate()" (change)="changeCompletedKotDate($any($event.target).value)" /></label>}</div>
   <section class="metric-grid four-metrics">
     <article class="metric">
       <span class="metric-icon brown"
@@ -298,7 +304,12 @@
   <section class="panel table-panel reports-table">
     <div class="panel-title report-list-title"><div class="panel-heading"><span class="material-symbols-outlined">receipt_long</span><div><h2>Order List <small>({{orders().length}} orders)</small></h2><p>View all invoices, payments and order details for your outlet.</p></div></div><input class="search-box" aria-label="Search sales" placeholder="Search invoice, cashier or payment…" [value]="reportSearch()" (input)="setSearch($any($event.target).value)" /><details #reportPicker class="report-picker" (keydown.escape)="reportPicker.open=false" (focusout)="!reportPicker.contains($any($event.relatedTarget)) && (reportPicker.open=false)">
 <summary aria-label="Filter sales reports"><span class="material-symbols-outlined">filter_alt</span>Filter {{reportStatus() || reportPayment() ? '•' : ''}}<span class="material-symbols-outlined">expand_more</span></summary>
-<div class="report-filter-menu"><label>Status<select [value]="reportStatus()" (change)="filterReports('status',$any($event.target).value)"><option value="">All statuses</option><option value="COMPLETED">Completed</option><option value="VOID">Void</option></select></label><label>Payment<select [value]="reportPayment()" (change)="filterReports('payment',$any($event.target).value)"><option value="">All payments</option><option value="CASH">Cash</option><option value="UPI">UPI</option><option value="CARD">Card</option></select></label><button type="button" (click)="filterReports('status','');filterReports('payment','')">Clear filters</button></div>
+<div class="report-filter-menu">
+  <div class="report-date-fields"><label>From<input type="date" [value]="reportFromDate()" (change)="reportFromDate.set($any($event.target).value)" /></label><label>To<input type="date" [value]="reportToDate()" (change)="reportToDate.set($any($event.target).value)" /></label></div>
+  <label>Status<select [value]="reportStatus()" (change)="filterReports('status',$any($event.target).value)"><option value="">All statuses</option><option value="COMPLETED">Completed</option><option value="VOID">Void</option></select></label>
+  <label>Payment<select [value]="reportPayment()" (change)="filterReports('payment',$any($event.target).value)"><option value="">All payments</option><option value="CASH">Cash</option><option value="UPI">UPI</option><option value="CARD">Card</option><option value="CREDIT">Credit</option></select></label>
+  <div class="report-filter-actions"><button type="button" (click)="clearReportFilters();reportPicker.open=false">Clear</button><button class="apply" type="button" (click)="applyReportDates();reportPicker.open=false">Apply</button></div>
+</div>
 </details></div>
     <div class="table-scroll lazy-table">
       <table>
@@ -335,7 +346,10 @@
                 <span class="status-pill" [class.pending]="order.status !== 'COMPLETED'">{{ order.status }}</span>
               </td>
               <td>
-                <div class="report-actions">
+                @if(session.isOwner()) {
+                  <span class="owner-read-only">View only</span>
+                } @else {
+                  <div class="report-actions">
                   <button
                     class="small-button print-row"
                     type="button"
@@ -350,7 +364,8 @@
                       Void
                     </button>
                   }
-                </div>
+                  </div>
+                }
               </td>
             </tr>
           } @empty {

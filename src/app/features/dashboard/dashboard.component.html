@@ -1,8 +1,8 @@
 <section class="view-head dashboard-head">
   <div>
-    <span class="dashboard-eyebrow">ADMIN DASHBOARD</span>
+    <span class="dashboard-eyebrow">{{session.isOwner()?'OWNER PORTFOLIO':'ADMIN DASHBOARD'}}</span>
     <h1>Welcome back, {{ session.user()?.display_name ?? 'Admin' }}!</h1>
-    <p>Live overview of your café operations</p>
+    <p>{{session.isOwner()?'Read-only overview of your assigned tenant branches':!session.user()?.outlet_id?'Tenant-wide overview across all outlets':'Live overview of your café operations'}}</p>
   </div>
   <div class="filter-row dashboard-filters">
     <div class="dashboard-date-control">
@@ -31,7 +31,14 @@
       }
     </div>
     @if (periodLabel() !== 'Today') {<button class="today-shortcut" type="button" [disabled]="loading()" (click)="showToday()"><span class="material-symbols-outlined">today</span>Today</button>}
-    <button type="button" class="outlet-filter"><span class="material-symbols-outlined">location_on</span><span><small>Current Outlet</small>{{ session.context()?.outlet_name }}</span><span class="material-symbols-outlined">expand_more</span></button>
+    @if(session.isOwner()) {
+      <div class="owner-scope-controls" aria-label="Owner dashboard scope">
+        <label><small>Tenant branch</small><select [value]="selectedTenantId()" (change)="changeOwnerTenant($any($event.target).value)">@for(scope of ownerScopes();track scope.tenant_id){<option [value]="scope.tenant_id">{{scope.tenant_name}} · {{scope.tenant_code}}</option>}</select></label>
+        <label><small>Outlet</small><select [value]="selectedOutletId()" (change)="changeOwnerOutlet($any($event.target).value)"><option value="">All outlets</option>@for(outlet of selectedOwnerScope()?.outlets??[];track outlet.id){<option [value]="outlet.id">{{outlet.name}} · {{outlet.code}}</option>}</select></label>
+      </div>
+    } @else {
+      <button type="button" class="outlet-filter"><span class="material-symbols-outlined">location_on</span><span><small>Current Outlet</small>{{ session.context()?.outlet_name ?? 'All outlets' }}</span><span class="material-symbols-outlined">expand_more</span></button>
+    }
   </div>
 </section>
 
@@ -43,15 +50,15 @@
   </div>
 } @else {
   <section class="metric-grid dashboard-metrics">
-    <article class="metric">
+    <button type="button" class="metric" (click)="openMetric('reports')">
       <span class="metric-icon brown"><span class="material-symbols-outlined">payments</span></span>
       <div>
         <small>{{ metricPrefix() }} Sales</small>
         <h2>{{ money(metrics()?.sales_today ?? 0) }}</h2>
         <p>live completed bills</p>
       </div>
-    </article>
-    <article class="metric">
+    </button>
+    <button type="button" class="metric" (click)="openMetric('reports')">
       <span class="metric-icon brown"
         ><span class="material-symbols-outlined">receipt_long</span></span
       >
@@ -60,24 +67,24 @@
         <h2>{{ metrics()?.orders_today ?? 0 }}</h2>
         <p>PostgreSQL orders</p>
       </div>
-    </article>
-    <article class="metric">
+    </button>
+    <button type="button" class="metric" (click)="openMetric('cash')">
       <span class="metric-icon green"><span class="material-symbols-outlined">payments</span></span>
       <div>
         <small>Cash Sales</small>
         <h2>{{ money(metrics()?.cash_sales ?? 0) }}</h2>
         <p>cash payments</p>
       </div>
-    </article>
-    <article class="metric">
+    </button>
+    <button type="button" class="metric" (click)="openMetric('upi')">
       <span class="metric-icon purple"><span class="material-symbols-outlined">qr_code</span></span>
       <div>
         <small>UPI Sales</small>
         <h2>{{ money(metrics()?.upi_sales ?? 0) }}</h2>
         <p>UPI payments</p>
       </div>
-    </article>
-    <article class="metric">
+    </button>
+    <button type="button" class="metric" (click)="openMetric('card')">
       <span class="metric-icon blue"
         ><span class="material-symbols-outlined">credit_card</span></span
       >
@@ -86,8 +93,8 @@
         <h2>{{ money(metrics()?.card_sales ?? 0) }}</h2>
         <p>card payments</p>
       </div>
-    </article>
-    <article class="metric">
+    </button>
+    <button type="button" class="metric" (click)="openMetric('inventory')">
       <span class="metric-icon yellow"
         ><span class="material-symbols-outlined">inventory_2</span></span
       >
@@ -96,8 +103,8 @@
         <h2>{{ lowStockProducts() }}</h2>
         <p>needs attention</p>
       </div>
-    </article>
-    <article class="metric">
+    </button>
+    <button type="button" class="metric" (click)="openMetric('reports')">
       <span class="metric-icon brown"
         ><span class="material-symbols-outlined">request_quote</span></span
       >
@@ -106,8 +113,8 @@
         <h2>{{ money(averageBill()) }}</h2>
         <p>{{ periodLabel() }} average</p>
       </div>
-    </article>
-    <article class="metric">
+    </button>
+    <button type="button" class="metric" (click)="openMetric('reports')">
       <span class="metric-icon green"
         ><span class="material-symbols-outlined">local_cafe</span></span
       >
@@ -116,7 +123,7 @@
         <h2>{{ topProducts()[0]?.product_name ?? 'No sales yet' }}</h2>
         <p>{{ topProducts()[0]?.quantity_sold ?? 0 }} sold</p>
       </div>
-    </article>
+    </button>
   </section>
 
   @if(marketplaceEnabled()){

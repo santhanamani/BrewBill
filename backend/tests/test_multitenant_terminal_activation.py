@@ -27,7 +27,7 @@ def test_same_desktop_can_activate_a_separate_terminal_for_each_tenant() -> None
     with sessions() as session:
         role = Role(id=str(uuid4()), code='ADMIN', name='Administrator')
         plan = SubscriptionPlan(
-            id=str(uuid4()), code='POS_TEST', name='POS Test', max_terminals=1, feature_json='{}'
+            id=str(uuid4()), code='POS_TEST', name='POS Test', max_terminals=2, feature_json='{}'
         )
         session.add_all([role, plan])
         session.flush()
@@ -39,7 +39,7 @@ def test_same_desktop_can_activate_a_separate_terminal_for_each_tenant() -> None
             session.add(tenant)
             session.flush()
             outlet = Outlet(
-                id=str(uuid4()), tenant_id=tenant.id, code='MAIN', name=f'Cafe {number} Main'
+                id=str(uuid4()), tenant_id=tenant.id, code=f'OUT{chr(64 + number)}', name=f'Cafe {number} Main'
             )
             session.add(outlet)
             session.flush()
@@ -88,6 +88,12 @@ def test_same_desktop_can_activate_a_separate_terminal_for_each_tenant() -> None
         with TestClient(app) as client:
             first = client.post('/api/platform/device/activate', json=request)
             assert first.status_code == 200, first.text
+            second_laptop = client.post('/api/platform/device/activate', json={
+                **request, 'installation_id': 'second-laptop-installation',
+            })
+            assert second_laptop.status_code == 200, second_laptop.text
+            assert second_laptop.json()['payload']['terminal_code'].startswith('POS01-')
+            assert second_laptop.json()['payload']['terminal_code'] != first.json()['payload']['terminal_code']
             active_user['value'] = users[1]
             second = client.post('/api/platform/device/activate', json=request)
             assert second.status_code == 200, second.text
@@ -95,10 +101,14 @@ def test_same_desktop_can_activate_a_separate_terminal_for_each_tenant() -> None
 
         with sessions() as session:
             terminals = list(session.scalars(select(PosTerminal).order_by(PosTerminal.tenant_id)))
-            assert len(terminals) == 2
+            assert len(terminals) == 3
             assert {terminal.tenant_id for terminal in terminals} == {user.tenant_id for user in users}
-            assert len({terminal.device_key_hash for terminal in terminals}) == 2
-            assert all(terminal.terminal_code == 'POS01' for terminal in terminals)
+            first_tenant_terminals = [terminal for terminal in terminals if terminal.tenant_id == users[0].tenant_id]
+            assert len({terminal.device_key_hash for terminal in first_tenant_terminals}) == 2
+            assert {terminal.terminal_code for terminal in first_tenant_terminals} == {
+                'POS01', second_laptop.json()['payload']['terminal_code'],
+            }
+            assert next(terminal for terminal in terminals if terminal.tenant_id == users[1].tenant_id).terminal_code == 'POS01'
     finally:
         settings.license_private_key = previous_private
         settings.license_public_key = previous_public

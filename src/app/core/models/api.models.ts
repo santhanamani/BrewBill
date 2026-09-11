@@ -31,7 +31,7 @@ export interface CurrentUser {
   outlet_id: string | null;
   username: string;
   display_name: string;
-  role_code: 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'ADMIN' | 'CASHIER';
+  role_code: 'SUPER_ADMIN' | 'TENANT_ADMIN' | 'ADMIN' | 'CASHIER' | 'OWNER';
 }
 
 export interface CurrencyDefinition {
@@ -193,12 +193,22 @@ export interface AdminUser {
   display_name: string;
   email: string | null;
   phone: string | null;
-  role_code: 'TENANT_ADMIN' | 'ADMIN' | 'CASHIER';
+  role_code: 'TENANT_ADMIN' | 'ADMIN' | 'CASHIER' | 'OWNER';
+  owner_tenant_ids: string[];
+  owner_tenant_names: string[];
   is_active: boolean;
   last_active: string;
 }
 
 export interface AdminRole { id: string; code: AdminUser['role_code']; name: string; }
+
+export interface OwnerTenantScope {
+  tenant_id: string;
+  tenant_code: string;
+  tenant_name: string;
+  currency: CurrencyDefinition;
+  outlets: AdminOutlet[];
+}
 
 export interface Category {
   id: string;
@@ -261,6 +271,7 @@ export interface CartLine extends Product {
 export interface OrderCreate {
   order_id: string;
   terminal_code: string;
+  outlet_id?: string;
   items: Array<{ product_id: string; variant_id?: string | null; quantity: number }>;
   payments: Array<{
     mode: 'CASH' | 'UPI' | 'CARD';
@@ -402,6 +413,7 @@ export interface Supplier {
 
 export interface Purchase {
   id: string;
+  supplier_id: string;
   supplier_name: string;
   invoice_number: string;
   purchase_date: string;
@@ -410,6 +422,16 @@ export interface Purchase {
   total: string;
   payment_status: 'PAID' | 'PENDING' | 'PARTIAL';
   item_count: number;
+  notes: string | null;
+  items: Array<{
+    product_id: string | null;
+    ingredient_id: string | null;
+    item_name: string;
+    quantity: string;
+    unit_cost: string;
+    tax_percent: string;
+    line_total: string;
+  }>;
 }
 
 export interface PurchaseCreate {
@@ -419,7 +441,8 @@ export interface PurchaseCreate {
   payment_status: Purchase['payment_status'];
   notes: string | null;
   items: Array<{
-    product_id: string;
+    product_id?: string;
+    ingredient_id?: string;
     quantity: string;
     unit_cost: string;
     tax_percent: string;
@@ -532,6 +555,32 @@ export interface MarketplaceSummary {
   swiggy_orders: number;
   zomato_orders: number;
   mock_enabled: boolean;
+}
+
+export interface TenantMessageUser {
+  id: string;
+  display_name: string;
+  username: string;
+  role_code: CurrentUser['role_code'];
+}
+
+export interface TenantMessage {
+  id: string;
+  group_message_id: string | null;
+  sender_user_id: string;
+  sender_name: string;
+  recipient_user_id: string;
+  recipient_name: string;
+  audience: 'DIRECT' | 'GROUP';
+  subject: string;
+  body: string;
+  reply_to_id: string | null;
+  reply_to_group_message_id: string | null;
+  reply_to_sender_name: string | null;
+  reply_to_body: string | null;
+  reactions: Array<{ emoji: string; count: number; reacted_by_me: boolean }>;
+  read_at: string | null;
+  created_at: string;
 }
 
 export interface LicenseEnvelope {

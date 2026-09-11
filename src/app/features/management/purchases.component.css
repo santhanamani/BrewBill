@@ -37,6 +37,7 @@
 :host([data-view='purchases']) table { width:100%; border-collapse:collapse; font-size:12px; }
 :host([data-view='purchases']) th { background:#f7f3ee; color:#6d5744; padding:13px 10px; font-size:11px; font-weight:650; white-space:nowrap; }
 :host([data-view='purchases']) td { padding:13px 10px; border-bottom:1px solid #eee7de; }
+:host([data-view='purchases']) .purchase-item-detail { display:block; margin-top:3px; color:#8b7d73; font-size:10px; font-weight:500; }
 :host([data-view='purchases']) td:nth-child(5) { font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
 :host([data-view='purchases']) .status-pill { font-size:10px; padding:6px 9px; background:#e9f6ed; color:#258147; border-radius:8px; }
 :host([data-view='purchases']) .status-pill.pending { background:#fff3d8; color:#a26b09; }

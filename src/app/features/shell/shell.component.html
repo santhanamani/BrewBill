@@ -1,16 +1,26 @@
-<div class="app-shell">
+<div class="app-shell" [class.super-admin-shell]="session.isSuperAdmin()" [class.owner-shell]="session.isOwner()">
   <header class="topbar light-topbar">
     <a class="brand" [routerLink]="session.isSuperAdmin() ? '/administration' : '/dashboard'">
       <img class="brand-mark" [src]="logoAsset()" alt="BrewBill" />
       <span><b [title]="brandLabel()">{{ brandLabel() }}</b><small>COFFEE &amp; CAFÉ</small></span>
     </a>
-    <div class="top-meta outlet-context"><span class="material-symbols-outlined">location_on</span><span><b>{{ session.isSuperAdmin() ? 'All Tenants' : (session.context()?.outlet_name ?? 'Platform') }}</b><small>{{ session.isSuperAdmin() ? 'Super Admin' : (isActive('/pos') ? 'Outlet (' + (session.context()?.outlet_code ?? session.context()?.tenant_code) + ')' : (session.context()?.outlet_code ?? session.context()?.tenant_code)) }}</small></span></div>
-    <span class="tenant-context-badge"><span class="material-symbols-outlined">database</span>{{session.isSuperAdmin() ? 'Multi-Tenant Administration' : 'Tenant-scoped data'}}</span>
+    @if (outletContext.canSelect()) {
+      <label class="top-meta outlet-context global-outlet-selector" title="Change the working outlet for every screen">
+        <span class="material-symbols-outlined">location_on</span>
+        <span><small>Working outlet</small><select [value]="outletContext.selectedOutletId()" (change)="changeOperationalOutlet($any($event.target).value)" aria-label="Working outlet">
+          @for (outlet of outletContext.outlets(); track outlet.id) { <option [value]="outlet.id">{{ outlet.name }} · {{ outlet.code }}</option> }
+        </select></span>
+      </label>
+    } @else {
+      <div class="top-meta outlet-context"><span class="material-symbols-outlined">location_on</span><span><b>{{ session.isSuperAdmin() ? 'All Tenants' : session.isOwner() ? 'Assigned Tenants' : (session.context()?.outlet_name ?? session.context()?.tenant_name ?? 'Platform') }}</b><small>{{ session.isSuperAdmin() ? 'Super Admin' : session.isOwner() ? 'Owner portfolio' : (isActive('/pos') ? 'Outlet (' + (session.context()?.outlet_code ?? session.context()?.tenant_code) + ')' : (session.context()?.outlet_code ?? session.context()?.tenant_code)) }}</small></span></div>
+    }
+    <span class="tenant-context-badge"><span class="material-symbols-outlined">database</span>{{session.isSuperAdmin() ? 'Multi-Tenant Administration' : session.isOwner() ? 'Read-only owner access' : 'Tenant-scoped data'}}</span>
     <div class="top-meta date-meta"><span class="material-symbols-outlined">calendar_month</span><span>{{ clock.date() }}<small>{{ clock.day() }}</small></span></div>
     <div class="top-meta time-meta"><span class="material-symbols-outlined">schedule</span><span>{{ clock.time() }}</span></div>
     <div class="top-meta profile"><span class="material-symbols-outlined">person</span><span>{{ session.user()?.display_name }}<small>{{ roleLabel() }}</small></span></div>
     <div class="top-actions">
-      @if(!session.isSuperAdmin()){
+      @if(!session.isSuperAdmin() && !session.isOwner()){
+        @if(marketplaceEnabled()){<a class="button message-alert" routerLink="/messages" title="Tenant messages"><span class="material-symbols-outlined">forum</span><span>Messages</span>@if(messageUnread()){<b>{{messageUnread()}}</b>}</a>}
         @if(marketplaceEnabled()){<a class="button marketplace-alert" routerLink="/marketplace" title="Online orders"><span class="material-symbols-outlined">delivery_dining</span><span>Online Orders</span>@if(marketplaceUnread()){<b>{{marketplaceUnread()}}</b>}</a>}
         @if (isActive('/dashboard')) {
           <a class="button green" routerLink="/pos"><span class="material-symbols-outlined">add</span>New Bill</a>
@@ -38,20 +48,12 @@
     }
     <router-outlet />
   </main>
+  @if(!session.isSuperAdmin()) {
   <nav class="bottom-nav" aria-label="Main navigation">
-    @if(session.isSuperAdmin()){
-      <button type="button" aria-disabled="true"><span class="material-symbols-outlined">home</span><span>Dashboard</span></button>
-      <button type="button" aria-disabled="true"><span class="material-symbols-outlined">point_of_sale</span><span>POS</span></button>
-      <button type="button" aria-disabled="true"><span class="material-symbols-outlined">receipt_long</span><span>Held Orders</span></button>
-      <button type="button" aria-disabled="true"><span class="material-symbols-outlined">shopping_cart</span><span>Purchases</span></button>
-      <button type="button" aria-disabled="true"><span class="material-symbols-outlined">inventory_2</span><span>Products</span></button>
-      <button type="button" aria-disabled="true"><span class="material-symbols-outlined">deployed_code</span><span>Inventory</span></button>
-      <button type="button" aria-disabled="true"><span class="material-symbols-outlined">account_balance_wallet</span><span>Expenses</span></button>
-      <button type="button" aria-disabled="true"><span class="material-symbols-outlined">bar_chart</span><span>Reports</span></button>
-      <button type="button" class="active administration-nav" (click)="openPage('/administration')"><span class="material-symbols-outlined">settings</span><span>Administration</span></button>
-      <button type="button" aria-disabled="true"><span class="material-symbols-outlined">settings</span><span>Settings</span></button>
-    } @else {
     <button type="button" [class.active]="isActive('/dashboard')" (click)="openPage('/dashboard')"><span class="material-symbols-outlined">home</span><span>Dashboard<small>(F1)</small></span></button>
+    @if(session.isOwner()) {
+      <button type="button" [class.active]="isActive('/operations/reports')" (click)="openPage('/operations/reports')"><span class="material-symbols-outlined">bar_chart</span><span>Reports<small>(F8)</small></span></button>
+    } @else {
     <button type="button" [class.active]="isActive('/pos')" (click)="openPage('/pos')"><span class="material-symbols-outlined">point_of_sale</span><span>POS<small>(F2)</small></span></button>
     <button type="button" [class.active]="isActive('/operations/holds')" (click)="openPage('/operations/holds')"><span class="material-symbols-outlined">receipt_long</span><span>Held Orders<small>(F3)</small></span></button>
     @if (session.isAdmin()) {
@@ -68,4 +70,5 @@
     }
     }
   </nav>
+  }
 </div>

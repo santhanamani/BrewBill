@@ -17,8 +17,8 @@ def test_all_adjustment_types_persist_with_audit_and_outlet_isolation():
     Base.metadata.create_all(engine)
     with sessions() as db:
         tenant = Tenant(id=str(uuid4()), name='Inventory Test', status='ACTIVE')
-        a = Outlet(id=str(uuid4()), tenant_id=tenant.id, code='A', name='A')
-        b = Outlet(id=str(uuid4()), tenant_id=tenant.id, code='B', name='B')
+        a = Outlet(id=str(uuid4()), tenant_id=tenant.id, code='AAAA', name='A')
+        b = Outlet(id=str(uuid4()), tenant_id=tenant.id, code='BAAA', name='B')
         role = Role(id=str(uuid4()), code='ADMIN', name='Admin')
         user = User(id=str(uuid4()), tenant_id=tenant.id, outlet_id=a.id, role_id=role.id, username='inventory-test', display_name='Admin', password_hash='x', is_active=True)
         user.role = role

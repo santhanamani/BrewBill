@@ -23,6 +23,7 @@ from .api.holds import router as holds_router
 from .api.platform import router as platform_router
 from .api.inventory import router as inventory_router
 from .api.marketplace import router as marketplace_router
+from .api.messages import router as message_router
 
 app = FastAPI(title="BrewBill Cloud API", version="0.1.0")
 app.include_router(product_router)
@@ -35,6 +36,7 @@ app.include_router(holds_router)
 app.include_router(platform_router)
 app.include_router(inventory_router)
 app.include_router(marketplace_router)
+app.include_router(message_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[origin.strip() for origin in settings.cors_origins.split(',') if origin.strip()],

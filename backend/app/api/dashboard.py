@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from .deps import current_user
 from ..database import get_session
 from ..models import Category, Inventory, Order, OrderItem, Payment, Product, User
+from ..owner_access import resolve_read_scope
 from ..schemas import DashboardRead, DashboardSeriesPoint, DashboardTopProduct
 
 router = APIRouter(prefix='/api/dashboard', tags=['dashboard'])
@@ -41,6 +42,8 @@ def business_local_datetime(value: datetime) -> datetime:
 def dashboard(
     from_date: date | None = Query(default=None),
     to_date: date | None = Query(default=None),
+    tenant_id: str | None = Query(default=None, max_length=36),
+    outlet_id: str | None = Query(default=None, max_length=36),
     user: User = Depends(current_user),
     session: Session = Depends(get_session),
 ) -> DashboardRead:
@@ -55,13 +58,15 @@ def dashboard(
     if (range_end - range_start).days > 366:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Dashboard date range cannot exceed 367 days.')
     starts_at, ends_before = business_date_bounds(range_start, range_end)
-    completed = (
-        Order.tenant_id == user.tenant_id,
-        Order.outlet_id == user.outlet_id,
+    scoped_tenant_id, scoped_outlet_id = resolve_read_scope(session, user, tenant_id, outlet_id)
+    completed = [
+        Order.tenant_id == scoped_tenant_id,
         Order.status == 'COMPLETED',
         Order.created_at >= starts_at,
         Order.created_at < ends_before,
-    )
+    ]
+    if scoped_outlet_id:
+        completed.append(Order.outlet_id == scoped_outlet_id)
     totals = session.execute(
         select(
             func.coalesce(func.sum(Order.grand_total), Decimal('0.00')),
@@ -79,10 +84,10 @@ def dashboard(
         select(func.count(Inventory.id))
         .join(Product, Product.id == Inventory.product_id)
         .where(
-            Inventory.tenant_id == user.tenant_id,
-            Inventory.outlet_id == user.outlet_id,
+            Inventory.tenant_id == scoped_tenant_id,
             Product.is_active.is_(True),
             Inventory.available_quantity <= Inventory.low_stock_limit,
+            *([Inventory.outlet_id == scoped_outlet_id] if scoped_outlet_id else []),
         )
     ) or 0
     product_rows = session.execute(

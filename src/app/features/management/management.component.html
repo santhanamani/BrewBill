@@ -67,16 +67,16 @@
         ><span class="material-symbols-outlined">inventory_2</span></span
       >
       <div>
-        <small>Catalogue Items</small>
-        <h2>{{ products().length }}</h2>
-        <p>PostgreSQL products</p>
+        <small>Inventory Ingredients</small>
+        <h2>{{ ingredients().length }}</h2>
+        <p>Available for procurement</p>
       </div>
     </article>
   </div>
   <div class="management-grid purchase-layout">
     <section class="panel form-panel">
       <div class="panel-title">
-        <div class="panel-heading"><span class="material-symbols-outlined">add_box</span><div><h2>New Purchase Entry</h2><p>Record a new purchase for this outlet</p></div></div>
+        <div class="panel-heading"><span class="material-symbols-outlined">{{ editingPurchaseId() ? 'edit_note' : 'add_box' }}</span><div><h2>{{ editingPurchaseId() ? 'Edit Purchase Entry' : 'New Purchase Entry' }}</h2><p>{{ editingPurchaseId() ? 'Update this purchase and reconcile ingredient stock' : 'Record a new ingredient purchase for this outlet' }}</p></div></div>
       </div>
       <details class="supplier-create"><summary>Add a new supplier</summary><div class="quick-create">
         <input
@@ -110,9 +110,9 @@
             required
         /></label>
         <label class="span-two"
-          >Product / Ingredient *<select name="product" [(ngModel)]="purchaseProduct" required>
-            @for (product of products(); track product.id) {
-              <option [value]="product.id">{{ product.name }}</option>
+          >Ingredient *<select name="ingredient" [(ngModel)]="purchaseIngredient" required>
+            @for (ingredient of ingredients(); track ingredient.id) {
+              <option [value]="ingredient.id">{{ ingredient.name }} ({{ ingredient.unit }}) · Stock {{ ingredient.available_quantity }}</option>
             }
           </select></label
         >
@@ -151,7 +151,7 @@
           </select></label
         >
         <label class="purchase-notes">Notes (Optional)<input name="purchaseNotes" [(ngModel)]="purchaseNotes" placeholder="Add notes (e.g. batch, remarks)…" /></label>
-        <div class="form-actions span-two"><button class="primary-action" type="submit" [disabled]="saving()"><span class="material-symbols-outlined">save</span>{{ saving() ? 'Saving...' : 'Add Purchase' }}</button><button type="button" class="clear-purchase" [disabled]="saving()" (click)="clearPurchase()"><span class="material-symbols-outlined">restart_alt</span>Reset</button></div>
+        <div class="form-actions span-two"><button class="primary-action" type="submit" [disabled]="saving()"><span class="material-symbols-outlined">save</span>{{ saving() ? 'Saving...' : editingPurchaseId() ? 'Update Purchase' : 'Add Purchase' }}</button><button type="button" class="clear-purchase" [disabled]="saving()" (click)="clearPurchase()"><span class="material-symbols-outlined">{{ editingPurchaseId() ? 'close' : 'restart_alt' }}</span>{{ editingPurchaseId() ? 'Cancel Edit' : 'Reset' }}</button></div>
       </form>
     </section>
     <section class="panel table-panel">
@@ -175,13 +175,13 @@
                 </td>
                 <td>{{ row.invoice_number }}</td>
                 <td>{{ date(row.purchase_date) }}</td>
-                <td>{{ row.item_count }}</td>
+                <td><b>{{ row.items[0]?.item_name || row.item_count }}</b>@if (row.items[0]) {<small class="purchase-item-detail">{{ row.items[0].quantity }} {{ row.items[0].ingredient_id ? 'units' : '(legacy product)' }}</small>}</td>
                 <td>{{ money(row.total) }}</td>
                 <td>
                   <span class="status-pill" [class.pending]="row.payment_status === 'PENDING'" [class.partial]="row.payment_status === 'PARTIAL'">{{
                     row.payment_status
                   }}</span>
-                </td><td><button class="icon-button" type="button"><span class="material-symbols-outlined">more_horiz</span></button></td>
+                </td><td><button class="icon-button" type="button" title="Edit purchase" aria-label="Edit purchase" (click)="editPurchase(row)"><span class="material-symbols-outlined">edit</span></button></td>
               </tr>
             } @empty {
               <tr>
@@ -670,7 +670,7 @@
 }
 
 @if (creditCollectionCustomer(); as customer) {
-  <div class="credit-collection-backdrop" (click)="closeCreditCollection()">
+  <div class="credit-collection-backdrop">
     <section class="credit-collection-dialog" role="dialog" aria-modal="true" aria-labelledby="credit-collection-title" (click)="$event.stopPropagation()">
       <header><span class="material-symbols-outlined">account_balance_wallet</span><div><small>CUSTOMER CREDIT</small><h2 id="credit-collection-title">Collect Outstanding</h2></div><button type="button" aria-label="Close" (click)="closeCreditCollection()"><span class="material-symbols-outlined">close</span></button></header>
       <div class="credit-customer-summary"><div><small>Customer</small><b>{{ customer.name }}</b><span>{{ customer.mobile || 'No mobile number' }}</span></div><div><small>Outstanding</small><b>{{ money(+(creditAccount(customer.id)?.outstanding_balance || 0)) }}</b><span>{{ creditAccount(customer.id)?.open_bill_count || 0 }} open bills</span></div></div>

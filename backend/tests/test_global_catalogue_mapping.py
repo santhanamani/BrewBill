@@ -25,9 +25,9 @@ def test_global_product_has_isolated_outlet_mapping() -> None:
             category_name='Coffee', base_unit='cup', default_gst=Decimal('5.00'), status='ACTIVE',
         )
         users = []
-        for code in ('CAFE1', 'CAFE2'):
+        for index, code in enumerate(('CAFE1', 'CAFE2'), start=1):
             tenant = Tenant(id=str(uuid4()), code=code, name=code, status='ACTIVE')
-            outlet = Outlet(id=str(uuid4()), tenant_id=tenant.id, code='MAIN', name=f'{code} Main')
+            outlet = Outlet(id=str(uuid4()), tenant_id=tenant.id, code=('OUTA', 'OUTB')[index - 1], name=f'{code} Main')
             user = User(
                 id=str(uuid4()), tenant_id=tenant.id, outlet_id=outlet.id, role_id=role.id,
                 username='admin', display_name=f'{code} Admin', password_hash='x', is_active=True,
@@ -127,9 +127,9 @@ def test_tenant_admin_can_configure_catalogue_variants_without_cross_tenant_acce
             category_name='Milkshakes', base_unit='cup', default_gst=Decimal('5.00'), status='ACTIVE',
         )
         users = []
-        for code in ('CAFE1', 'CAFE2'):
+        for index, code in enumerate(('CAFE1', 'CAFE2'), start=1):
             tenant = Tenant(id=str(uuid4()), code=code, name=code, status='ACTIVE')
-            outlet = Outlet(id=str(uuid4()), tenant_id=tenant.id, code='MAIN', name=f'{code} Main')
+            outlet = Outlet(id=str(uuid4()), tenant_id=tenant.id, code=('OUTA', 'OUTB')[index - 1], name=f'{code} Main')
             user = User(
                 id=str(uuid4()), tenant_id=tenant.id, outlet_id=outlet.id, role_id=role.id,
                 username='admin', display_name=f'{code} Admin', password_hash='x', is_active=True,

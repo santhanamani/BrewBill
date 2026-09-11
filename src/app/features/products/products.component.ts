@@ -9,6 +9,7 @@ import {
 import { RuntimeConfigService } from '../../core/runtime-config.service';
 import { SessionService } from '../../core/session.service';
 import { CurrencyService } from '../../core/currency.service';
+import { timedSignal } from '../../core/timed-signal';
 
 type ProductDraft = {
   categoryId: string;
@@ -284,7 +285,7 @@ export class ProductsComponent {
   readonly categories = signal<Category[]>([]);
   readonly loading = signal(true);
   readonly saving = signal(false);
-  readonly notice = signal('');
+  readonly notice = timedSignal();
   readonly search = signal('');
   readonly visibleLimit = signal(10);
   readonly categoryFilter = signal('ALL');

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-from .deps import current_user, require_role
+from .deps import require_role
 from ..database import get_session
 from ..models import AuditLog, Category, User
 from ..schemas import CategoryCreate, CategoryRead, CategoryUpdate
@@ -14,7 +14,7 @@ router = APIRouter(prefix='/api/categories', tags=['categories'])
 
 @router.get('', response_model=list[CategoryRead])
 def list_categories(
-    user: User = Depends(current_user),
+    user: User = Depends(require_role('ADMIN', 'CASHIER')),
     session: Session = Depends(get_session),
 ) -> list[Category]:
     statement = select(Category).where(Category.tenant_id == user.tenant_id, Category.is_active.is_(True)).order_by(Category.display_order, Category.name)

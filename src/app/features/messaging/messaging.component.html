@@ -1,0 +1,122 @@
+<section class="message-page">
+  <header class="message-heading">
+    <div class="heading-copy">
+      <span class="material-symbols-outlined">forum</span>
+      <div><small>ULTRA PROFESSIONAL</small><h1>Tenant Chat</h1><p>Private and group conversations inside {{ session.context()?.tenant_name }}.</p></div>
+    </div>
+    <button type="button" [disabled]="loading()" (click)="load()"><span class="material-symbols-outlined">refresh</span>Refresh</button>
+  </header>
+
+  @if (notice()) { <div class="toast"><span class="material-symbols-outlined">check_circle</span>{{ notice() }}</div> }
+  @if (error()) { <div class="message-error" role="alert"><span class="material-symbols-outlined">error</span>{{ error() }}</div> }
+
+  <div class="chat-shell">
+    <aside class="conversation-panel">
+      <header>
+        <div class="current-profile"><span>{{ initials(session.user()?.display_name ?? 'User') }}</span><div><b>{{ session.user()?.display_name }}</b><small>{{ totalUnread() }} unread messages</small></div></div>
+        <button class="new-chat-button" type="button" title="Start a new chat" aria-label="Start a new chat" (click)="openNewChat()"><span class="material-symbols-outlined">add_comment</span></button>
+      </header>
+      <label class="conversation-search"><span class="material-symbols-outlined">search</span><input [ngModel]="conversationSearch()" (ngModelChange)="conversationSearch.set($event)" placeholder="Search chats" /></label>
+      <div class="conversation-list">
+        @if (loading()) {
+          <div class="conversation-empty"><span class="material-symbols-outlined spin">progress_activity</span>Loading chats…</div>
+        } @else {
+          @for (conversation of conversations(); track conversation.id) {
+            <button type="button" [class.active]="selectedConversationId() === conversation.id" (click)="selectConversation(conversation.id)">
+              <span class="conversation-avatar" [class.group]="conversation.group">
+                @if (conversation.group) { <span class="material-symbols-outlined">groups</span> } @else { {{ conversation.avatar }} }
+              </span>
+              <span class="conversation-copy"><span><b>{{ conversation.title }}</b><time>{{ conversationTime(conversation.lastMessage) }}</time></span><span><small>{{ conversation.lastMessage ? preview(conversation.lastMessage) : conversation.subtitle }}</small>@if (conversation.unread) { <i>{{ conversation.unread }}</i> }</span></span>
+            </button>
+          } @empty {
+            <div class="conversation-empty"><span class="material-symbols-outlined">forum</span><b>No conversations yet</b><small>Use the new chat button above.</small></div>
+          }
+        }
+      </div>
+      @if (newChatOpen()) {
+        <section class="new-chat-picker">
+          <header><button type="button" aria-label="Close new chat" (click)="newChatOpen.set(false)"><span class="material-symbols-outlined">arrow_back</span></button><h2>New chat</h2></header>
+          <label class="conversation-search new-chat-search"><span class="material-symbols-outlined">search</span><input [ngModel]="newChatSearch()" (ngModelChange)="newChatSearch.set($event)" placeholder="Search tenant users" /></label>
+          <p>Tenant contacts</p>
+          <div class="new-chat-list">
+            @for (conversation of newChatOptions(); track conversation.id) {
+              <button type="button" (click)="selectConversation(conversation.id)"><span class="conversation-avatar" [class.group]="conversation.group">@if (conversation.group) { <span class="material-symbols-outlined">groups</span> } @else { {{ conversation.avatar }} }</span><span><b>{{ conversation.title }}</b><small>{{ conversation.group ? conversation.subtitle + ' · Group message' : conversation.subtitle }}</small></span>@if(conversation.lastMessage){<i>Open</i>}</button>
+            } @empty { <div class="conversation-empty"><span class="material-symbols-outlined">person_search</span>No matching users</div> }
+          </div>
+        </section>
+      }
+    </aside>
+
+    <section class="chat-panel">
+      @if (activeConversation(); as conversation) {
+        <header class="chat-header">
+          <span class="conversation-avatar" [class.group]="conversation.group">@if (conversation.group) { <span class="material-symbols-outlined">groups</span> } @else { {{ conversation.avatar }} }</span>
+          <div><h2>{{ conversation.title }}</h2><p>{{ conversation.group ? conversation.subtitle + ' · Messages reach everyone in this tenant' : conversation.subtitle }}</p></div>
+          <span class="secure-chat"><span class="material-symbols-outlined">lock</span>Tenant only</span>
+        </header>
+
+        <div class="chat-thread" aria-live="polite">
+          @for (message of threadMessages(); track message.id; let index = $index) {
+            @if (startsNewDay(index)) { <div class="day-divider"><span>{{ dayLabel(message.created_at) }}</span></div> }
+            <div class="bubble-row" [class.mine]="isMine(message)" [id]="'message-' + messageKey(message)">
+              <article class="message-bubble">
+                <div class="bubble-tools">
+                  <button type="button" title="React" aria-label="React to message" (click)="reactionPickerId.set(reactionPickerId() === message.id ? '' : message.id)"><span class="material-symbols-outlined">add_reaction</span></button>
+                  <button type="button" title="Reply" aria-label="Reply to message" (click)="startReply(message)"><span class="material-symbols-outlined">reply</span></button>
+                  @if (reactionPickerId() === message.id) {
+                    <div class="reaction-picker">
+                      @for (emoji of reactionEmojis; track emoji) { <button type="button" (click)="react(message, emoji)">{{ emoji }}</button> }
+                    </div>
+                  }
+                </div>
+                @if (conversation.group && !isMine(message)) { <b class="bubble-sender">{{ message.sender_name }}</b> }
+                @if (message.reply_to_id) {
+                  <button class="reply-quote" type="button" (click)="jumpToMessage(message)">
+                    <b>{{ message.reply_to_sender_name || 'Message' }}</b>
+                    <span>{{ message.reply_to_body || 'Original message' }}</span>
+                  </button>
+                }
+                @if (showSubject(message)) { <small class="legacy-subject">{{ message.subject }}</small> }
+                <p>{{ message.body }}</p>
+                @if ((message.reactions ?? []).length) {
+                  <div class="reaction-summary">
+                    @for (reaction of message.reactions; track reaction.emoji) {
+                      <button type="button" [class.reacted]="reaction.reacted_by_me" (click)="react(message, reaction.emoji)"><span>{{ reaction.emoji }}</span>{{ reaction.count }}</button>
+                    }
+                  </div>
+                }
+                <footer><time>{{ messageTime(message.created_at) }}</time>@if (isMine(message)) { <span class="material-symbols-outlined delivered">done_all</span> }</footer>
+              </article>
+            </div>
+          } @empty {
+            <div class="thread-empty"><span class="material-symbols-outlined">waving_hand</span><h3>Start this conversation</h3><p>{{ conversation.group ? 'Send an update to everyone in your tenant.' : 'Messages here are private between you and ' + conversation.title + '.' }}</p></div>
+          }
+        </div>
+
+        <footer class="chat-composer">
+          @if (replyingTo(); as reply) {
+            <div class="composer-reply">
+              <span class="material-symbols-outlined">reply</span>
+              <div><b>Replying to {{ reply.sender_name }}</b><small>{{ reply.body }}</small></div>
+              <button type="button" aria-label="Cancel reply" (click)="replyingTo.set(null)"><span class="material-symbols-outlined">close</span></button>
+            </div>
+          }
+          <div class="composer-row">
+            <div class="emoji-control">
+              <button class="emoji-toggle" type="button" aria-label="Choose emoji" [attr.aria-expanded]="composerEmojiOpen()" (click)="composerEmojiOpen.set(!composerEmojiOpen())"><span class="material-symbols-outlined">sentiment_satisfied</span></button>
+              @if (composerEmojiOpen()) {
+                <div class="emoji-picker">
+                  @for (emoji of emojis; track emoji) { <button type="button" (click)="appendEmoji(emoji)">{{ emoji }}</button> }
+                </div>
+              }
+            </div>
+            <textarea rows="1" maxlength="5000" [(ngModel)]="messageBody" (keydown)="onComposerKeydown($event)" [placeholder]="conversation.group ? 'Message tenant group' : 'Message ' + conversation.title"></textarea>
+            <button class="send-button" type="button" [disabled]="sending() || !messageBody.trim()" (click)="send()" aria-label="Send message"><span class="material-symbols-outlined">send</span></button>
+          </div>
+        </footer>
+      } @else {
+        <div class="no-chat"><span class="material-symbols-outlined">forum</span><h2>Select a chat</h2></div>
+      }
+    </section>
+  </div>
+</section>

@@ -43,7 +43,9 @@ def adjust_stock(
     if new_quantity < 0:
         raise ValueError(f'Insufficient stock for {product.name}.')
     inventory.available_quantity = new_quantity
-    if quantity_delta > 0:
+    if transaction_type == 'PURCHASE_REVERSAL':
+        inventory.stock_added = max(Decimal('0.000'), inventory.stock_added + quantity_delta)
+    elif quantity_delta > 0:
         inventory.stock_added += quantity_delta
     elif transaction_type == 'SALE':
         inventory.stock_sold += -quantity_delta

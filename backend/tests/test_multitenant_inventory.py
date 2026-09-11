@@ -19,8 +19,8 @@ def test_shared_catalogue_and_outlet_inventory_are_isolated() -> None:
     Base.metadata.create_all(engine)
     with testing_session() as session:
         tenant = Tenant(id=str(uuid4()), name='Two Outlet Tenant', status='ACTIVE')
-        outlet_a = Outlet(id=str(uuid4()), tenant_id=tenant.id, code='A01', name='Outlet A')
-        outlet_b = Outlet(id=str(uuid4()), tenant_id=tenant.id, code='B01', name='Outlet B')
+        outlet_a = Outlet(id=str(uuid4()), tenant_id=tenant.id, code='AAAA', name='Outlet A')
+        outlet_b = Outlet(id=str(uuid4()), tenant_id=tenant.id, code='BAAA', name='Outlet B')
         role = Role(id=str(uuid4()), code='ADMIN', name='Administrator')
         user_a = User(id=str(uuid4()), tenant_id=tenant.id, outlet_id=outlet_a.id, role_id=role.id, username='admin-a', display_name='Admin A', password_hash='x', is_active=True)
         user_b = User(id=str(uuid4()), tenant_id=tenant.id, outlet_id=outlet_b.id, role_id=role.id, username='admin-b', display_name='Admin B', password_hash='x', is_active=True)

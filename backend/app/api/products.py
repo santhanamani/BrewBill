@@ -7,9 +7,10 @@ from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from .deps import current_user, require_role
+from .deps import require_role
 from ..database import get_session
 from ..inventory_service import adjust_stock
+from ..outlet_scope import resolve_operational_outlet
 from ..product_media import (
     MAX_PRODUCT_IMAGE_BYTES, product_media_path, save_product_image, validate_product_image_path,
 )
@@ -60,7 +61,7 @@ def mapping_view(session: Session, mapping: OutletProductMapping, inventory: Inv
 @router.get('/master', response_model=list[GlobalProductRead])
 def list_global_products(
     include_inactive: bool = Query(default=False),
-    user: User = Depends(current_user),
+    user: User = Depends(require_role('ADMIN', 'CASHIER', 'SUPER_ADMIN')),
     session: Session = Depends(get_session),
 ) -> list[GlobalProduct]:
     query = select(GlobalProduct)
@@ -106,7 +107,7 @@ def update_global_product(
 @router.get('/catalogue', response_model=list[OutletProductMappingRead])
 def list_outlet_catalogue(
     outlet_id: str | None = Query(default=None, max_length=36),
-    user: User = Depends(current_user),
+    user: User = Depends(require_role('ADMIN', 'CASHIER')),
     session: Session = Depends(get_session),
 ) -> list[OutletProductMappingRead]:
     selected_outlet = resolve_outlet(session, user, outlet_id)
@@ -350,15 +351,7 @@ def unmap_outlet_product(
 
 
 def resolve_outlet(session: Session, user: User, requested_outlet_id: str | None = None) -> str:
-    if requested_outlet_id and requested_outlet_id != user.outlet_id and user.role_code != 'ADMIN':
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Cashiers can access only their assigned outlet.')
-    outlet_id = requested_outlet_id or user.outlet_id
-    if not outlet_id:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail='Select an outlet before managing products.')
-    outlet = session.scalar(select(Outlet).where(Outlet.id == outlet_id, Outlet.tenant_id == user.tenant_id))
-    if outlet is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Outlet not found for this tenant.')
-    return outlet.id
+    return resolve_operational_outlet(session, user, requested_outlet_id)
 
 
 def inventory_for(session: Session, tenant_id: str, outlet_id: str, product: Product) -> Inventory:
@@ -428,7 +421,7 @@ def product_view(
 @router.get('', response_model=list[ProductRead])
 def list_products(
     outlet_id: str | None = Query(default=None, max_length=36),
-    user: User = Depends(current_user),
+    user: User = Depends(require_role('ADMIN', 'CASHIER')),
     session: Session = Depends(get_session),
 ) -> list[ProductRead]:
     selected_outlet = resolve_outlet(session, user, outlet_id)
@@ -626,10 +619,11 @@ def replace_variant_configuration(
 def update_product_favourite(
     product_id: str,
     body: ProductFavouriteUpdate,
+    outlet_id: str | None = Query(default=None, max_length=36),
     user: User = Depends(require_role('ADMIN', 'CASHIER')),
     session: Session = Depends(get_session),
 ) -> ProductRead:
-    outlet_id = resolve_outlet(session, user)
+    outlet_id = resolve_outlet(session, user, outlet_id)
     mapping = session.scalar(select(OutletProductMapping).options(
         selectinload(OutletProductMapping.global_product),
         selectinload(OutletProductMapping.legacy_product).selectinload(Product.variants),

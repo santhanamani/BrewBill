@@ -50,7 +50,7 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.css", "src/app/app.css", "src/app/live-shell.css", "src/app/reference-ui.css"]
+            "styles": ["src/styles.css", "src/app/app.css", "src/app/live-shell.css", "src/app/reference-ui.css", "src/app/control-system.css"]
           },
           "configurations": {
             "production": {

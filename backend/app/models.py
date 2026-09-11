@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .database import Base
 
@@ -65,10 +65,20 @@ class Outlet(Base, Timestamped):
     __tablename__ = 'outlets'
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id'), index=True)
-    code: Mapped[str] = mapped_column(String(32))
+    code: Mapped[str] = mapped_column(String(4))
     name: Mapped[str] = mapped_column(String(160))
     address: Mapped[str | None] = mapped_column(Text)
-    __table_args__ = (UniqueConstraint('tenant_id', 'code', name='uq_outlet_tenant_code'),)
+    __table_args__ = (
+        UniqueConstraint('code', name='uq_outlets_code'),
+        CheckConstraint(
+            "length(code) = 4 AND code = upper(code) "
+            "AND substr(code, 1, 1) BETWEEN 'A' AND 'Z' "
+            "AND substr(code, 2, 1) BETWEEN 'A' AND 'Z' "
+            "AND substr(code, 3, 1) BETWEEN 'A' AND 'Z' "
+            "AND substr(code, 4, 1) BETWEEN 'A' AND 'Z'",
+            name='ck_outlets_code_format',
+        ),
+    )
 
 
 class Category(Base, Timestamped):
@@ -123,6 +133,36 @@ class User(Base, Timestamped):
     @property
     def role_code(self) -> str:
         return self.role.code
+
+
+class TenantMessage(Base):
+    """A tenant-isolated inbox row; group messages are fanned out per recipient."""
+
+    __tablename__ = 'tenant_messages'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id'), index=True)
+    sender_user_id: Mapped[str] = mapped_column(ForeignKey('users.id'), index=True)
+    recipient_user_id: Mapped[str] = mapped_column(ForeignKey('users.id'), index=True)
+    group_message_id: Mapped[str | None] = mapped_column(String(36), index=True)
+    reply_to_id: Mapped[str | None] = mapped_column(ForeignKey('tenant_messages.id'), index=True)
+    audience: Mapped[str] = mapped_column(String(16), default='DIRECT', index=True)
+    subject: Mapped[str] = mapped_column(String(160))
+    body: Mapped[str] = mapped_column(Text)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+class TenantMessageReaction(Base):
+    __tablename__ = 'tenant_message_reactions'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    tenant_id: Mapped[str] = mapped_column(ForeignKey('tenants.id'), index=True)
+    message_id: Mapped[str] = mapped_column(ForeignKey('tenant_messages.id', ondelete='CASCADE'), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey('users.id'), index=True)
+    emoji: Mapped[str] = mapped_column(String(16))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    __table_args__ = (
+        UniqueConstraint('message_id', 'user_id', name='uq_tenant_message_reaction_user'),
+    )
 
 
 class RefreshToken(Base):
@@ -427,13 +467,22 @@ class PurchaseItem(Base):
     __tablename__ = 'purchase_items'
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     purchase_id: Mapped[str] = mapped_column(ForeignKey('purchases.id'), index=True)
-    product_id: Mapped[str] = mapped_column(ForeignKey('products.id'), index=True)
+    # Product-backed purchase rows are retained for restored/legacy databases.
+    # New procurement rows point at the ingredient inventory instead.
+    product_id: Mapped[str | None] = mapped_column(ForeignKey('products.id'), index=True)
+    ingredient_id: Mapped[str | None] = mapped_column(ForeignKey('ingredients.id'), index=True)
     product_name: Mapped[str] = mapped_column(String(180))
     quantity: Mapped[Decimal] = mapped_column(Numeric(18, 3))
     unit_cost: Mapped[Decimal] = mapped_column(Numeric(18, 2))
     tax_percent: Mapped[Decimal] = mapped_column(Numeric(5, 2), default=Decimal('5.00'))
     line_total: Mapped[Decimal] = mapped_column(Numeric(18, 2))
     purchase: Mapped[Purchase] = relationship(back_populates='items')
+    __table_args__ = (
+        CheckConstraint(
+            '(product_id IS NULL) <> (ingredient_id IS NULL)',
+            name='ck_purchase_items_single_source',
+        ),
+    )
 
 
 class Expense(Base, Timestamped):

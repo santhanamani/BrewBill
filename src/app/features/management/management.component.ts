@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute } from '@angular/router';
@@ -12,7 +12,7 @@ import {
   CustomerCreditAccount,
   DailyClosing,
   Expense,
-  Product,
+  IngredientInventoryItem,
   Purchase,
   Supplier,
   TenantSetting,
@@ -21,6 +21,7 @@ import {
 } from '../../core/models/api.models';
 import { SessionService } from '../../core/session.service';
 import { CurrencyService } from '../../core/currency.service';
+import { timedSignal } from '../../core/timed-signal';
 
 const pageDetails: Record<string, { title: string; detail: string; icon: string }> = {
   purchases: {
@@ -73,10 +74,11 @@ export class ManagementComponent {
   readonly loading = signal(false);
   readonly saving = signal(false);
   readonly error = signal('');
-  readonly success = signal('');
+  readonly success = timedSignal();
   readonly suppliers = signal<Supplier[]>([]);
-  readonly products = signal<Product[]>([]);
+  readonly ingredients = signal<IngredientInventoryItem[]>([]);
   readonly purchases = signal<Purchase[]>([]);
+  readonly editingPurchaseId = signal('');
   readonly expenses = signal<Expense[]>([]);
   readonly customers = signal<Customer[]>([]);
   readonly creditAccounts = signal<CustomerCreditAccount[]>([]);
@@ -147,6 +149,7 @@ export class ManagementComponent {
   );
 
   clearPurchase(): void {
+    this.editingPurchaseId.set('');
     this.purchaseInvoice=''; this.purchaseDate=this.localDate(); this.purchaseQuantity='1';
     this.purchaseCost='0.00'; this.purchaseTax='5.00'; this.purchaseStatus='PENDING'; this.purchaseNotes='';
   }
@@ -163,7 +166,7 @@ export class ManagementComponent {
   supplierName = '';
   purchaseInvoice = '';
   purchaseDate = this.localDate();
-  purchaseProduct = '';
+  purchaseIngredient = '';
   purchaseQuantity = '1';
   purchaseCost = '0.00';
   purchaseTax = '5.00';
@@ -264,16 +267,16 @@ export class ManagementComponent {
     try {
       switch (this.key()) {
         case 'purchases': {
-          const [suppliers, products, purchases] = await Promise.all([
+          const [suppliers, ingredients, purchases] = await Promise.all([
             this.api.listSuppliers(token),
-            this.api.listProducts(token),
+            this.api.listInventoryItems(token),
             this.api.listPurchases(token),
           ]);
           this.suppliers.set(suppliers);
-          this.products.set(products);
+          this.ingredients.set(ingredients);
           this.purchases.set(purchases);
           this.purchaseSupplier ||= suppliers[0]?.id ?? '';
-          this.purchaseProduct ||= products[0]?.id ?? '';
+          this.purchaseIngredient ||= ingredients[0]?.id ?? '';
           break;
         }
         case 'expenses':
@@ -388,6 +391,11 @@ export class ManagementComponent {
     if (this.settlingCustomerId()) return;
     this.creditCollectionCustomer.set(null);
     this.creditCollectionAmount = '';
+  }
+
+  @HostListener('document:keydown.escape')
+  closeCreditCollectionWithEscape(): void {
+    this.closeCreditCollection();
   }
 
   async settleCredit(): Promise<void> {
@@ -621,12 +629,13 @@ export class ManagementComponent {
   }
 
   async addPurchase(): Promise<void> {
-    if (!this.purchaseSupplier || !this.purchaseProduct || !this.purchaseInvoice.trim()) {
-      this.error.set('Supplier, invoice number and product are required.');
+    if (!this.purchaseSupplier || !this.purchaseIngredient || !this.purchaseInvoice.trim()) {
+      this.error.set('Supplier, invoice number and ingredient are required.');
       return;
     }
-    await this.save('Purchase saved and stock updated.', async (token) => {
-      await this.api.createPurchase(token, {
+    const editingId = this.editingPurchaseId();
+    await this.save(editingId ? 'Purchase updated and ingredient stock adjusted.' : 'Purchase saved and ingredient stock updated.', async (token) => {
+      const body = {
         supplier_id: this.purchaseSupplier,
         invoice_number: this.purchaseInvoice.trim(),
         purchase_date: new Date(`${this.purchaseDate}T12:00:00+05:30`).toISOString(),
@@ -634,17 +643,38 @@ export class ManagementComponent {
         notes: this.purchaseNotes.trim() || null,
         items: [
           {
-            product_id: this.purchaseProduct,
+            ingredient_id: this.purchaseIngredient,
             quantity: this.purchaseQuantity,
             unit_cost: this.purchaseCost,
             tax_percent: this.purchaseTax,
           },
         ],
-      });
-      this.purchaseInvoice = '';
+      };
+      if (editingId) {
+        await this.api.updatePurchase(token, editingId, body);
+      } else {
+        await this.api.createPurchase(token, body);
+      }
+      this.clearPurchase();
       this.purchases.set(await this.api.listPurchases(token));
-      this.products.set(await this.api.listProducts(token));
+      this.ingredients.set(await this.api.listInventoryItems(token));
     });
+  }
+
+  editPurchase(row: Purchase): void {
+    const line = row.items[0];
+    this.editingPurchaseId.set(row.id);
+    this.purchaseSupplier = row.supplier_id;
+    this.purchaseInvoice = row.invoice_number;
+    this.purchaseDate = row.purchase_date.slice(0, 10);
+    this.purchaseIngredient = line?.ingredient_id ?? this.ingredients()[0]?.id ?? '';
+    this.purchaseQuantity = line?.quantity ?? '1';
+    this.purchaseCost = line?.unit_cost ?? '0.00';
+    this.purchaseTax = line?.tax_percent ?? '5.00';
+    this.purchaseStatus = row.payment_status;
+    this.purchaseNotes = row.notes ?? '';
+    this.error.set(line?.ingredient_id ? '' : 'This is a legacy product purchase. Select the matching ingredient before updating it.');
+    document.querySelector('.form-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   async addExpense(): Promise<void> {

@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { BrewBillApiService } from '../../core/brew-bill-api.service';
@@ -11,11 +11,13 @@ import {
   MarketplaceOrder,
   MarketplaceSummary,
   OrderListItem,
+  OwnerTenantScope,
 } from '../../core/models/api.models';
 import { RuntimeConfigService } from '../../core/runtime-config.service';
 import { SessionService } from '../../core/session.service';
 import { ReceiptPaymentMode, ReceiptPrinterService } from '../../core/receipt-printer.service';
 import { CurrencyService } from '../../core/currency.service';
+import { timedSignal } from '../../core/timed-signal';
 
 const labels: Record<string, { title: string; detail: string; icon: string }> = {
   holds: {
@@ -35,7 +37,7 @@ const labels: Record<string, { title: string; detail: string; icon: string }> = 
   },
   reports: {
     title: 'Sales Reports',
-    detail: 'View and manage sales transactions for your outlet.',
+    detail: 'View sales transactions for the selected tenant branch and outlet.',
     icon: 'bar_chart',
   },
 };
@@ -49,6 +51,7 @@ export class OperationsComponent {
   private readonly heldCart = inject(HeldCartService);
   private readonly router = inject(Router);
   private readonly receiptPrinter = inject(ReceiptPrinterService);
+  private readonly destroyRef = inject(DestroyRef);
   readonly currency = inject(CurrencyService);
 
   readonly key = signal('inventory');
@@ -101,7 +104,13 @@ export class OperationsComponent {
   readonly marketplaceOrders = signal<MarketplaceOrder[]>([]);
   readonly marketplaceSummary = signal<MarketplaceSummary | null>(null);
   readonly marketplaceEnabled = computed(
-    () => this.session.context()?.plan_code === 'ULTRA_PROFESSIONAL',
+    () => !this.session.isOwner() && this.session.context()?.plan_code === 'ULTRA_PROFESSIONAL',
+  );
+  readonly ownerScopes = signal<OwnerTenantScope[]>([]);
+  readonly selectedTenantId = signal('');
+  readonly selectedOutletId = signal('');
+  readonly selectedOwnerScope = computed(() =>
+    this.ownerScopes().find(scope => scope.tenant_id === this.selectedTenantId()) ?? null,
   );
   readonly inventoryItems = signal<IngredientInventoryItem[]>([]);
   readonly movements = signal<IngredientMovement[]>([]);
@@ -134,6 +143,8 @@ export class OperationsComponent {
   readonly reportLimit = signal(10);
   readonly reportStatus = signal('');
   readonly reportPayment = signal('');
+  readonly reportFromDate = signal(this.localDateValue(new Date()));
+  readonly reportToDate = signal(this.localDateValue(new Date()));
   readonly reportPage = signal(0);
   readonly reportPageSize = signal(10);
   readonly filteredOrders = computed(() => {
@@ -170,11 +181,14 @@ export class OperationsComponent {
   readonly adjustmentReference = signal('');
   readonly adjustmentNotes = signal('');
   readonly kotFilter = signal<'ALL' | KotTicket['status']>('ALL');
-  readonly filteredKots = computed(() =>
-    this.kotFilter() === 'ALL'
-      ? this.kots()
-      : this.kots().filter((kot) => kot.status === this.kotFilter()),
-  );
+  readonly completedKotDate = signal(this.localDateValue(new Date()));
+  readonly completedKots = computed(() => this.kots().filter(kot =>
+    kot.status === 'SERVED' && this.localDateValue(new Date(kot.created_at)) === this.completedKotDate()));
+  readonly filteredKots = computed(() => this.kotFilter() === 'ALL'
+    ? this.kots().filter(kot => kot.status !== 'SERVED')
+    : this.kotFilter() === 'SERVED'
+      ? this.completedKots()
+      : this.kots().filter(kot => kot.status === this.kotFilter()));
   readonly openKots = computed(() => this.kots().filter((kot) => kot.status !== 'SERVED').length);
   readonly readyKots = computed(() => this.kots().filter((kot) => kot.status === 'READY').length);
   readonly delayedKots = computed(
@@ -194,19 +208,32 @@ export class OperationsComponent {
   );
   readonly loading = signal(false);
   readonly error = signal('');
-  readonly notice = signal('');
+  readonly notice = timedSignal();
   readonly printingOrderId = signal<string | null>(null);
 
   constructor() {
+    this.route.queryParamMap.subscribe((params) => {
+      this.reportStatus.set(params.get('status') ?? '');
+      this.reportPayment.set(params.get('payment') ?? '');
+      this.reportFromDate.set(params.get('from') ?? this.reportFromDate());
+      this.reportToDate.set(params.get('to') ?? this.reportToDate());
+      this.selectedTenantId.set(params.get('tenant') ?? this.selectedTenantId());
+      this.selectedOutletId.set(params.get('outlet') ?? this.selectedOutletId());
+      this.reportPage.set(0);
+    });
     this.route.paramMap.subscribe((params) => {
       this.key.set(params.get('module') ?? 'inventory');
       void this.load();
     });
+    const reportRefresh = window.setInterval(() => {
+      if (this.key() === 'reports' && !this.loading()) void this.load(false);
+    }, 15000);
+    this.destroyRef.onDestroy(() => window.clearInterval(reportRefresh));
   }
 
-  async load(): Promise<void> {
+  async load(showLoading = true): Promise<void> {
     this.error.set('');
-    this.loading.set(true);
+    if (showLoading) this.loading.set(true);
     try {
       const token = this.requireToken();
       if (this.key() === 'holds') {
@@ -216,10 +243,32 @@ export class OperationsComponent {
         if (!rows.some((row) => row.id === this.selectedHoldId()))
           this.selectedHoldId.set(rows[0]?.id ?? null);
       }
-      if (this.key() === 'kot') this.kots.set(await this.api.listKots(token));
+      if (this.key() === 'kot') this.kots.set(await this.api.listKots(token, this.completedKotDate()));
       if (this.key() === 'reports') {
+        if (this.session.isOwner() && !this.ownerScopes().length) {
+          const scopes = await this.api.listOwnerTenants(token);
+          this.ownerScopes.set(scopes);
+          const requested = this.selectedTenantId();
+          const homeTenant = this.session.user()?.tenant_id;
+          this.selectedTenantId.set(
+            scopes.some(scope => scope.tenant_id === requested) ? requested
+              : scopes.some(scope => scope.tenant_id === homeTenant) ? String(homeTenant)
+                : (scopes[0]?.tenant_id ?? ''),
+          );
+          const selectedScope = scopes.find(scope => scope.tenant_id === this.selectedTenantId());
+          if (!selectedScope?.outlets.some(outlet => outlet.id === this.selectedOutletId())) {
+            this.selectedOutletId.set('');
+          }
+          this.currency.configure(selectedScope?.currency);
+        }
         const [orders, marketplaceOrders, marketplaceSummary] = await Promise.all([
-          this.api.listOrders(token),
+          this.api.listOrders(
+            token,
+            this.reportFromDate(),
+            this.reportToDate(),
+            this.session.isOwner() ? this.selectedTenantId() || undefined : undefined,
+            this.session.isOwner() ? this.selectedOutletId() || undefined : undefined,
+          ),
           this.marketplaceEnabled() ? this.api.listMarketplaceOrders(token) : Promise.resolve([]),
           this.marketplaceEnabled() ? this.api.getMarketplaceSummary(token) : Promise.resolve(null),
         ]);
@@ -241,9 +290,58 @@ export class OperationsComponent {
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : 'Unable to load PostgreSQL data.');
     } finally {
-      this.loading.set(false);
+      if (showLoading) this.loading.set(false);
     }
   }
+
+  applyReportDates(): void {
+    if (!this.reportFromDate() || !this.reportToDate() || this.reportFromDate() > this.reportToDate()) {
+      this.error.set('Choose a valid From and To date range.');
+      return;
+    }
+    this.reportPage.set(0);
+    void this.load();
+  }
+
+  clearReportFilters(): void {
+    const today = this.localDateValue(new Date());
+    this.reportStatus.set('');
+    this.reportPayment.set('');
+    this.reportFromDate.set(today);
+    this.reportToDate.set(today);
+    this.reportPage.set(0);
+    void this.load();
+  }
+
+  changeOwnerTenant(tenantId: string): void {
+    if (!tenantId || tenantId === this.selectedTenantId()) return;
+    this.selectedTenantId.set(tenantId);
+    this.selectedOutletId.set('');
+    this.currency.configure(this.ownerScopes().find(scope => scope.tenant_id === tenantId)?.currency);
+    this.reportPage.set(0);
+    void this.load();
+  }
+
+  changeOwnerOutlet(outletId: string): void {
+    this.selectedOutletId.set(outletId);
+    this.reportPage.set(0);
+    void this.load();
+  }
+
+  changeCompletedKotDate(value: string): void {
+    if (!value) return;
+    this.completedKotDate.set(value);
+    void this.load();
+  }
+
+  private localDateValue(value: Date): string {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).formatToParts(value);
+    const part = (type: Intl.DateTimeFormatPartTypes) => parts.find(row => row.type === type)?.value ?? '';
+    return `${part('year')}-${part('month')}-${part('day')}`;
+  }
+
 
   selectHold(hold: HeldBill): void {
     this.selectedHoldId.set(hold.id);

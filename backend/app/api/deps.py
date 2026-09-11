@@ -1,18 +1,37 @@
 from typing import Annotated
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Request, status
+from sqlalchemy.orm.attributes import set_committed_value
 from sqlalchemy.orm import Session
 from ..database import get_session
 from ..models import User
+from ..outlet_scope import resolve_operational_outlet
 from ..security import decode_token
 from ..subscriptions import require_subscription_access
 
 
-def current_user(authorization: Annotated[str, Header()], session: Session = Depends(get_session)) -> User:
+OPERATIONAL_PATHS = (
+    '/api/dashboard', '/api/orders', '/api/holds', '/api/kot', '/api/products',
+    '/api/inventory', '/api/suppliers', '/api/purchases', '/api/expenses',
+    '/api/customers', '/api/closings', '/api/marketplace',
+)
+
+
+def current_user(
+    request: Request,
+    authorization: Annotated[str, Header()],
+    x_brewbill_outlet: Annotated[str | None, Header(alias='X-BrewBill-Outlet')] = None,
+    session: Session = Depends(get_session),
+) -> User:
     payload = decode_token(authorization.removeprefix('Bearer '), 'access')
     user = session.get(User, payload['sub'])
     if user is None or not user.is_active or user.tenant_id != payload.get('tenant_id'):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Session is no longer valid')
     require_subscription_access(user, session)
+    if x_brewbill_outlet and request.url.path.startswith(OPERATIONAL_PATHS):
+        selected_outlet_id = resolve_operational_outlet(session, user, x_brewbill_outlet)
+        # Request-local effective scope. Marking it committed prevents a later
+        # transaction commit from permanently assigning this multi-outlet admin.
+        set_committed_value(user, 'outlet_id', selected_outlet_id)
     return user
 
 

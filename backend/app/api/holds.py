@@ -6,9 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 
-from .deps import current_user
+from .deps import require_role
 from ..database import get_session
 from ..models import AuditLog, HeldOrder, Order, OrderItem, OutletProductMapping, PosTerminal, Product, ProductVariant, User
+from ..numbering import next_prefixed_number
+from ..outlet_scope import resolve_operational_outlet
 from ..schemas import HeldItemRead, HeldOrderRead, HoldCreate
 
 router = APIRouter(prefix='/api/holds', tags=['holds'])
@@ -39,7 +41,7 @@ def view(held: HeldOrder) -> HeldOrderRead:
 
 @router.get('', response_model=list[HeldOrderRead])
 def list_holds(
-    user: User = Depends(current_user),
+    user: User = Depends(require_role('ADMIN', 'CASHIER')),
     session: Session = Depends(get_session),
 ) -> list[HeldOrderRead]:
     rows = session.scalars(
@@ -54,12 +56,13 @@ def list_holds(
 @router.post('', response_model=HeldOrderRead, status_code=status.HTTP_201_CREATED)
 def create_hold(
     body: HoldCreate,
-    user: User = Depends(current_user),
+    user: User = Depends(require_role('ADMIN', 'CASHIER')),
     session: Session = Depends(get_session),
 ) -> HeldOrderRead:
+    outlet_id = resolve_operational_outlet(session, user, body.outlet_id)
     terminal = session.scalar(select(PosTerminal).where(
         PosTerminal.tenant_id == user.tenant_id,
-        PosTerminal.outlet_id == user.outlet_id,
+        PosTerminal.outlet_id == outlet_id,
         PosTerminal.terminal_code == body.terminal_code,
         PosTerminal.status == 'ACTIVE',
     ))
@@ -69,20 +72,20 @@ def create_hold(
     products = session.scalars(select(Product).where(
         Product.tenant_id == user.tenant_id,
         Product.id.in_(product_ids),
-        or_(Product.outlet_id.is_(None), Product.outlet_id == user.outlet_id),
+        or_(Product.outlet_id.is_(None), Product.outlet_id == outlet_id),
     )).all()
     product_by_id = {product.id: product for product in products}
     if len(product_by_id) != len(set(product_ids)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='One or more products no longer exist.')
     mappings = session.scalars(select(OutletProductMapping).where(
         OutletProductMapping.tenant_id == user.tenant_id,
-        OutletProductMapping.outlet_id == user.outlet_id,
+        OutletProductMapping.outlet_id == outlet_id,
         OutletProductMapping.legacy_product_id.in_(product_ids),
     )).all()
     mapping_by_product = {mapping.legacy_product_id: mapping for mapping in mappings}
     catalogue_enabled = session.scalar(select(OutletProductMapping.id).where(
         OutletProductMapping.tenant_id == user.tenant_id,
-        OutletProductMapping.outlet_id == user.outlet_id,
+        OutletProductMapping.outlet_id == outlet_id,
     ).limit(1)) is not None
     if catalogue_enabled and len(mapping_by_product) != len(set(product_ids)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='One or more products are not mapped to this outlet.')
@@ -115,16 +118,18 @@ def create_hold(
         tax += line_tax
         lines.append(OrderItem(id=str(uuid4()), product_id=product.id, variant_id=variant.id if variant else None, product_name=product_name, variant_name=variant.name if variant else 'Regular', quantity=requested.quantity, rate=rate, tax=line_tax, line_total=line_total))
 
-    sequence = session.query(HeldOrder).filter(HeldOrder.tenant_id == user.tenant_id).count() + 1
+    hold_number = next_prefixed_number(session, HeldOrder.hold_number, 'HLD-')
+    hold_invoice_prefix = f'HOLD-{body.terminal_code}-{datetime.now(UTC).year}-'
     order = Order(
         id=str(uuid4()), tenant_id=user.tenant_id, outlet_id=terminal.outlet_id, terminal_id=terminal.id,
-        cashier_id=user.id, invoice_number=f'HOLD-{body.terminal_code}-{datetime.now(UTC).year}-{sequence:06d}',
+        cashier_id=user.id,
+        invoice_number=next_prefixed_number(session, Order.invoice_number, hold_invoice_prefix),
         subtotal=money(subtotal), discount=Decimal('0.00'), tax=money(tax), round_off=Decimal('0.00'), grand_total=money(subtotal + tax), status='HELD',
         items=lines,
     )
     held = HeldOrder(
         id=str(uuid4()), tenant_id=user.tenant_id, outlet_id=terminal.outlet_id, order_id=order.id,
-        cashier_id=user.id, hold_number=f'HLD-{sequence:06d}', status='HELD', order=order, cashier=user,
+        cashier_id=user.id, hold_number=hold_number, status='HELD', order=order, cashier=user,
     )
     session.add(held)
     session.commit()
@@ -135,7 +140,7 @@ def create_hold(
 @router.get('/{hold_id}', response_model=HeldOrderRead)
 def get_hold(
     hold_id: str,
-    user: User = Depends(current_user),
+    user: User = Depends(require_role('ADMIN', 'CASHIER')),
     session: Session = Depends(get_session),
 ) -> HeldOrderRead:
     held = session.scalar(
@@ -151,7 +156,7 @@ def get_hold(
 @router.post('/{hold_id}/reopen', response_model=HeldOrderRead)
 def reopen_hold(
     hold_id: str,
-    user: User = Depends(current_user),
+    user: User = Depends(require_role('ADMIN', 'CASHIER')),
     session: Session = Depends(get_session),
 ) -> HeldOrderRead:
     held = session.scalar(
@@ -175,7 +180,7 @@ def reopen_hold(
 @router.delete('/{hold_id}', status_code=status.HTTP_204_NO_CONTENT)
 def cancel_hold(
     hold_id: str,
-    user: User = Depends(current_user),
+    user: User = Depends(require_role('ADMIN', 'CASHIER')),
     session: Session = Depends(get_session),
 ) -> None:
     held = session.scalar(

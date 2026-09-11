@@ -52,6 +52,7 @@ class DeviceActivationRequest(BaseModel):
     installation_id: str = Field(min_length=16, max_length=160)
     terminal_code: str = Field(min_length=2, max_length=64, pattern=r'^[A-Za-z0-9_-]+$')
     terminal_name: str = Field(min_length=2, max_length=120)
+    outlet_id: str | None = Field(default=None, min_length=36, max_length=36)
 
 
 class LicenseEnvelope(BaseModel):
@@ -286,7 +287,6 @@ class TenantSubscriptionUpdate(BaseModel):
 class TenantCreate(BaseModel):
     code: str = Field(min_length=2, max_length=32, pattern=r'^[A-Za-z0-9_-]+$')
     name: str = Field(min_length=2, max_length=160)
-    outlet_code: str = Field(min_length=2, max_length=32, pattern=r'^[A-Za-z0-9_-]+$')
     outlet_name: str = Field(min_length=2, max_length=160)
     outlet_address: str | None = Field(default=None, max_length=2000)
     admin_username: str = Field(min_length=3, max_length=80)
@@ -306,7 +306,6 @@ class TenantUpdate(BaseModel):
 
 class AdminOutletCreate(BaseModel):
     tenant_id: str
-    code: str = Field(min_length=2, max_length=32, pattern=r'^[A-Za-z0-9_-]+$')
     name: str = Field(min_length=2, max_length=160)
     address: str | None = Field(default=None, max_length=2000)
 
@@ -328,7 +327,8 @@ class AdminOutletRead(BaseModel):
 class AdminUserCreate(BaseModel):
     tenant_id: str
     outlet_id: str | None = None
-    role_code: str = Field(pattern=r'^(TENANT_ADMIN|ADMIN|CASHIER)$')
+    role_code: str = Field(pattern=r'^(TENANT_ADMIN|ADMIN|CASHIER|OWNER)$')
+    owner_tenant_ids: list[str] = Field(default_factory=list, max_length=200)
     username: str = Field(min_length=3, max_length=80)
     display_name: str = Field(min_length=2, max_length=120)
     email: str | None = Field(default=None, max_length=255)
@@ -338,7 +338,8 @@ class AdminUserCreate(BaseModel):
 
 class AdminUserUpdate(BaseModel):
     outlet_id: str | None = None
-    role_code: str | None = Field(default=None, pattern=r'^(TENANT_ADMIN|ADMIN|CASHIER)$')
+    role_code: str | None = Field(default=None, pattern=r'^(TENANT_ADMIN|ADMIN|CASHIER|OWNER)$')
+    owner_tenant_ids: list[str] | None = Field(default=None, max_length=200)
     display_name: str | None = Field(default=None, min_length=2, max_length=120)
     email: str | None = Field(default=None, max_length=255)
     phone: str | None = Field(default=None, max_length=32)
@@ -357,6 +358,8 @@ class AdminUserRead(BaseModel):
     email: str | None
     phone: str | None
     role_code: str
+    owner_tenant_ids: list[str] = Field(default_factory=list)
+    owner_tenant_names: list[str] = Field(default_factory=list)
     is_active: bool
     last_active: datetime
 
@@ -365,6 +368,14 @@ class AdminRoleRead(BaseModel):
     id: str
     code: str
     name: str
+
+
+class OwnerTenantRead(BaseModel):
+    tenant_id: str
+    tenant_code: str
+    tenant_name: str
+    currency: CurrencyRead
+    outlets: list[AdminOutletRead]
 
 
 class ProductCreate(BaseModel):
@@ -456,6 +467,7 @@ class PaymentCreate(BaseModel):
 class OrderCreate(BaseModel):
     order_id: str = Field(min_length=36, max_length=36)
     terminal_code: str = Field(min_length=2, max_length=64)
+    outlet_id: str | None = Field(default=None, min_length=36, max_length=36)
     items: list[OrderLineCreate] = Field(min_length=1, max_length=100)
     payments: list[PaymentCreate] = Field(default_factory=list, max_length=3)
     credit_customer_id: str | None = Field(default=None, min_length=36, max_length=36)
@@ -544,6 +556,7 @@ class KotStatusUpdate(BaseModel):
 
 class HoldCreate(BaseModel):
     terminal_code: str = Field(min_length=2, max_length=64)
+    outlet_id: str | None = Field(default=None, min_length=36, max_length=36)
     items: list[OrderLineCreate] = Field(min_length=1, max_length=100)
 
 
@@ -749,10 +762,17 @@ class SupplierRead(SupplierCreate):
 
 
 class PurchaseLineCreate(BaseModel):
-    product_id: str = Field(min_length=36, max_length=36)
+    product_id: str | None = Field(default=None, min_length=36, max_length=36)
+    ingredient_id: str | None = Field(default=None, min_length=36, max_length=36)
     quantity: Decimal = Field(gt=0, max_digits=18, decimal_places=3)
     unit_cost: Decimal = Field(ge=0, max_digits=18, decimal_places=2)
     tax_percent: Decimal = Field(default=Decimal('5.00'), ge=0, le=100, max_digits=5, decimal_places=2)
+
+    @model_validator(mode='after')
+    def validate_item_reference(self) -> 'PurchaseLineCreate':
+        if bool(self.product_id) == bool(self.ingredient_id):
+            raise ValueError('Select exactly one product or ingredient.')
+        return self
 
 
 class PurchaseCreate(BaseModel):
@@ -764,8 +784,19 @@ class PurchaseCreate(BaseModel):
     items: list[PurchaseLineCreate] = Field(min_length=1, max_length=100)
 
 
+class PurchaseLineRead(BaseModel):
+    product_id: str | None
+    ingredient_id: str | None
+    item_name: str
+    quantity: Decimal
+    unit_cost: Decimal
+    tax_percent: Decimal
+    line_total: Decimal
+
+
 class PurchaseRead(BaseModel):
     id: str
+    supplier_id: str
     supplier_name: str
     invoice_number: str
     purchase_date: datetime
@@ -774,6 +805,8 @@ class PurchaseRead(BaseModel):
     total: Decimal
     payment_status: str
     item_count: int
+    notes: str | None
+    items: list[PurchaseLineRead]
 
 
 class ExpenseCreate(BaseModel):
@@ -870,6 +903,54 @@ class TenantPaymentPolicyRead(BaseModel):
 
 class TenantPaymentPolicyUpdate(BaseModel):
     payment_processing_mode: Literal['MANUAL_ALLOWED', 'TERMINAL_REQUIRED']
+
+
+class TenantMessageUserRead(BaseModel):
+    id: str
+    display_name: str
+    username: str
+    role_code: str
+
+
+class TenantMessageCreate(BaseModel):
+    audience: Literal['DIRECT', 'GROUP'] = 'DIRECT'
+    recipient_user_id: str | None = None
+    subject: str = Field(min_length=2, max_length=160)
+    body: str = Field(min_length=1, max_length=5000)
+    reply_to_id: str | None = Field(default=None, min_length=36, max_length=36)
+
+
+class TenantMessageReactionRead(BaseModel):
+    emoji: str
+    count: int
+    reacted_by_me: bool
+
+
+class TenantMessageReactionUpdate(BaseModel):
+    emoji: str = Field(min_length=1, max_length=16)
+
+
+class TenantMessageRead(BaseModel):
+    id: str
+    group_message_id: str | None
+    sender_user_id: str
+    sender_name: str
+    recipient_user_id: str
+    recipient_name: str
+    audience: Literal['DIRECT', 'GROUP']
+    subject: str
+    body: str
+    reply_to_id: str | None
+    reply_to_group_message_id: str | None
+    reply_to_sender_name: str | None
+    reply_to_body: str | None
+    reactions: list[TenantMessageReactionRead]
+    read_at: datetime | None
+    created_at: datetime
+
+
+class TenantMessageSendResult(BaseModel):
+    delivered: int
 
 
 class CategoryCreate(BaseModel):

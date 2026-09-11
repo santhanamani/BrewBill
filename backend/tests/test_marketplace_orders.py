@@ -38,7 +38,7 @@ def test_marketplace_order_lifecycle_uses_outlet_price_and_audited_stock(monkeyp
     now = datetime.now(UTC)
     with testing_session() as session:
         tenant = Tenant(id=str(uuid4()), code='MARKET', name='Marketplace Tenant', status='ACTIVE')
-        outlet = Outlet(id=str(uuid4()), tenant_id=tenant.id, code='MKT01', name='Marketplace Outlet')
+        outlet = Outlet(id=str(uuid4()), tenant_id=tenant.id, code='MARK', name='Marketplace Outlet')
         role = Role(id=str(uuid4()), code='ADMIN', name='Administrator')
         user = User(
             id=str(uuid4()),
@@ -149,7 +149,7 @@ def test_marketplace_order_lifecycle_uses_outlet_price_and_audited_stock(monkeyp
             provider_order = {
                 'provider': 'SWIGGY',
                 'merchant_id': 'SWG-TEST',
-                'outlet_code': 'MKT01',
+                'outlet_code': 'MARK',
                 'external_order_id': 'SWIGGY-LIVE-001',
                 'customer_name': 'Provider Customer',
                 'customer_phone_masked': '******4321',

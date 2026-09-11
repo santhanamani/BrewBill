@@ -7,6 +7,10 @@
 .bottom-nav button {
   text-decoration: none;
 }
+
+.super-admin-shell .page-content { padding-bottom: 22px; min-height: calc(100dvh - 80px); }
+.message-alert { position: relative; }
+.message-alert b { display:grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:#d52d55;color:#fff;font-size:10px; }
 .bottom-nav a,
 .bottom-nav button {
   height: 56px;

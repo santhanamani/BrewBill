@@ -1,9 +1,9 @@
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 from uuid import uuid4
 from zoneinfo import ZoneInfo
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, selectinload
 from .deps import current_user, require_role
@@ -11,6 +11,9 @@ from .platform import active_subscription
 from ..database import get_session
 from ..inventory_service import adjust_stock
 from ..models import AuditLog, Customer, CustomerCreditEntry, HeldOrder, KotHeader, KotItem, Order, OrderItem, Outlet, OutletProductMapping, Payment, PosTerminal, Product, ProductVariant, TenantSetting, User
+from ..numbering import next_prefixed_number
+from ..owner_access import resolve_read_scope
+from ..outlet_scope import resolve_operational_outlet
 from ..schemas import OrderCreate, OrderListItemRead, OrderRead, OrderVoidRequest, SyncOrderCreate
 
 router = APIRouter(prefix='/api/orders', tags=['orders'])
@@ -24,16 +27,33 @@ def money(value: Decimal) -> Decimal:
 
 @router.get('', response_model=list[OrderListItemRead])
 def list_orders(
+    from_date: date | None = Query(default=None),
+    to_date: date | None = Query(default=None),
+    tenant_id: str | None = Query(default=None, max_length=36),
+    outlet_id: str | None = Query(default=None, max_length=36),
     user: User = Depends(current_user),
     session: Session = Depends(get_session),
 ) -> list[OrderListItemRead]:
     """Return the signed-in outlet's PostgreSQL order history."""
+    if from_date and to_date and from_date > to_date:
+        raise HTTPException(status_code=422, detail='from_date must be on or before to_date.')
+    scoped_tenant_id, scoped_outlet_id = resolve_read_scope(session, user, tenant_id, outlet_id)
+    conditions = [
+        Order.tenant_id == scoped_tenant_id,
+        Order.status.in_(('COMPLETED', 'VOID')),
+    ]
+    if scoped_outlet_id:
+        conditions.append(Order.outlet_id == scoped_outlet_id)
+    if from_date:
+        conditions.append(Order.created_at >= datetime.combine(from_date, time.min, INDIA).astimezone(UTC))
+    if to_date:
+        conditions.append(Order.created_at < datetime.combine(to_date + timedelta(days=1), time.min, INDIA).astimezone(UTC))
     orders = session.scalars(
         select(Order)
-        .where(Order.tenant_id == user.tenant_id, Order.outlet_id == user.outlet_id, Order.status.in_(('COMPLETED', 'VOID')))
+        .where(*conditions)
         .options(selectinload(Order.items), selectinload(Order.payments))
         .order_by(Order.created_at.desc())
-        .limit(250)
+        .limit(1000)
     ).all()
     cashier_ids = {order.cashier_id for order in orders if order.cashier_id}
     cashiers = {
@@ -79,13 +99,14 @@ def list_orders(
 @router.post('', response_model=OrderRead, status_code=status.HTTP_201_CREATED)
 def create_order(
     body: OrderCreate,
-    user: User = Depends(current_user),
+    user: User = Depends(require_role('ADMIN', 'CASHIER')),
     session: Session = Depends(get_session),
 ) -> Order:
     existing = session.scalar(select(Order).where(Order.id == body.order_id, Order.tenant_id == user.tenant_id))
     if existing is not None:
         return existing
     active_subscription(user, session)
+    outlet_id = resolve_operational_outlet(session, user, body.outlet_id)
     credit_customer = None
     if body.credit_customer_id:
         credit_customer = session.scalar(select(Customer).where(
@@ -99,7 +120,7 @@ def create_order(
         held_order = session.scalar(select(HeldOrder).where(
             HeldOrder.id == body.held_order_id,
             HeldOrder.tenant_id == user.tenant_id,
-            HeldOrder.outlet_id == user.outlet_id,
+            HeldOrder.outlet_id == outlet_id,
             HeldOrder.status == 'HELD',
         ).with_for_update())
         if held_order is None:
@@ -116,27 +137,27 @@ def create_order(
         PosTerminal.terminal_code == body.terminal_code,
         PosTerminal.status == 'ACTIVE',
     ))
-    if terminal is None or terminal.outlet_id != user.outlet_id:
+    if terminal is None or terminal.outlet_id != outlet_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='This POS terminal is not active for the signed-in outlet.')
 
     product_ids = [line.product_id for line in body.items]
     products = session.scalars(select(Product).where(
         Product.tenant_id == user.tenant_id,
         Product.id.in_(product_ids),
-        or_(Product.outlet_id.is_(None), Product.outlet_id == user.outlet_id),
+        or_(Product.outlet_id.is_(None), Product.outlet_id == outlet_id),
     ).with_for_update()).all()
     product_by_id = {product.id: product for product in products}
     if len(product_by_id) != len(set(product_ids)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='One or more products no longer exist.')
     mappings = session.scalars(select(OutletProductMapping).where(
         OutletProductMapping.tenant_id == user.tenant_id,
-        OutletProductMapping.outlet_id == user.outlet_id,
+        OutletProductMapping.outlet_id == outlet_id,
         OutletProductMapping.legacy_product_id.in_(product_ids),
     )).all()
     mapping_by_product = {mapping.legacy_product_id: mapping for mapping in mappings}
     catalogue_enabled = session.scalar(select(OutletProductMapping.id).where(
         OutletProductMapping.tenant_id == user.tenant_id,
-        OutletProductMapping.outlet_id == user.outlet_id,
+        OutletProductMapping.outlet_id == outlet_id,
     ).limit(1)) is not None
     if catalogue_enabled and len(mapping_by_product) != len(set(product_ids)):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='One or more products are not mapped to this outlet.')
@@ -202,11 +223,11 @@ def create_order(
         )
     credit_amount = money(grand_total - paid_total) if credit_customer is not None else Decimal('0.00')
 
-    sequence = session.query(Order).filter(Order.tenant_id == user.tenant_id).count() + 1
     outlet = session.get(Outlet, terminal.outlet_id)
     if outlet is None:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='The terminal outlet no longer exists.')
-    invoice_number = f'BH-{outlet.code}-{terminal.terminal_code}-{datetime.now(UTC).year}-{sequence:06d}'
+    invoice_prefix = f'BH-{outlet.code}-{terminal.terminal_code}-{datetime.now(UTC).year}-'
+    invoice_number = next_prefixed_number(session, Order.invoice_number, invoice_prefix)
     order = Order(
         id=body.order_id, tenant_id=user.tenant_id, outlet_id=terminal.outlet_id,
         terminal_id=terminal.id, cashier_id=user.id, customer_id=credit_customer.id if credit_customer else None,
@@ -250,13 +271,12 @@ def create_order(
         if kot_required_by_product[line.product_id]
     ]
     if kot_lines and body.order_type in ('KOT', 'TAKEAWAY'):
-        kot_sequence = session.query(KotHeader).filter(KotHeader.tenant_id == user.tenant_id).count() + 1
         kot = KotHeader(
             id=str(uuid4()),
             tenant_id=user.tenant_id,
             outlet_id=terminal.outlet_id,
             order_id=order.id,
-            kot_number=f'KOT-{kot_sequence:06d}',
+            kot_number=next_prefixed_number(session, KotHeader.kot_number, 'KOT-'),
             station='Takeaway Counter' if body.order_type == 'TAKEAWAY' else 'Hot Kitchen',
             status='NEW',
         )
@@ -357,7 +377,7 @@ def void_order(
 @router.post('/sync', response_model=OrderRead, status_code=status.HTTP_201_CREATED)
 def sync_order(
     body: SyncOrderCreate,
-    user: User = Depends(current_user),
+    user: User = Depends(require_role('ADMIN', 'CASHIER')),
     session: Session = Depends(get_session),
 ) -> Order:
     """Accept a completed offline order using tenant-scoped stable product codes.
