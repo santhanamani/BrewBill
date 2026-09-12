@@ -9,7 +9,9 @@ from urllib.parse import urlsplit
 from fastapi import HTTPException
 from PIL import Image, ImageOps, UnidentifiedImageError
 
-MEDIA_ROOT = Path(__file__).resolve().parents[1] / 'storage' / 'tenant-branding'
+from .media_storage import data_root
+
+MEDIA_ROOT = data_root() / 'tenant-branding'
 LIMITS = {'logo': 2 * 1024 * 1024, 'cover': 5 * 1024 * 1024}
 PREFIX = '/api/platform/tenants/'
 
@@ -46,7 +48,12 @@ def save_image(tenant_id: str, kind: str, content: bytes) -> dict:
     name = f'{kind}-{uuid4().hex}.webp'
     with (directory / name).open('xb') as target:
         target.write(encoded.getvalue())
-    return {'url': f'{PREFIX}{tenant_id}/media/{name}', 'width': width, 'height': height}
+    return {
+        'path': f'tenant-branding/{tenant_id}/{name}',
+        'url': f'{PREFIX}{tenant_id}/media/{name}',
+        'width': width,
+        'height': height,
+    }
 
 
 def media_path(tenant_id: str, filename: str) -> Path:
@@ -58,13 +65,19 @@ def media_path(tenant_id: str, filename: str) -> Path:
 def validate_branding_url(tenant_id: str, value: str | None) -> None:
     if not value:
         return
-    if value.startswith(PREFIX):
+    relative_prefix = f'tenant-branding/{tenant_id}/'
+    if value.startswith('tenant-branding/'):
+        if not value.startswith(relative_prefix) or not media_path(tenant_id, value[len(relative_prefix):]).is_file():
+            raise HTTPException(422, 'Choose an image uploaded for this tenant only.')
+    elif value.startswith(PREFIX):
         expected = f'{PREFIX}{tenant_id}/media/'
         if not value.startswith(expected) or not media_path(tenant_id, value[len(expected):]).is_file():
             raise HTTPException(422, 'Choose an image uploaded for this tenant only.')
     elif value.startswith('/'):
         if not value.startswith('/assets/images/'):
             raise HTTPException(422, 'Invalid branding image path.')
+    elif value.startswith(('brand/', 'products/', 'categories/', 'inventory/')):
+        return
     else:
         parsed = urlsplit(value)
         if parsed.scheme not in {'http', 'https'} or not parsed.hostname or parsed.username or parsed.password:

@@ -24,8 +24,16 @@ from .api.platform import router as platform_router
 from .api.inventory import router as inventory_router
 from .api.marketplace import router as marketplace_router
 from .api.messages import router as message_router
+from .api.media import router as media_router
 
-app = FastAPI(title="BrewBill Cloud API", version="0.1.0")
+app = FastAPI(
+    title="BrewBill Cloud API",
+    description="Tenant-scoped APIs for BrewBill POS and administration.",
+    version="0.1.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
+)
 app.include_router(product_router)
 app.include_router(category_router)
 app.include_router(order_router)
@@ -37,6 +45,7 @@ app.include_router(platform_router)
 app.include_router(inventory_router)
 app.include_router(marketplace_router)
 app.include_router(message_router)
+app.include_router(media_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[origin.strip() for origin in settings.cors_origins.split(',') if origin.strip()],

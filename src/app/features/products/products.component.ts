@@ -469,7 +469,7 @@ export class ProductsComponent {
       const image = this.tenantProductImage();
       if (image) {
         const uploaded = await this.api.uploadTenantProductImage(this.requireToken(), image);
-        body.image_path = uploaded.url;
+        body.image_path = uploaded.path;
       }
       await this.api.createTenantCatalogueProduct(this.requireToken(), body);
       this.tenantProductImage.set(null);

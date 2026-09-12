@@ -345,7 +345,7 @@ export class AdministrationComponent {
     try {
       const result=await this.api.uploadTenantBranding(token,tenant.id,kind,file);
       if(this.selected()?.id!==tenant.id||version!==this.brandSelectionVersion)return;
-      this.patchDraft(kind==='logo'?'logo_url':'cover_image_url',result.url);
+      this.patchDraft(kind==='logo'?'logo_url':'cover_image_url',result.path);
       this.brandFeedback.set('Uploaded '+result.width+' × '+result.height+' px. Click Save Changes to publish for '+tenant.code+' only.');
     }catch(error){
       if(this.selected()?.id===tenant.id&&version===this.brandSelectionVersion)this.brandFeedback.set(this.errorMessage(error));

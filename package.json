@@ -1,16 +1,17 @@
 {
   "name": "brew-bill-ui",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "main": "electron/main.cjs",
   "scripts": {
     "ng": "set \"PATH=D:\\BrewBillTools\\NodeJS\\22.22.3;%PATH%\" && ng",
     "start": "set \"PATH=D:\\BrewBillTools\\NodeJS\\22.22.3;%PATH%\" && ng serve --host 127.0.0.1 --hmr=false",
     "build": "set \"PATH=D:\\BrewBillTools\\NodeJS\\22.22.3;%PATH%\" && ng build",
+    "build:desktop": "set \"PATH=D:\\BrewBillTools\\NodeJS\\22.22.3;%PATH%\" && ng build --base-href ./",
     "watch": "set \"PATH=D:\\BrewBillTools\\NodeJS\\22.22.3;%PATH%\" && ng build --watch --configuration development",
     "test": "set \"PATH=D:\\BrewBillTools\\NodeJS\\22.22.3;%PATH%\" && ng test",
     "dev": "npm run desktop:dev",
     "desktop:dev": "set \"PATH=D:\\BrewBillTools\\NodeJS\\22.22.3;%PATH%\" && concurrently -k \"npm.cmd run start\" \"wait-on http://127.0.0.1:4200 && set ELECTRON_RUN_AS_NODE=&& electron .\"",
-    "desktop:package": "set \"PATH=D:\\BrewBillTools\\NodeJS\\22.22.3;%PATH%\" && npm.cmd run build && electron-builder --win nsis",
+    "desktop:package": "set \"PATH=D:\\BrewBillTools\\NodeJS\\22.22.3;%PATH%\" && npm.cmd run build:desktop && electron-builder --win nsis",
     "test:license": "set \"PATH=D:\\BrewBillTools\\NodeJS\\22.22.3;%PATH%\" && node scripts/test-license.cjs",
     "test:shortcuts": "node --test scripts/test-electron-shortcuts.cjs"
   },

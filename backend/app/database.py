@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     cors_origins: str = 'http://localhost:4200,http://127.0.0.1:4200,null'
     marketplace_mock_enabled: bool = False
     marketplace_connector_token: str = ''
+    brewbill_data_path: str = 'D:/BrewBill-Data_folder'
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)
 
 

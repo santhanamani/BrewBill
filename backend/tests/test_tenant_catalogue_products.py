@@ -210,6 +210,10 @@ def test_product_image_upload_is_saved_and_scoped_to_tenant_outlet(tenant_catalo
     )
     assert uploaded.status_code == 200, uploaded.text
     media = uploaded.json()
+    expected_path_prefix = (
+        f'products/tenant-uploads/{users["admin"].tenant_id}/{users["admin"].outlet_id}/'
+    )
+    assert media['path'].startswith(expected_path_prefix)
     expected_prefix = (
         f'/api/products/media/{users["admin"].tenant_id}/{users["admin"].outlet_id}/'
     )
@@ -218,15 +222,15 @@ def test_product_image_upload_is_saved_and_scoped_to_tenant_outlet(tenant_catalo
     assert client.get(media['url']).headers['content-type'].startswith('image/webp')
 
     payload = local_product_payload(category.id)
-    payload['image_path'] = media['url']
+    payload['image_path'] = media['path']
     created = client.post('/api/products/catalogue/local', json=payload)
     assert created.status_code == 201, created.text
-    assert created.json()['image_path'] == media['url']
+    assert created.json()['image_path'] == media['path']
 
     active['user'] = users['other_admin']
     other_payload = local_product_payload(other_category.id)
     other_payload['code'] = 'OTHER_SPECIAL'
-    other_payload['image_path'] = media['url']
+    other_payload['image_path'] = media['path']
     assert client.post('/api/products/catalogue/local', json=other_payload).status_code == 422
 
     active['user'] = users['cashier']

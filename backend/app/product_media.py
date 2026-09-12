@@ -10,8 +10,10 @@ from uuid import UUID, uuid4
 from fastapi import HTTPException
 from PIL import Image, ImageOps, UnidentifiedImageError
 
+from .media_storage import data_root
 
-MEDIA_ROOT = Path(__file__).resolve().parents[1] / 'storage' / 'tenant-products'
+
+MEDIA_ROOT = data_root() / 'products' / 'tenant-uploads'
 MAX_PRODUCT_IMAGE_BYTES = 5 * 1024 * 1024
 PREFIX = '/api/products/media/'
 
@@ -62,6 +64,7 @@ def save_product_image(tenant_id: str, outlet_id: str, content: bytes) -> dict:
     with (directory / filename).open('xb') as target:
         target.write(encoded.getvalue())
     return {
+        'path': f'products/tenant-uploads/{tenant_id}/{outlet_id}/{filename}',
         'url': f'{PREFIX}{tenant_id}/{outlet_id}/{filename}',
         'width': width,
         'height': height,
@@ -82,6 +85,14 @@ def validate_product_image_path(tenant_id: str, outlet_id: str, value: str | Non
         if not value.startswith(expected):
             raise HTTPException(422, 'Choose an image uploaded for this tenant and outlet.')
         path = product_media_path(tenant_id, outlet_id, value[len(expected):])
+        if not path.is_file():
+            raise HTTPException(422, 'Uploaded product image was not found.')
+        return
+    relative_prefix = f'products/tenant-uploads/{tenant_id}/{outlet_id}/'
+    if value.startswith('products/tenant-uploads/'):
+        if not value.startswith(relative_prefix):
+            raise HTTPException(422, 'Choose an image uploaded for this tenant and outlet.')
+        path = product_media_path(tenant_id, outlet_id, value[len(relative_prefix):])
         if not path.is_file():
             raise HTTPException(422, 'Uploaded product image was not found.')
         return

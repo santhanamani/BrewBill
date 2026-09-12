@@ -59,8 +59,10 @@ def test_upload_save_resolve_isolated_and_public(branding_client):
     for kind, field in [('logo', 'logo_url'), ('cover', 'cover_image_url')]:
         response = upload(client, first, kind=kind)
         assert response.status_code == 200, response.text
-        path = response.json()['url']
-        assert f'/tenants/{first}/media/{kind}-' in path
+        media = response.json()
+        path = media['path']
+        url = media['url']
+        assert path.startswith(f'tenant-branding/{first}/{kind}-')
         # Upload is a draft until the explicit save; no tenant name/images modified.
         assert client.get('/api/platform/tenants/resolve?code=CAFE-A').json()[field] is None
         saved = client.patch(f'/api/platform/admin/tenants/{first}/branding',
@@ -70,7 +72,7 @@ def test_upload_save_resolve_isolated_and_public(branding_client):
         assert resolved[field] == path
         assert resolved['name'] == 'Cafe A New Name'
         assert client.get('/api/platform/tenants/resolve?code=CAFE-B').json()[field] is None
-        image = client.get(path)
+        image = client.get(url)
         assert image.status_code == 200
         assert image.headers['content-type'] == 'image/webp'
         assert image.headers['x-content-type-options'] == 'nosniff'
@@ -79,7 +81,7 @@ def test_upload_save_resolve_isolated_and_public(branding_client):
             assert not decoded.getexif()
         wrong = client.patch(f'/api/platform/admin/tenants/{second}/branding', json={field: path})
         assert wrong.status_code == 422
-        assert client.get(path.replace(first, second)).status_code == 404
+        assert client.get(url.replace(first, second)).status_code == 404
 
 
 @pytest.mark.parametrize('content', [b'', b'not an image', b'<svg xmlns="http://www.w3.org/2000/svg"/>', picture((20, 20)), b'x' * (2 * 1024 * 1024 + 1)], ids=['empty', 'garbage', 'svg', 'too-small', 'too-large'])

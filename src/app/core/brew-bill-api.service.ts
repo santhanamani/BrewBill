@@ -76,19 +76,19 @@ export class BrewBillApiService {
     );
   }
 
-  uploadTenantBranding(accessToken: string, tenantId: string, kind: 'logo' | 'cover', file: File): Promise<{url:string;width:number;height:number}> {
+  uploadTenantBranding(accessToken: string, tenantId: string, kind: 'logo' | 'cover', file: File): Promise<{path:string;url:string;width:number;height:number}> {
     const body = new FormData();
     body.append('file', file);
-    return this.request(this.http.post<{url:string;width:number;height:number}>(
+    return this.request(this.http.post<{path:string;url:string;width:number;height:number}>(
       this.runtime.apiUrl('/platform/admin/tenants/' + encodeURIComponent(tenantId) + '/branding/' + kind + '/upload'),
       body, {headers:this.authHeaders(accessToken)},
     ), 30000);
   }
 
-  uploadTenantProductImage(accessToken: string, file: File): Promise<{url:string;width:number;height:number}> {
+  uploadTenantProductImage(accessToken: string, file: File): Promise<{path:string;url:string;width:number;height:number}> {
     const body = new FormData();
     body.append('file', file);
-    return this.request(this.http.post<{url:string;width:number;height:number}>(
+    return this.request(this.http.post<{path:string;url:string;width:number;height:number}>(
       this.runtime.apiUrl('/products/catalogue/local/image'), body,
       {headers:this.authHeaders(accessToken)},
     ), 30000);

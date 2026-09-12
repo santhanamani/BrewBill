@@ -38,6 +38,8 @@ yarn-error.log
 testem.log
 /typings
 __screenshots__/
+.codex-runtime/
+.pytest_cache/
 
 # System files
 .DS_Store

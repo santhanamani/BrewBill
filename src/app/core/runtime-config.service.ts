@@ -30,11 +30,20 @@ export class RuntimeConfigService {
   }
 
   assetUrl(path: string | null): string {
-    if (!path) return `${this.config().assetsBaseUrl.replace(/\/$/, '')}/products/placeholder.svg`;
+    if (!path) return this.mediaUrl('products/placeholder.svg');
     if (/^https?:\/\//i.test(path)) return path;
     if (path.startsWith('/api/platform/tenants/')) return this.apiUrl(path.slice('/api/'.length));
     if (path.startsWith('/api/products/media/')) return this.apiUrl(path.slice('/api/'.length));
-    if (path.startsWith('/assets/images/')) return path;
-    return `${this.config().assetsBaseUrl.replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
+    if (path.startsWith('/api/media/')) return this.apiUrl(path.slice('/api/'.length));
+    const relative = path
+      .replace(/^\/assets\/images\//, '')
+      .replace(/^assets\/images\//, '')
+      .replace(/^\//, '');
+    return this.mediaUrl(relative);
+  }
+
+  private mediaUrl(relativePath: string): string {
+    const encoded = relativePath.split('/').map(segment => encodeURIComponent(segment)).join('/');
+    return this.apiUrl(`media/${encoded}`);
   }
 }
