@@ -1,0 +1,41 @@
+/* Filter menus must escape decorative cards, not their table scroll regions.
+   Elevate the complete ancestor chain: a menu's own z-index cannot escape an
+   isolated heading or compete with a later sibling stacking context. */
+.app-shell .page-content :is(
+  .dashboard-head, .dashboard-filters, .dashboard-date-control,
+  .panel, .catalogue-card, .panel-title, .catalogue-toolbar, .catalogue-toolbar-line,
+  .catalogue-filters, .filter-row, .table-toolbar,
+  .purchase-layout, .expense-layout, .catalogue-layout, .split-catalogue,
+  .report-list-panel, .reports-table
+):has(:is(
+  .dashboard-calendar,
+  .category-picker[open], .purchase-filter[open],
+  .expense-picker[open], .report-picker[open]
+)) {
+  position: relative;
+  z-index: 50 !important;
+  overflow: visible !important;
+}
+
+.app-shell .page-content :is(
+  .category-picker, .purchase-filter, .expense-picker, .report-picker
+)[open] {
+  position: relative;
+  z-index: 51 !important;
+  overflow: visible !important;
+}
+
+.app-shell .page-content :is(
+  .dashboard-calendar, .category-options, .purchase-filter-menu,
+  .expense-picker-menu, .report-filter-menu
+) {
+  z-index: 52 !important;
+  max-width: calc(100vw - 32px);
+}
+
+/* Preserve menu scrolling while leaving card decoration non-interactive. */
+.app-shell .page-content :is(.category-options, .purchase-filter-menu, .expense-picker-menu) {
+  max-height: min(300px, 55dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
