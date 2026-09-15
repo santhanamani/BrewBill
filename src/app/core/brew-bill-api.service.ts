@@ -93,6 +93,14 @@ export class BrewBillApiService {
       {headers:this.authHeaders(accessToken)},
     ), 30000);
   }
+  uploadGlobalProductImage(accessToken: string, file: File): Promise<{path:string;url:string;width:number;height:number}> {
+    const body = new FormData();
+    body.append('file', file);
+    return this.request(this.http.post<{path:string;url:string;width:number;height:number}>(
+      this.runtime.apiUrl('/products/master/image'), body,
+      {headers:this.authHeaders(accessToken)},
+    ), 30000);
+  }
   resolveTenant(code: string): Promise<TenantPreview> {
     return this.request(
       this.http.get<TenantPreview>(
@@ -385,8 +393,11 @@ export class BrewBillApiService {
     );
   }
 
-  listMarketplaceOrders(accessToken: string): Promise<MarketplaceOrder[]> {
-    return this.get<MarketplaceOrder[]>(accessToken, '/marketplace/orders');
+  listMarketplaceOrders(accessToken: string, fromDate?: string, toDate?: string): Promise<MarketplaceOrder[]> {
+    const params = new URLSearchParams();
+    if (fromDate) params.set('from_date', fromDate);
+    if (toDate) params.set('to_date', toDate);
+    return this.get<MarketplaceOrder[]>(accessToken, `/marketplace/orders${params.size ? `?${params}` : ''}`);
   }
 
   getMarketplaceSummary(accessToken: string, fromDate?: string, toDate?: string): Promise<MarketplaceSummary> {

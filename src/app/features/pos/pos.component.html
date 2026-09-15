@@ -28,7 +28,7 @@
             [class.active]="activeCategoryId() === category.id"
             (click)="activeCategoryId.set(category.id)"
           >
-            <img [src]="asset(category.image_path)" [alt]="category.name" /><em>{{
+            <span class="category-symbol" aria-hidden="true">{{ categorySymbol(category.code) }}</span><em>{{
               category.name
             }}</em>
           </button>
@@ -37,7 +37,8 @@
       <button class="category-next" type="button" aria-label="More categories" (click)="categoryStrip.scrollBy({left: 300, behavior: 'smooth'})"><span class="material-symbols-outlined">chevron_right</span></button></div>
     </div>
     <div class="catalog-toolbar">
-      <h1>Products <small>{{ filteredProducts().length }} items</small></h1>
+      <h1>Products <small>{{ filteredProducts().length }} {{ filteredProducts().length === 1 ? 'item' : 'items' }}</small></h1>
+      <span class="cafe-signature" aria-label="Good Coffee, Brighter Days"></span>
       <div class="order-mode-bar" role="group" aria-label="Billing method">
         <button [class.active]="orderType() === 'DIRECT'" [attr.aria-pressed]="orderType() === 'DIRECT'" (click)="orderType.set('DIRECT')">
           <span class="material-symbols-outlined">receipt_long</span><b>Direct Bill</b
@@ -71,9 +72,10 @@
             [class.unavailable]="!product.is_available || price(product.stock_quantity) <= 0"
             (click)="add(product)"
           >
-            <img class="product-photo" [src]="asset(product.image_path)" [alt]="product.name" />
+            <img class="product-photo" [class.isolated-product]="product.image_path?.includes('products/cafe/') || product.image_path?.includes('products/global-uploads/')"
+              [src]="asset(product.image_path)" [alt]="productDisplayName(product)" loading="lazy" />
             <div class="product-copy">
-              <b [title]="product.name">{{ product.name }}</b
+              <b [class.wrap-name]="productDisplayName(product).length > 16" [title]="productDisplayName(product)">{{ productDisplayName(product) }}</b
               ><strong>{{ money(price(product.selling_price)) }}</strong
               ><small>{{
                 product.is_available && price(product.stock_quantity) > 0
@@ -91,7 +93,7 @@
   </div>
   <aside class="bill-panel" [class.expanded]="billExpanded()">
     <div class="bill-head">
-      <h2>Current Order</h2>
+      <div class="order-heading"><h2>Current Order</h2></div>
       <div class="bill-head-actions">
         <button
           class="bill-expand"

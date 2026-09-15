@@ -1,6 +1,6 @@
 {
   "name": "brew-bill-ui",
-  "version": "1.0.2",
+  "version": "1.0.5",
   "main": "electron/main.cjs",
   "scripts": {
     "ng": "set \"PATH=D:\\BrewBillTools\\NodeJS\\22.22.3;%PATH%\" && ng",

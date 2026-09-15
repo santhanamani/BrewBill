@@ -1,0 +1,253 @@
+/* Final POS presentation. Measurements refer to a 1673 × 892 CSS viewport
+   (the supplied 1673 × 942 reference without the native Electron title bar).
+   A single scale keeps the catalogue and checkout in proportion on desktops. */
+.app-shell:has(app-pos) {
+  --pos-u: clamp(.72px, .059773vw, 1.25px);
+  grid-template-rows: calc(72 * var(--pos-u)) minmax(0, 1fr) auto !important;
+  background-image: linear-gradient(#fffcf780, #fffcf780), url('../../public/assets/images/brand/pos-reference-background-v3.png') !important;
+}
+.app-shell:has(app-pos) .light-topbar {
+  width: 100% !important;
+  height: calc(72 * var(--pos-u)) !important;
+  margin: 0 !important;
+  padding: 0 calc(30 * var(--pos-u)) !important;
+  border: 0 !important;
+  border-radius: 0 0 calc(23 * var(--pos-u)) calc(23 * var(--pos-u)) !important;
+  background: #fffdf9ed !important;
+  gap: 0 !important;
+}
+.app-shell:has(app-pos) .brand { flex: 0 0 calc(222 * var(--pos-u)); min-width: 0 !important; max-width: none !important; gap: calc(14 * var(--pos-u)); padding: 0 calc(18 * var(--pos-u)) 0 0; }
+.app-shell:has(app-pos) .brand-mark { width: calc(52 * var(--pos-u)); height: calc(52 * var(--pos-u)); }
+.app-shell:has(app-pos) .light-topbar .brand-mark { width: calc(52 * var(--pos-u)) !important; height: calc(52 * var(--pos-u)) !important; flex: 0 0 calc(52 * var(--pos-u)) !important; }
+.app-shell:has(app-pos) .brand > span { min-width: 0; flex: 1; }
+.app-shell:has(app-pos) .brand b { font-size: calc(24 * var(--pos-u)) !important; white-space: nowrap; }
+.app-shell:has(app-pos) .brand small { font-size: calc(11 * var(--pos-u)) !important; letter-spacing: calc(1.6 * var(--pos-u)); white-space: nowrap; }
+.app-shell:has(app-pos) .top-meta { flex-shrink: 0 !important; padding-inline: calc(10 * var(--pos-u)) !important; gap: calc(7 * var(--pos-u)) !important; font-size: calc(12 * var(--pos-u)) !important; white-space: nowrap; }
+.app-shell:has(app-pos) .top-meta > .material-symbols-outlined { font-size: calc(24 * var(--pos-u)) !important; }
+.app-shell:has(app-pos) .outlet-context { width: calc(188 * var(--pos-u)); max-width: calc(188 * var(--pos-u)); }
+.app-shell:has(app-pos) .date-meta { width: calc(120 * var(--pos-u)); }
+.app-shell:has(app-pos) .time-meta { width: calc(115 * var(--pos-u)); }
+.app-shell:has(app-pos) .profile { width: calc(110 * var(--pos-u)); }
+.app-shell:has(app-pos) .top-meta b { font-size: calc(12 * var(--pos-u)); }
+.app-shell:has(app-pos) .top-meta small { font-size: calc(10 * var(--pos-u)); }
+.app-shell:has(app-pos) .tenant-context-badge { flex-shrink: 0; margin-inline: calc(5 * var(--pos-u)); padding-inline: calc(10 * var(--pos-u)); font-size: calc(10 * var(--pos-u)); }
+.app-shell:has(app-pos) .top-actions { gap: calc(8 * var(--pos-u)); }
+.app-shell:has(app-pos) .top-actions .button { height: calc(40 * var(--pos-u)); padding: 0 calc(13 * var(--pos-u)); font-size: calc(11 * var(--pos-u)); }
+.app-shell:has(app-pos) .top-actions .logout-button { margin-left: calc(112 * var(--pos-u)); }
+.app-shell.app-shell:has(app-pos) > .page-content {
+  padding: calc(20 * var(--pos-u)) calc(31 * var(--pos-u)) calc(16 * var(--pos-u)) calc(37 * var(--pos-u)) !important;
+  min-height: 0;
+}
+.app-shell:has(app-pos) .page-content::after { content: none; }
+.app-shell:has(app-pos)::after {
+  content: 'Good\A Food\A Great Vibes  \2661'; white-space: pre-line;
+  position: absolute; top: calc(53 * var(--pos-u)); right: calc(36 * var(--pos-u));
+  color: #765139; font: 500 calc(18 * var(--pos-u))/1.02 'Segoe Script', cursive;
+  transform: rotate(-9deg); pointer-events: none; z-index: 5;
+}
+.app-shell:has(app-pos) app-pos .pos-layout {
+  grid-template-columns: minmax(0, 1.814fr) minmax(0, 1fr) !important;
+  gap: calc(24 * var(--pos-u)) !important;
+  height: 100% !important;
+  min-height: 0;
+}
+app-pos .pos-layout .catalog { min-width: 0; min-height: 0; }
+app-pos .pos-layout .catalog-search { height: calc(45 * var(--pos-u)) !important; min-height: calc(45 * var(--pos-u)); margin-bottom: calc(18 * var(--pos-u)) !important; gap: calc(14 * var(--pos-u)); }
+app-pos .pos-layout .catalog-search .search,
+app-pos .pos-layout .catalog-search .favourites-filter { height: calc(45 * var(--pos-u)) !important; min-height: 0 !important; }
+app-pos .pos-layout .catalog-search .favourites-filter { min-width: calc(138 * var(--pos-u)) !important; font-size: calc(13 * var(--pos-u)); }
+app-pos .pos-layout .catalog-search .search input { font-size: calc(13 * var(--pos-u)); border: 0 !important; box-shadow: none !important; background: transparent !important; }
+app-pos .pos-layout .pos-controls { margin-bottom: calc(18 * var(--pos-u)) !important; }
+app-pos .pos-layout .category-row,
+app-pos .pos-layout .category-card,
+app-pos .pos-layout .category-next { height: calc(45 * var(--pos-u)) !important; min-height: 0 !important; }
+app-pos .pos-layout .category-strip { gap: calc(9 * var(--pos-u)); }
+app-pos .pos-layout .category-card { padding-inline: calc(12 * var(--pos-u)) !important; gap: calc(8 * var(--pos-u)) !important; border-radius: calc(10 * var(--pos-u)); }
+app-pos .pos-layout .category-card em { font-size: calc(12 * var(--pos-u)) !important; }
+app-pos .category-symbol { display: inline-grid; place-items: center; width: calc(24 * var(--pos-u)); font: calc(23 * var(--pos-u))/1 'Segoe UI Emoji', sans-serif; }
+app-pos .pos-layout .category-card.active,
+.app-shell:has(app-pos) .bottom-nav button.active {
+  background: linear-gradient(120deg, #663609, #8c5226) !important;
+  border: 1px solid #be8b51 !important;
+  box-shadow: inset 0 1px 2px #f2cf9270, 0 3px 9px #66421c26 !important;
+}
+app-pos .pos-layout .catalog-toolbar { height: calc(42 * var(--pos-u)) !important; min-height: calc(42 * var(--pos-u)); margin-bottom: calc(18 * var(--pos-u)) !important; padding: 0 !important; }
+app-pos .pos-layout .catalog-toolbar h1 { font-size: calc(24 * var(--pos-u)); }
+app-pos .pos-layout .catalog-toolbar .order-mode-bar { background: transparent !important; border: 0 !important; padding: 0 !important; gap: calc(6 * var(--pos-u)); }
+app-pos .pos-layout .catalog-toolbar .order-mode-bar > button { height: calc(39 * var(--pos-u)) !important; width: auto !important; padding-inline: calc(11 * var(--pos-u)) !important; background: #fffdf9 !important; border: 1px solid #e7d9c8 !important; border-radius: calc(9 * var(--pos-u)); }
+app-pos .pos-layout .catalog-toolbar .order-mode-bar > button b { font-size: calc(12 * var(--pos-u)); }
+app-pos .pos-layout .catalog-toolbar .order-mode-bar > button.active { border-color: #bb844e; }
+app-pos .pos-layout .product-grid {
+  flex: 1 1 auto !important;
+  height: auto !important;
+  max-height: calc(458 * var(--pos-u)) !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  grid-auto-rows: calc(142 * var(--pos-u)) !important;
+  gap: calc(15 * var(--pos-u)) !important;
+  padding: 0 !important;
+  scrollbar-width: none;
+  align-content: start;
+}
+app-pos .pos-layout .product-grid::-webkit-scrollbar { display: none; }
+app-pos .pos-layout .pos-product-tile,
+app-pos .pos-layout .pos-product-tile .product-card { height: calc(142 * var(--pos-u)) !important; min-height: calc(142 * var(--pos-u)) !important; }
+app-pos .pos-layout .pos-product-tile .product-card {
+  display: block !important;
+  position: relative;
+  width: 100%;
+  padding: 0 !important;
+  overflow: hidden;
+  border: 1px solid #e8ddcd !important;
+  border-radius: calc(13 * var(--pos-u)) !important;
+  background: #fcfaf5 !important;
+  box-shadow: 0 calc(4 * var(--pos-u)) calc(13 * var(--pos-u)) #6d472013 !important;
+  transform: none !important;
+}
+app-pos .pos-layout .product-card::after { content: none !important; }
+app-pos .pos-layout .product-card .product-photo {
+  position: absolute !important; inset: 0 0 0 auto; width: 57% !important; height: 100% !important;
+  transform: none !important; object-fit: cover;
+}
+app-pos .pos-layout .product-card .product-photo.isolated-product {
+  object-fit: contain !important; object-position: center;
+  margin: 0 !important; padding: calc(3 * var(--pos-u));
+  border-radius: 0 !important; background: transparent !important;
+  mask-image: none !important; filter: none !important;
+}
+app-pos .pos-layout .product-card .product-copy {
+  position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important;
+  min-height: 0 !important; padding: calc(19 * var(--pos-u)) calc(16 * var(--pos-u)) calc(19 * var(--pos-u)) !important;
+  display: flex; flex-direction: column; gap: calc(3 * var(--pos-u));
+  background: linear-gradient(90deg, #fcfaf5 0%, #fcfaf5b0 27%, #fcfaf500 43%) !important;
+}
+app-pos .pos-layout .product-copy b {
+  width: 75% !important; max-width: 75% !important; height: auto !important; min-height: calc(39 * var(--pos-u)) !important;
+  padding: 0 !important; font-size: calc(16 * var(--pos-u)) !important; line-height: calc(20 * var(--pos-u)) !important;
+  font-weight: 700 !important; color: #171310 !important; letter-spacing: -.3px;
+}
+app-pos .pos-layout .product-copy strong { margin: auto 0 0 !important; font-size: calc(20 * var(--pos-u)) !important; line-height: calc(24 * var(--pos-u)) !important; font-weight: 750 !important; color: #20130d !important; }
+app-pos .pos-layout .product-copy b.wrap-name { width: 58% !important; max-width: 58% !important; }
+app-pos .pos-layout .product-copy small { font-size: calc(12 * var(--pos-u)) !important; line-height: calc(14 * var(--pos-u)) !important; font-weight: 500 !important; color: #00a638; }
+app-pos .pos-layout .product-card.unavailable { opacity: 1 !important; }
+app-pos .pos-layout .product-card.unavailable .product-photo { filter: none !important; }
+app-pos .pos-layout .product-card.unavailable .product-copy small { color: #e51b23 !important; }
+app-pos .pos-layout .product-card .product-add {
+  right: calc(5 * var(--pos-u)) !important; bottom: calc(5 * var(--pos-u)) !important;
+  width: calc(39 * var(--pos-u)) !important; height: calc(39 * var(--pos-u)) !important;
+  border: calc(3 * var(--pos-u)) solid #fffdf8 !important; background: #f3e8d5 !important; color: #70421e !important;
+  box-shadow: 0 2px 5px #5d3b1929 !important; opacity: 1 !important;
+}
+app-pos .pos-layout .product-favourite {
+  top: calc(7 * var(--pos-u)) !important; right: calc(7 * var(--pos-u)) !important;
+  width: calc(29 * var(--pos-u)) !important; height: calc(29 * var(--pos-u)) !important;
+  border: 0 !important; background: #fffdf7 !important; color: #79471f;
+  box-shadow: 0 2px 4px #69452015 !important;
+}
+app-pos .pos-layout .bill-panel {
+  display: grid !important; align-self: start !important;
+  height: calc(687 * var(--pos-u)) !important; max-height: calc(100% - 6 * var(--pos-u));
+  margin-top: calc(6 * var(--pos-u)) !important;
+  grid-template-rows: calc(58 * var(--pos-u)) calc(42 * var(--pos-u)) minmax(80px, 1fr) auto auto auto auto !important;
+  border: 1px solid #ece1d4 !important; border-radius: calc(16 * var(--pos-u)) !important;
+  background: #fffdfa !important; box-shadow: 0 5px 20px #6543220c;
+}
+app-pos .pos-layout .bill-head { padding-inline: calc(18 * var(--pos-u)) !important; }
+app-pos .pos-layout .bill-head h2 { font-size: calc(25 * var(--pos-u)) !important; font-weight: 750; }
+app-pos .pos-layout .bill-columns { padding-inline: calc(16 * var(--pos-u)); background: #f8f3e9 !important; }
+app-pos .pos-layout .empty-cart > .material-symbols-outlined { font-size: calc(80 * var(--pos-u)) !important; color: #b79b70; }
+app-pos .pos-layout .empty-cart p { font-size: calc(16 * var(--pos-u)) !important; line-height: calc(23 * var(--pos-u)); color: #784c32; }
+app-pos .pos-layout .totals { margin: 0 calc(13 * var(--pos-u)) calc(10 * var(--pos-u)) !important; padding: calc(5 * var(--pos-u)) calc(14 * var(--pos-u)) 0 !important; border: 1px solid #e9dfd2; }
+app-pos .pos-layout .totals > div { min-height: 0 !important; height: calc(30 * var(--pos-u)); padding-block: 0 !important; font-size: calc(13 * var(--pos-u)); }
+app-pos .pos-layout .totals .grand { height: calc(46 * var(--pos-u)) !important; margin: calc(4 * var(--pos-u)) calc(-14 * var(--pos-u)) 0 !important; padding: 0 calc(14 * var(--pos-u)) !important; background: #f4ecde !important; font-size: calc(20 * var(--pos-u)); }
+app-pos .pos-layout .totals .grand b { font-size: calc(30 * var(--pos-u)); }
+app-pos .pos-layout .payment-grid { gap: calc(7 * var(--pos-u)); padding: 0 calc(13 * var(--pos-u)) calc(9 * var(--pos-u)) !important; grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+app-pos .pos-layout .payment-grid button { height: calc(74 * var(--pos-u)) !important; border-radius: calc(9 * var(--pos-u)); font-size: calc(15 * var(--pos-u)); filter: none !important; }
+app-pos .pos-layout .payment-grid .material-symbols-outlined { font-size: calc(28 * var(--pos-u)); }
+app-pos .pos-layout .payment-grid small { font-size: calc(12 * var(--pos-u)); }
+app-pos .pos-layout .payment-grid .cash.policy-blocked { background: #8d8378 !important; }
+app-pos .pos-layout .terminal-status { height: calc(24 * var(--pos-u)) !important; min-height: 0 !important; padding: 0 !important; margin: 0 calc(13 * var(--pos-u)) calc(8 * var(--pos-u)) !important; font-size: calc(11 * var(--pos-u)); }
+app-pos .pos-layout .bill-actions { padding: 0 calc(13 * var(--pos-u)) calc(10 * var(--pos-u)) !important; gap: calc(9 * var(--pos-u)); }
+app-pos .pos-layout .bill-actions button { height: calc(46 * var(--pos-u)) !important; font-size: calc(16 * var(--pos-u)); }
+app-pos .pos-layout .bill-actions .print { background: #795b40 !important; color: white !important; }
+app-pos .pos-layout .bill-actions .hold { background: #f4efe6 !important; color: #725238 !important; }
+app-pos .pos-layout .bill-actions button:disabled { opacity: .8; cursor: not-allowed; }
+app-pos .pos-layout .bill-panel.expanded { height: calc(100vh - 32px) !important; max-height: none; }
+.app-shell:has(app-pos) .bottom-nav { width: calc(100% - 221 * var(--pos-u)) !important; min-width: 0 !important; height: calc(80 * var(--pos-u)) !important; margin: 0 calc(149 * var(--pos-u)) calc(8 * var(--pos-u)) calc(72 * var(--pos-u)) !important; padding: calc(7 * var(--pos-u)) calc(10 * var(--pos-u)) !important; background: #fffdf9f5 !important; border-radius: calc(18 * var(--pos-u)) !important; }
+.app-shell:has(app-pos) .bottom-nav button { flex: 1 1 0 !important; min-width: 0 !important; width: auto !important; height: calc(62 * var(--pos-u)) !important; padding-inline: calc(7 * var(--pos-u)); font-size: calc(13 * var(--pos-u)) !important; gap: calc(9 * var(--pos-u)); white-space: nowrap; }
+.app-shell:has(app-pos) .bottom-nav button small { font-size: calc(12 * var(--pos-u)) !important; }
+.app-shell:has(app-pos) .bottom-nav button > .material-symbols-outlined { font-size: calc(27 * var(--pos-u)) !important; }
+@media (min-width: 1200px) {
+  .app-shell:has(app-pos) .light-topbar { display: grid !important; grid-template-columns: calc(222 * var(--pos-u)) calc(188 * var(--pos-u)) calc(145 * var(--pos-u)) calc(120 * var(--pos-u)) calc(115 * var(--pos-u)) calc(110 * var(--pos-u)) minmax(0, 1fr); }
+  .app-shell:has(app-pos) .date-meta,
+  .app-shell:has(app-pos) .tenant-context-badge { display: flex !important; }
+}
+@media (min-width: 1200px) and (max-width: 1499px) {
+  .app-shell:has(app-pos) .top-actions .logout-button { margin-left: calc(50 * var(--pos-u)); }
+  .app-shell:has(app-pos) .top-actions .button { font-size: calc(11 * var(--pos-u)) !important; padding-inline: calc(10 * var(--pos-u)) !important; min-width: 0 !important; }
+}
+@media (max-width: 1199px) {
+  .app-shell:has(app-pos) .top-actions .logout-button { margin-left: 0; }
+  .app-shell:has(app-pos) .time-meta { display: none; }
+  .app-shell:has(app-pos) app-pos .pos-layout { grid-template-columns: minmax(0, 1.5fr) minmax(340px, 1fr) !important; }
+  app-pos .pos-layout .product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 850px) {
+  .app-shell:has(app-pos) .page-content { overflow-y: auto; }
+  .app-shell:has(app-pos) app-pos .pos-layout { display: flex; flex-direction: column; height: auto !important; }
+  app-pos .pos-layout .product-grid { flex-basis: 340px !important; height: 340px !important; }
+  app-pos .pos-layout .bill-panel { width: 100%; height: 650px !important; max-height: none; }
+  .app-shell:has(app-pos) .bottom-nav { width: calc(100% - 16px) !important; margin-inline: 8px !important; overflow-x: auto; }
+}
+
+/* Use the complete POS workspace and keep the selected service mode obvious. */
+.app-shell:has(app-pos) .page-content {
+  padding-bottom: calc(8 * var(--pos-u)) !important;
+}
+app-pos .pos-layout .product-grid {
+  height: auto !important;
+  max-height: none !important;
+}
+app-pos .pos-layout .bill-panel {
+  align-self: stretch !important;
+  height: 100% !important;
+  max-height: none !important;
+  margin-top: 0 !important;
+}
+app-pos .pos-layout .catalog-toolbar .order-mode-bar > button.active {
+  color: #fffaf0 !important;
+  background: linear-gradient(120deg, #653407, #965b27) !important;
+  border-color: #a86a31 !important;
+  box-shadow: inset 0 1px 1px #f4cf8e66, 0 3px 8px #5b2c162d !important;
+}
+app-pos .pos-layout .catalog-toolbar .order-mode-bar > button.active .material-symbols-outlined {
+  color: #ffe09a !important;
+}
+.app-shell.app-shell:has(app-pos) > .bottom-nav.bottom-nav {
+  height: calc(64 * var(--pos-u)) !important;
+  min-height: 54px !important;
+  margin-bottom: calc(5 * var(--pos-u)) !important;
+  padding: calc(5 * var(--pos-u)) calc(9 * var(--pos-u)) !important;
+  border-radius: calc(15 * var(--pos-u)) !important;
+}
+.app-shell.app-shell:has(app-pos) > .bottom-nav.bottom-nav button {
+  height: calc(54 * var(--pos-u)) !important;
+  gap: calc(8 * var(--pos-u)) !important;
+}
+.app-shell.app-shell:has(app-pos) > .bottom-nav.bottom-nav button > .material-symbols-outlined {
+  font-size: calc(24 * var(--pos-u)) !important;
+}
+.app-shell.app-shell:has(app-pos) > .bottom-nav.bottom-nav button small {
+  margin-top: 2px;
+  font-size: calc(10 * var(--pos-u)) !important;
+}
+@media (max-width: 850px) {
+  app-pos .pos-layout .product-grid {
+    flex-basis: 340px !important;
+    height: 340px !important;
+  }
+  app-pos .pos-layout .bill-panel {
+    align-self: auto !important;
+    height: 650px !important;
+    max-height: none !important;
+  }
+}

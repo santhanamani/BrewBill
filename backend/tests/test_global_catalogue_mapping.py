@@ -2,12 +2,13 @@ from decimal import Decimal
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
+from PIL import Image
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.api.deps import current_user
-from app.database import Base, get_session
+from app.database import Base, get_session, settings
 from app.main import app
 from app.models import GlobalProduct, Outlet, Role, Tenant, User
 
@@ -183,7 +184,10 @@ def test_tenant_admin_can_configure_catalogue_variants_without_cross_tenant_acce
         Base.metadata.drop_all(engine)
 
 
-def test_master_actions_persist_and_are_restricted_to_super_admin() -> None:
+def test_master_actions_persist_and_are_restricted_to_super_admin(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(settings, 'brewbill_data_path', str(tmp_path))
+    (tmp_path / 'products').mkdir()
+    Image.new('RGB', (64, 64), 'white').save(tmp_path / 'products/coffee.jpg')
     engine = create_engine('sqlite+pysqlite://', connect_args={'check_same_thread': False}, poolclass=StaticPool)
     sessions = sessionmaker(bind=engine, expire_on_commit=False)
     Base.metadata.create_all(engine)

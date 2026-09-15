@@ -10,7 +10,7 @@ from .deps import current_user, require_role
 from .platform import active_subscription
 from ..database import get_session
 from ..inventory_service import adjust_stock
-from ..models import AuditLog, Customer, CustomerCreditEntry, HeldOrder, KotHeader, KotItem, Order, OrderItem, Outlet, OutletProductMapping, Payment, PosTerminal, Product, ProductVariant, TenantSetting, User
+from ..models import AuditLog, Category, Customer, CustomerCreditEntry, HeldOrder, KotHeader, KotItem, Order, OrderItem, Outlet, OutletProductMapping, Payment, PosTerminal, Product, ProductVariant, TenantSetting, User
 from ..numbering import next_prefixed_number
 from ..owner_access import resolve_read_scope
 from ..outlet_scope import resolve_operational_outlet
@@ -60,6 +60,18 @@ def list_orders(
         cashier.id: cashier.display_name
         for cashier in session.scalars(select(User).where(User.id.in_(cashier_ids))).all()
     } if cashier_ids else {}
+    product_ids = {item.product_id for order in orders for item in order.items}
+    product_details = {
+        product_id: (category_name, image_path, is_available)
+        for product_id, category_name, image_path, is_available in session.execute(
+            select(Product.id, Category.name, Product.image_path, Product.is_available).outerjoin(Category, Category.id == Product.category_id).where(Product.id.in_(product_ids))
+        ).all()
+    } if product_ids else {}
+    outlet_ids = {order.outlet_id for order in orders if order.outlet_id}
+    outlets = {
+        outlet.id: outlet
+        for outlet in session.scalars(select(Outlet).where(Outlet.id.in_(outlet_ids))).all()
+    } if outlet_ids else {}
     return [
         OrderListItemRead(
             id=order.id,
@@ -76,6 +88,8 @@ def list_orders(
             service_reference=order.service_reference,
             created_at=order.created_at,
             cashier_name=cashiers.get(order.cashier_id, 'Unknown'),
+            outlet_name=outlets[order.outlet_id].name if order.outlet_id in outlets else 'Unknown Outlet',
+            outlet_code=outlets[order.outlet_id].code if order.outlet_id in outlets else '',
             item_count=sum(item.quantity for item in order.items),
             payment_modes=(
                 sorted({payment.payment_mode for payment in order.payments}) + ['CREDIT']
@@ -84,13 +98,20 @@ def list_orders(
             ),
             items=[
                 {
+                    'product_id': item.product_id,
                     'product_name': item.product_name,
                     'variant_name': item.variant_name,
+                    'category_name': product_details.get(item.product_id, (None, None, None))[0],
+                    'image_path': product_details.get(item.product_id, (None, None, None))[1],
+                    'is_available': product_details.get(item.product_id, (None, None, None))[2],
                     'quantity': item.quantity,
+                    'rate': item.rate,
+                    'tax': item.tax,
                     'line_total': item.line_total,
                 }
                 for item in order.items
             ],
+            payments=[{'payment_mode': payment.payment_mode, 'amount': payment.amount} for payment in order.payments],
         )
         for order in orders
     ]

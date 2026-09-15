@@ -13,6 +13,7 @@ from ..inventory_service import adjust_stock
 from ..outlet_scope import resolve_operational_outlet
 from ..product_media import (
     MAX_PRODUCT_IMAGE_BYTES, product_media_path, save_product_image, validate_product_image_path,
+    save_global_product_image, validate_global_product_image_path,
 )
 from ..models import (
     AuditLog, Category, GlobalProduct, Inventory, Outlet, OutletProductMapping, Product, ProductVariant, User,
@@ -76,6 +77,7 @@ def create_global_product(
     user: User = Depends(require_role('SUPER_ADMIN')),
     session: Session = Depends(get_session),
 ) -> GlobalProduct:
+    validate_global_product_image_path(body.image_path)
     product = GlobalProduct(id=str(uuid4()), **body.model_dump())
     product.code = product.code.upper()
     session.add(product)
@@ -88,6 +90,15 @@ def create_global_product(
     return product
 
 
+@router.post('/master/image', status_code=status.HTTP_201_CREATED)
+def upload_global_product_image(
+    file: UploadFile = File(...),
+    user: User = Depends(require_role('SUPER_ADMIN')),
+) -> dict:
+    # Upload is a draft. Only create/patch publishes the returned relative path.
+    return save_global_product_image(file.file.read(MAX_PRODUCT_IMAGE_BYTES + 1))
+
+
 @router.patch('/master/{product_id}', response_model=GlobalProductRead)
 def update_global_product(
     product_id: str, body: GlobalProductUpdate,
@@ -97,7 +108,16 @@ def update_global_product(
     product = session.get(GlobalProduct, product_id)
     if product is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Global product not found.')
-    for field, value in body.model_dump(exclude_unset=True).items():
+    changes = body.model_dump(exclude_unset=True)
+    if 'image_path' in changes and changes['image_path'] != product.image_path:
+        validate_global_product_image_path(changes['image_path'])
+        # Keep legacy consumers consistent without touching outlet commercial data.
+        mapped_products = session.scalars(select(Product).join(
+            OutletProductMapping, OutletProductMapping.legacy_product_id == Product.id,
+        ).where(OutletProductMapping.global_product_id == product.id)).unique()
+        for mapped_product in mapped_products:
+            mapped_product.image_path = changes['image_path']
+    for field, value in changes.items():
         setattr(product, field, value)
     session.commit()
     session.refresh(product)

@@ -342,3 +342,10 @@
     display: block;
   }
 }
+.global-image-upload { display:flex; gap:20px; align-items:center; padding:16px; border:1px solid #e7d8c6; border-radius:12px; background:#fcfaf6; }
+.global-image-preview { flex:0 0 120px; height:120px; border:1px solid #e7d8c6; border-radius:10px; background:#fff; overflow:hidden; }
+.global-image-preview img { width:100%; height:100%; object-fit:contain; }
+.global-image-upload > div:last-child { min-width:0; flex:1; }
+.global-image-upload input { max-width:100%; }
+.global-image-upload p { font-size:12px; line-height:1.5; color:#786653; margin:8px 0 0; }
+@media(max-width:600px) { .global-image-upload { align-items:stretch; flex-direction:column; } .global-image-preview { flex-basis:auto; width:120px; } }

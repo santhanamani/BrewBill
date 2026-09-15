@@ -1,0 +1,434 @@
+[
+  {
+    "code": "APPLE_JUICE",
+    "name": "Apple Juice",
+    "category": "Fruit Juices",
+    "subject": "a tall glass of pale golden cloudy apple juice with red apple and cut apple half, no citrus",
+    "legacy": "juice",
+    "image_path": "products/cafe/apple-juice.png"
+  },
+  {
+    "code": "ORANGE_JUICE",
+    "name": "Orange Juice",
+    "category": "Fruit Juices",
+    "subject": "a tall clear glass of vivid orange juice with fresh orange half, no apples",
+    "legacy": "juice",
+    "image_path": "products/cafe/orange-juice.png"
+  },
+  {
+    "code": "WATERMELON_JUICE",
+    "name": "Watermelon Juice",
+    "category": "Fruit Juices",
+    "subject": "a tall clear glass of pink-red watermelon juice with triangular watermelon slice showing green rind",
+    "legacy": "juice",
+    "image_path": "products/cafe/watermelon-juice.png"
+  },
+  {
+    "code": "PINEAPPLE_JUICE",
+    "name": "Pineapple Juice",
+    "category": "Fruit Juices",
+    "subject": "a tall clear glass of yellow pineapple juice with pineapple wedge showing textured rind",
+    "legacy": "juice",
+    "image_path": "products/cafe/pineapple-juice.png"
+  },
+  {
+    "code": "LEMON_JUICE",
+    "name": "Lemon Juice",
+    "category": "Fruit Juices",
+    "subject": "a tall clear glass of very pale cloudy lemonade with yellow lemon half and thin lemon wheel",
+    "legacy": "juice",
+    "image_path": "products/cafe/lemon-juice.png"
+  },
+  {
+    "code": "FILTER_COFFEE",
+    "name": "Filter Coffee",
+    "category": "Coffee",
+    "subject": "South Indian filter coffee with tan froth in a stainless steel tumbler resting inside a traditional steel dabarah saucer",
+    "legacy": "filter-coffee",
+    "image_path": "products/cafe/filter-coffee.png"
+  },
+  {
+    "code": "BLACK_COFFEE",
+    "name": "Black Coffee",
+    "category": "Coffee",
+    "subject": "black coffee without milk in a white ceramic cup and saucer, dark black-brown surface, handle right",
+    "legacy": "black-coffee",
+    "image_path": "products/cafe/black-coffee.png"
+  },
+  {
+    "code": "COLD_COFFEE",
+    "name": "Cold Coffee",
+    "category": "Coffee",
+    "subject": "a tall clear glass of frothy light-brown cold coffee with ice, small foam cap, no whipped cream or chocolate sauce",
+    "legacy": "cold-coffee",
+    "image_path": "products/cafe/cold-coffee.png"
+  },
+  {
+    "code": "TEA",
+    "name": "Tea",
+    "category": "Tea / Hot Drinks",
+    "subject": "Indian milk tea chai in a simple ivory ceramic cup and saucer, caramel brown tea surface",
+    "legacy": "tea",
+    "image_path": "products/cafe/tea.png"
+  },
+  {
+    "code": "GINGER_TEA",
+    "name": "Ginger Tea",
+    "category": "Tea / Hot Drinks",
+    "subject": "Indian ginger milk chai in a cream ceramic cup with two fresh ginger pieces beside the saucer",
+    "legacy": "tea",
+    "image_path": "products/cafe/ginger-tea.png"
+  },
+  {
+    "code": "LEMON_TEA",
+    "name": "Lemon Tea",
+    "category": "Tea / Hot Drinks",
+    "subject": "clear amber black tea in a transparent glass teacup and saucer, thin yellow lemon slice on rim, no milk",
+    "legacy": "lemon-tea",
+    "image_path": "products/cafe/lemon-tea.png"
+  },
+  {
+    "code": "HORLICKS",
+    "name": "Horlicks",
+    "category": "Milk Drinks",
+    "subject": "a glass mug of warm creamy pale beige malted milk, gentle foam top, plain unbranded mug, no pistachio garnish",
+    "legacy": "milk-drink",
+    "image_path": "products/cafe/horlicks.png"
+  },
+  {
+    "code": "BOOST",
+    "name": "Boost",
+    "category": "Milk Drinks",
+    "subject": "a glass mug of warm brown chocolate malt milk, gently foamy top, distinct chocolate-brown drink, no yellow milk or pistachios, unbranded",
+    "legacy": "milk-drink",
+    "image_path": "products/cafe/boost.png"
+  },
+  {
+    "code": "PAALKOVA_MILK",
+    "name": "Paalkova Milk",
+    "category": "Milk Drinks",
+    "subject": "a clear glass of thick ivory sweet reduced milk with a few soft pale milk-solid crumbles on top, creamy off-white not yellow",
+    "legacy": "milk-drink",
+    "image_path": "products/cafe/paalkova-milk.png"
+  },
+  {
+    "code": "CHOCOLATE_MILKSHAKE",
+    "name": "Chocolate Milkshake",
+    "category": "Milkshakes",
+    "subject": "a tall fluted glass of rich brown chocolate milkshake with whipped cream, chocolate drizzle and a small dark chocolate piece",
+    "legacy": "milkshake",
+    "image_path": "products/cafe/chocolate-milkshake.png"
+  },
+  {
+    "code": "VANILLA_MILKSHAKE",
+    "name": "Vanilla Milkshake",
+    "category": "Milkshakes",
+    "subject": "a tall fluted glass of ivory vanilla milkshake with plain whipped cream and a vanilla bean beside the base, absolutely no chocolate",
+    "legacy": "milkshake",
+    "image_path": "products/cafe/vanilla-milkshake.png"
+  },
+  {
+    "code": "STRAWBERRY_MILKSHAKE",
+    "name": "Strawberry Milkshake",
+    "category": "Milkshakes",
+    "subject": "a tall fluted glass of pastel pink strawberry milkshake with whipped cream, fresh red strawberry and two strawberries beside base",
+    "legacy": "milkshake",
+    "image_path": "products/cafe/strawberry-milkshake.png"
+  },
+  {
+    "code": "MANGO_MILKSHAKE",
+    "name": "Mango Milkshake",
+    "category": "Milkshakes",
+    "subject": "a tall fluted glass of thick golden-yellow mango milkshake with mango cubes and fresh mango cheek beside base, no chocolate",
+    "legacy": "milkshake",
+    "image_path": "products/cafe/mango-milkshake.png"
+  },
+  {
+    "code": "BUTTERSCOTCH_MILKSHAKE",
+    "name": "Butterscotch Milkshake",
+    "category": "Milkshakes",
+    "subject": "a tall fluted glass of golden beige butterscotch milkshake with whipped cream caramel drizzle and crunchy golden praline, no dark chocolate",
+    "legacy": "milkshake",
+    "image_path": "products/cafe/butterscotch-milkshake.png"
+  },
+  {
+    "code": "MINT_MOJITO",
+    "name": "Mint Mojito",
+    "category": "Mojitos",
+    "subject": "a tall glass of clear sparkling non-alcoholic lime and mint mojito with ice, bright fresh mint and green lime wedges",
+    "legacy": "mojito",
+    "image_path": "products/cafe/mint-mojito.png"
+  },
+  {
+    "code": "BLUE_LAGOON_MOJITO",
+    "name": "Blue Lagoon Mojito",
+    "category": "Mojitos",
+    "subject": "a tall glass of distinctly bright turquoise-blue non-alcoholic blue lagoon mojito with ice mint leaves and green lime slices, blue liquid not green",
+    "legacy": "mojito",
+    "image_path": "products/cafe/blue-lagoon-mojito.png"
+  },
+  {
+    "code": "STRAWBERRY_MOJITO",
+    "name": "Strawberry Mojito",
+    "category": "Mojitos",
+    "subject": "a tall glass of rosy red non-alcoholic strawberry mojito with ice mint leaves lime and visible strawberry slices",
+    "legacy": "mojito",
+    "image_path": "products/cafe/strawberry-mojito.png"
+  },
+  {
+    "code": "GREEN_APPLE_MOJITO",
+    "name": "Green Apple Mojito",
+    "category": "Mojitos",
+    "subject": "a tall glass of light apple-green non-alcoholic green apple mojito with ice mint and thin green apple wedges, green apple half beside base",
+    "legacy": "mojito",
+    "image_path": "products/cafe/green-apple-mojito.png"
+  },
+  {
+    "code": "FRENCH_FRIES",
+    "name": "French Fries",
+    "category": "Fries",
+    "subject": "plain golden salted French fries in a small matte black bowl, no cheese or red seasoning",
+    "legacy": "fries",
+    "image_path": "products/cafe/french-fries.png"
+  },
+  {
+    "code": "MASALA_FRIES",
+    "name": "Masala Fries",
+    "category": "Fries",
+    "subject": "French fries generously coated with visible rust-red Indian masala seasoning in a matte black bowl, no cheese",
+    "legacy": "fries",
+    "image_path": "products/cafe/masala-fries.png"
+  },
+  {
+    "code": "CHEESE_FRIES",
+    "name": "Cheese Fries",
+    "category": "Fries",
+    "subject": "golden French fries in a matte black bowl generously topped with melted yellow cheese sauce and a little grated cheese, cheese clearly visible",
+    "legacy": "fries",
+    "image_path": "products/cafe/cheese-fries.png"
+  },
+  {
+    "code": "NUGGETS",
+    "name": "Nuggets",
+    "category": "Frozen Foods",
+    "subject": "six irregular golden breaded chicken nuggets on a small white plate, one cut open revealing white cooked chicken inside, not samosas",
+    "legacy": "samosa",
+    "image_path": "products/cafe/nuggets.png"
+  },
+  {
+    "code": "VEG_NUGGETS",
+    "name": "Veg Nuggets",
+    "category": "Frozen Foods",
+    "subject": "six small golden breaded vegetable nuggets on a small white plate, one cut open revealing carrot peas corn and potato, no meat",
+    "legacy": "samosa",
+    "image_path": "products/cafe/veg-nuggets.png"
+  },
+  {
+    "code": "SAMOSA",
+    "name": "Samosa",
+    "category": "Frozen Foods",
+    "subject": "two crisp golden triangular Indian potato samosas on a small white plate, one split revealing spiced potato and peas",
+    "legacy": "samosa",
+    "image_path": "products/cafe/samosa.png"
+  },
+  {
+    "code": "SPRING_ROLL",
+    "name": "Spring Roll",
+    "category": "Frozen Foods",
+    "subject": "three golden cylindrical vegetable spring rolls on a small white plate, one cut diagonally to reveal shredded vegetables, not triangular samosas",
+    "legacy": "samosa",
+    "image_path": "products/cafe/spring-roll.png"
+  },
+  {
+    "code": "VEG_SANDWICH",
+    "name": "Veg Sandwich",
+    "category": "Sandwiches",
+    "subject": "two triangular fresh soft white-bread vegetable sandwiches, visible cucumber tomato lettuce and green chutney, not toasted",
+    "legacy": "sandwich",
+    "image_path": "products/cafe/veg-sandwich.png"
+  },
+  {
+    "code": "CHEESE_SANDWICH",
+    "name": "Cheese Sandwich",
+    "category": "Sandwiches",
+    "subject": "two golden toasted cheese sandwich triangles with clearly visible melted cheese filling, no meat or vegetable layers",
+    "legacy": "sandwich",
+    "image_path": "products/cafe/cheese-sandwich.png"
+  },
+  {
+    "code": "PANEER_SANDWICH",
+    "name": "Paneer Sandwich",
+    "category": "Sandwiches",
+    "subject": "two toasted sandwich triangles filled with visible white paneer cubes and lightly spiced peppers, no meat",
+    "legacy": "sandwich",
+    "image_path": "products/cafe/paneer-sandwich.png"
+  },
+  {
+    "code": "GRILLED_SANDWICH",
+    "name": "Grilled Sandwich",
+    "category": "Sandwiches",
+    "subject": "two large grilled vegetable sandwich triangles on a white plate, distinct diagonal grill marks, layers of tomato peppers and melted cheese",
+    "legacy": "sandwich",
+    "image_path": "products/cafe/grilled-sandwich.png"
+  },
+  {
+    "code": "VEG_BURGER",
+    "name": "Veg Burger",
+    "category": "Burgers",
+    "subject": "one sesame bun vegetable burger with visible vegetable patty flecked with peas carrots, lettuce and tomato, no meat or cheese",
+    "legacy": "burger",
+    "image_path": "products/cafe/veg-burger.png"
+  },
+  {
+    "code": "CHEESE_BURGER",
+    "name": "Cheese Burger",
+    "category": "Burgers",
+    "subject": "one sesame bun cheese burger with a golden vegetable patty and two prominently melted cheddar slices, lettuce and tomato, no beef",
+    "legacy": "burger",
+    "image_path": "products/cafe/cheese-burger.png"
+  },
+  {
+    "code": "PANEER_BURGER",
+    "name": "Paneer Burger",
+    "category": "Burgers",
+    "subject": "one sesame bun paneer burger with a clearly visible thick rectangular golden paneer slab showing white paneer interior, lettuce and tomato, no meat",
+    "legacy": "burger",
+    "image_path": "products/cafe/paneer-burger.png"
+  },
+  {
+    "code": "CHICKEN_BURGER",
+    "name": "Chicken Burger",
+    "category": "Burgers",
+    "subject": "one sesame bun crispy chicken burger with a large irregular golden breaded chicken fillet, white chicken visible at edge, lettuce and mayonnaise, not a round vegetable patty",
+    "legacy": "burger",
+    "image_path": "products/cafe/chicken-burger.png"
+  },
+  {
+    "code": "ESPRESSO",
+    "name": "Espresso",
+    "category": "Coffee",
+    "subject": "a small white espresso demitasse and saucer with short dark espresso and rich hazelnut crema, no milk",
+    "legacy": null,
+    "image_path": "products/cafe/espresso.png"
+  },
+  {
+    "code": "AMERICANO",
+    "name": "Americano",
+    "category": "Coffee",
+    "subject": "a clear short wide glass cup of dark americano coffee on a glass saucer, no milk, subtle golden crema ring",
+    "legacy": null,
+    "image_path": "products/cafe/americano.png"
+  },
+  {
+    "code": "CAPPUCCINO",
+    "name": "Cappuccino",
+    "category": "Coffee",
+    "subject": "a white ceramic cappuccino cup and saucer with thick velvety milk foam and subtle cocoa dust circle",
+    "legacy": null,
+    "image_path": "products/cafe/cappuccino.png"
+  },
+  {
+    "code": "CAFE_LATTE",
+    "name": "Café Latte",
+    "category": "Coffee",
+    "subject": "a clear latte glass with creamy espresso milk and delicate white leaf latte art on top",
+    "legacy": null,
+    "image_path": "products/cafe/cafe-latte.png"
+  },
+  {
+    "code": "CAFE_MOCHA",
+    "name": "Café Mocha",
+    "category": "Coffee",
+    "subject": "a ceramic mocha cup of chocolate espresso milk with a small whipped cream crown and fine chocolate drizzle",
+    "legacy": null,
+    "image_path": "products/cafe/cafe-mocha.png"
+  },
+  {
+    "code": "FLAT_WHITE",
+    "name": "Flat White",
+    "category": "Coffee",
+    "subject": "a small cream ceramic flat white cup and saucer with thin silky microfoam and precise white rosetta latte art",
+    "legacy": null,
+    "image_path": "products/cafe/flat-white.png"
+  },
+  {
+    "code": "ICED_LATTE",
+    "name": "Iced Latte",
+    "category": "Coffee",
+    "subject": "a tall clear iced latte glass with visible ice and layered ivory milk and caramel espresso, no cream",
+    "legacy": null,
+    "image_path": "products/cafe/iced-latte.png"
+  },
+  {
+    "code": "HOT_CHOCOLATE",
+    "name": "Hot Chocolate",
+    "category": "Tea / Hot Drinks",
+    "subject": "a cream ceramic mug of thick rich dark hot chocolate topped with three small white marshmallows",
+    "legacy": null,
+    "image_path": "products/cafe/hot-chocolate.png"
+  },
+  {
+    "code": "MASALA_CHAI",
+    "name": "Masala Chai",
+    "category": "Tea / Hot Drinks",
+    "subject": "a warm terracotta kulhad of Indian masala milk chai with cardamom pods and cinnamon stick beside base",
+    "legacy": null,
+    "image_path": "products/cafe/masala-chai.png"
+  },
+  {
+    "code": "GREEN_TEA",
+    "name": "Green Tea",
+    "category": "Tea / Hot Drinks",
+    "subject": "a transparent glass cup and saucer with clear pale yellow-green green tea and a few fresh green tea leaves beside base",
+    "legacy": null,
+    "image_path": "products/cafe/green-tea.png"
+  },
+  {
+    "code": "BUTTER_CROISSANT",
+    "name": "Butter Croissant",
+    "category": "Bakery & Desserts",
+    "subject": "one golden crescent butter croissant with delicate crisp laminated layers on a small ivory plate",
+    "legacy": null,
+    "image_path": "products/cafe/butter-croissant.png"
+  },
+  {
+    "code": "CHOCOLATE_MUFFIN",
+    "name": "Chocolate Muffin",
+    "category": "Bakery & Desserts",
+    "subject": "one rich dark chocolate muffin in a brown paper liner, domed top studded with chocolate chunks",
+    "legacy": null,
+    "image_path": "products/cafe/chocolate-muffin.png"
+  },
+  {
+    "code": "CHOCOLATE_BROWNIE",
+    "name": "Chocolate Brownie",
+    "category": "Bakery & Desserts",
+    "subject": "one thick square fudgy chocolate brownie with a shiny crackled top on a small white plate, no ice cream",
+    "legacy": null,
+    "image_path": "products/cafe/chocolate-brownie.png"
+  },
+  {
+    "code": "CHEESECAKE",
+    "name": "Cheesecake",
+    "category": "Bakery & Desserts",
+    "subject": "one triangular slice of classic baked cheesecake with ivory creamy body golden top and biscuit crumb base on a small white plate",
+    "legacy": null,
+    "image_path": "products/cafe/cheesecake.png"
+  },
+  {
+    "code": "GARLIC_BREAD",
+    "name": "Garlic Bread",
+    "category": "Snacks & Wraps",
+    "subject": "four toasted baguette garlic bread slices with melted butter and green parsley on a small white plate",
+    "legacy": null,
+    "image_path": "products/cafe/garlic-bread.png"
+  },
+  {
+    "code": "VEG_WRAP",
+    "name": "Veg Wrap",
+    "category": "Snacks & Wraps",
+    "subject": "two halves of a toasted tortilla vegetable wrap cut diagonally to show lettuce carrots peppers and paneer-free vegetable filling, no meat",
+    "legacy": null,
+    "image_path": "products/cafe/veg-wrap.png"
+  }
+]

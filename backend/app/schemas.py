@@ -519,18 +519,32 @@ class OrderRead(BaseModel):
 
 
 class OrderReceiptItemRead(BaseModel):
+    product_id: str
     product_name: str
     variant_name: str | None
+    category_name: str | None = None
+    image_path: str | None = None
+    is_available: bool | None = None
     quantity: int
+    rate: Decimal
+    tax: Decimal
     line_total: Decimal
+
+
+class OrderReportPaymentRead(BaseModel):
+    payment_mode: str
+    amount: Decimal
 
 
 class OrderListItemRead(OrderRead):
     created_at: datetime
     cashier_name: str
+    outlet_name: str
+    outlet_code: str
     item_count: int
     payment_modes: list[str]
     items: list[OrderReceiptItemRead]
+    payments: list[OrderReportPaymentRead]
 
 
 class KotItemRead(BaseModel):

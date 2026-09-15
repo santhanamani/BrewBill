@@ -1,4 +1,5 @@
 :host { display:block; color:#28221c; --coffee:#795332; --line:#eae2d9; }
+:host img[src*="/products/cafe/"], :host img[src*="/products/global-uploads/"] { object-fit:contain !important; background:transparent; }
 :host .view-head { margin-bottom:20px; align-items:center; }
 :host .view-head h1 { font-size:30px; font-weight:750; letter-spacing:-.6px; }
 :host .view-head p { color:#817b76; font-size:14px; }

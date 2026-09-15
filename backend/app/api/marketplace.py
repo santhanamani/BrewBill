@@ -135,11 +135,13 @@ def ingest_provider_order(
 
 
 @router.get('/orders', response_model=list[MarketplaceOrderRead])
-def list_orders(provider: str | None = Query(None), order_status: str | None = Query(None), user: User = Depends(require_role('ADMIN','CASHIER')), session: Session = Depends(get_session)):
+def list_orders(provider: str | None = Query(None), order_status: str | None = Query(None), from_date: date | None = Query(None), to_date: date | None = Query(None), user: User = Depends(require_role('ADMIN','CASHIER')), session: Session = Depends(get_session)):
     ensure_feature(user, session)
     query = select(MarketplaceOrder).where(*scope(user)).options(selectinload(MarketplaceOrder.items)).order_by(MarketplaceOrder.placed_at.desc()).limit(250)
     if provider: query = query.where(MarketplaceOrder.provider == provider.upper())
     if order_status: query = query.where(MarketplaceOrder.status == order_status.upper())
+    if from_date: query = query.where(MarketplaceOrder.placed_at >= datetime.combine(from_date,time.min,tzinfo=INDIA).astimezone(UTC))
+    if to_date: query = query.where(MarketplaceOrder.placed_at < datetime.combine(to_date+timedelta(days=1),time.min,tzinfo=INDIA).astimezone(UTC))
     return list(session.scalars(query).unique())
 
 

@@ -314,14 +314,23 @@ export interface OrderListItem extends OrderResult {
   round_off: string;
   created_at: string;
   cashier_name: string;
+  outlet_name?: string;
+  outlet_code?: string;
   item_count: number;
   payment_modes: string[];
   items: Array<{
+    product_id?: string;
     product_name: string;
     variant_name: string | null;
+    category_name?: string | null;
+    image_path?: string | null;
+    is_available?: boolean | null;
     quantity: number;
+    rate?: string;
+    tax?: string;
     line_total: string;
   }>;
+  payments?: Array<{ payment_mode: string; amount: string }>;
 }
 
 export interface KotTicket {

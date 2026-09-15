@@ -22,6 +22,9 @@ export class AdministrationComponent {
   private readonly session = inject(SessionService);
   readonly runtime = inject(RuntimeConfigService);
   readonly saving = signal(false);
+  readonly uploadingProduct = signal(false);
+  readonly productImageFeedback = signal('');
+  private productFormVersion = 0;
   readonly uploadingBrand = signal<'logo' | 'cover' | null>(null);
   readonly savingBrand = signal(false);
   readonly brandFeedback = signal('');
@@ -271,6 +274,8 @@ export class AdministrationComponent {
   editOutlet(row:AdminOutlet):void { this.open('outlet-edit');this.form.set({id:row.id,tenant_id:row.tenant_id,code:row.code,name:row.name,address:row.address??''}); }
 
   open(type:Exclude<ModalType,null>, item?:TenantAdmin):void{
+    if(this.uploadingProduct())return;
+    this.productFormVersion++; this.productImageFeedback.set('');
     this.editingProductId.set(null); this.formError.set('');
     this.modal.set(type);
     if(type==='tenant')this.form.set({code:'',name:'',outlet_name:'',outlet_address:'',admin_username:'admin',admin_password:'',admin_display_name:'',plan_code:'PROFESSIONAL',currency_code:'INR'});
@@ -280,6 +285,7 @@ export class AdministrationComponent {
     if(type==='product')this.form.set({code:'',name:'',category_name:'Coffee',base_unit:'Cup',default_gst:'5.00',image_path:'',description:'',status:'ACTIVE'});
   }
   editProduct(row:GlobalProduct):void {
+    if(this.saving()||this.uploadingProduct())return;
     this.open('product'); this.editingProductId.set(row.id); this.productMenu.set(null);
     this.form.set({...row,description:row.description??'',image_path:row.image_path??''});
   }
@@ -293,7 +299,25 @@ export class AdministrationComponent {
     try{await this.api.updateGlobalProduct(token,row.id,{status:row.status==='ACTIVE'?'INACTIVE':'ACTIVE'});await this.load();this.notice.set(row.name+' updated.');}
     catch(error){this.notice.set(this.errorMessage(error));}finally{this.saving.set(false);}
   }
-  close():void{if(this.saving())return;this.modal.set(null);this.form.set({});}
+  close():void{if(this.saving()||this.uploadingProduct())return;this.productFormVersion++;this.modal.set(null);this.form.set({});}
+
+  async uploadProductImage(event:Event):Promise<void> {
+    const input=event.target as HTMLInputElement, file=input.files?.[0]; input.value='';
+    const token=this.token(), version=this.productFormVersion;
+    if(!file||!token||this.uploadingProduct()||this.saving()||this.modal()!=='product')return;
+    this.formError.set(''); this.productImageFeedback.set('');
+    if(!['image/png','image/jpeg','image/webp'].includes(file.type)||!file.size||file.size>5*1024*1024){
+      this.formError.set('Choose a PNG, JPG or WebP image up to 5 MB.');return;
+    }
+    this.uploadingProduct.set(true);
+    try {
+      const result=await this.api.uploadGlobalProductImage(token,file);
+      if(version!==this.productFormVersion||this.modal()!=='product')return;
+      this.patchForm('image_path',result.path);
+      this.productImageFeedback.set('Uploaded '+result.width+' × '+result.height+' px. Save Changes to publish to all mapped outlets.');
+    } catch(error) { if(version===this.productFormVersion)this.formError.set(this.errorMessage(error)); }
+    finally {this.uploadingProduct.set(false);}
+  }
 
   private duplicateError(type:Exclude<ModalType,null>, f:Record<string,string|boolean>):string {
     if(type==='tenant') {
@@ -310,7 +334,7 @@ export class AdministrationComponent {
     return '';
   }
   async submit():Promise<void>{
-    const token=this.token(), type=this.modal(), f=this.form(); if(!token||!type||this.saving())return;
+    const token=this.token(), type=this.modal(), f=this.form(); if(!token||!type||this.saving()||this.uploadingProduct())return;
     const duplicateError=this.duplicateError(type,f);
     if(duplicateError){this.formError.set(duplicateError);return;}
     this.saving.set(true); this.formError.set('');

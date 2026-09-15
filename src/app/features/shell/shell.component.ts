@@ -11,6 +11,7 @@ import { OutletContextService } from '../../core/outlet-context.service';
   selector: 'app-shell',
   imports: [RouterLink, RouterOutlet],
   templateUrl: './shell.component.html',
+  styleUrl: './shell.component.css',
 })
 export class ShellComponent {
   readonly session = inject(SessionService);

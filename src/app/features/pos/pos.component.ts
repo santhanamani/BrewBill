@@ -12,6 +12,23 @@ import { CurrencyService } from '../../core/currency.service';
 import { timedSignal } from '../../core/timed-signal';
 import { OutletContextService } from '../../core/outlet-context.service';
 
+const POS_PRODUCT_DISPLAY_ORDER = new Map(
+  [
+    'APPLE_JUICE',
+    'BLACK_COFFEE',
+    'BLUE_LAGOON_MOJITO',
+    'BOOST',
+    'BUTTERSCOTCH_MILKSHAKE',
+    'CHEESE_BURGER',
+    'CHEESE_FRIES',
+    'CHICKEN_BURGER',
+    'CHOCOLATE_MILKSHAKE',
+    'COLD_COFFEE',
+    'TEA',
+    'GRILLED_SANDWICH',
+  ].map((code, index) => [code, index]),
+);
+
 @Component({
   selector: 'app-pos',
   imports: [CommonModule],
@@ -67,15 +84,27 @@ export class PosComponent {
   readonly splitUpi = signal('0.00');
   readonly splitCard = signal('0.00');
   readonly lastReceipt = signal<ReceiptPayload | null>(null);
-  readonly filteredProducts = computed(() =>
-    this.products().filter(
+  readonly filteredProducts = computed(() => {
+    const filtered = this.products().filter(
       (product) =>
         product.is_active &&
         (!this.favouritesOnly() || product.is_favourite) &&
-        product.name.toLowerCase().includes(this.search().trim().toLowerCase()) &&
+        this.productDisplayName(product).toLowerCase().includes(this.search().trim().toLowerCase()) &&
         (!this.activeCategoryId() || product.category_id === this.activeCategoryId()),
-    ),
-  );
+    );
+
+    return filtered
+      .map((product, sourceIndex) => ({ product, sourceIndex }))
+      .sort((left, right) => {
+        const leftRank = POS_PRODUCT_DISPLAY_ORDER.get(left.product.code);
+        const rightRank = POS_PRODUCT_DISPLAY_ORDER.get(right.product.code);
+        if (leftRank === undefined && rightRank === undefined) return left.sourceIndex - right.sourceIndex;
+        if (leftRank === undefined) return 1;
+        if (rightRank === undefined) return -1;
+        return leftRank - rightRank;
+      })
+      .map(({ product }) => product);
+  });
   readonly subtotal = computed(() =>
     this.cart().reduce((total, line) => total + this.price(line.selling_price) * line.quantity, 0),
   );
@@ -97,6 +126,15 @@ export class PosComponent {
   readonly creditBalance = computed(() =>
     Math.max(0, this.grandTotal() - Math.max(0, this.price(this.creditPaidAmount()))),
   );
+
+  productDisplayName(product: Product): string {
+    return product.code === 'TEA' && product.name === 'Tea' ? 'Hot Tea' : product.name;
+  }
+
+  categorySymbol(code: string): string {
+    return ({ COFFEE: '☕', HOT_DRINKS: '🍵', MILK_DRINKS: '🥛', JUICES: '🍊',
+      MILKSHAKES: '🥤', MOJITOS: '🌿', FRIES: '🍟', FROZEN: '🍦', SANDWICHES: '🥪', BURGERS: '🍔' } as Record<string, string>)[code] ?? '🍽️';
+  }
 
   constructor() {
     void Promise.all([this.loadCatalog(), this.loadPaymentTerminal()]);

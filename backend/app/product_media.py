@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 from fastapi import HTTPException
 from PIL import Image, ImageOps, UnidentifiedImageError
 
-from .media_storage import data_root
+from .media_storage import data_root, media_file_path
 
 
 MEDIA_ROOT = data_root() / 'products' / 'tenant-uploads'
@@ -22,7 +22,7 @@ def product_directory(tenant_id: str, outlet_id: str) -> Path:
     return MEDIA_ROOT / str(UUID(tenant_id)) / str(UUID(outlet_id))
 
 
-def save_product_image(tenant_id: str, outlet_id: str, content: bytes) -> dict:
+def encode_product_image(content: bytes, preserve_alpha: bool = False) -> tuple[bytes, int, int]:
     if not content or len(content) > MAX_PRODUCT_IMAGE_BYTES:
         raise HTTPException(413, 'Product image must be between 1 byte and 5 MB.')
     try:
@@ -38,8 +38,11 @@ def save_product_image(tenant_id: str, outlet_id: str, content: bytes) -> dict:
                 original.load()
                 oriented = ImageOps.exif_transpose(original)
                 oriented.thumbnail((1600, 1600))
-                clean = Image.new('RGB', oriented.size, '#ffffff')
-                if 'A' in oriented.getbands():
+                clean = Image.new('RGBA' if preserve_alpha else 'RGB', oriented.size,
+                                  (0, 0, 0, 0) if preserve_alpha else '#ffffff')
+                if preserve_alpha:
+                    clean.paste(oriented.convert('RGBA'))
+                elif 'A' in oriented.getbands():
                     clean.paste(oriented.convert('RGBA'), mask=oriented.convert('RGBA').getchannel('A'))
                 else:
                     clean.paste(oriented.convert('RGB'))
@@ -58,17 +61,45 @@ def save_product_image(tenant_id: str, outlet_id: str, content: bytes) -> dict:
             'Choose a valid still PNG, JPG or WebP image (64-8000 px, at most 20 megapixels).',
         ) from exc
 
+    return encoded.getvalue(), width, height
+
+
+def save_product_image(tenant_id: str, outlet_id: str, content: bytes) -> dict:
+    encoded, width, height = encode_product_image(content)
     directory = product_directory(tenant_id, outlet_id)
     directory.mkdir(parents=True, exist_ok=True)
     filename = f'product-{uuid4().hex}.webp'
     with (directory / filename).open('xb') as target:
-        target.write(encoded.getvalue())
+        target.write(encoded)
     return {
         'path': f'products/tenant-uploads/{tenant_id}/{outlet_id}/{filename}',
         'url': f'{PREFIX}{tenant_id}/{outlet_id}/{filename}',
         'width': width,
         'height': height,
     }
+
+
+def save_global_product_image(content: bytes) -> dict:
+    encoded, width, height = encode_product_image(content, preserve_alpha=True)
+    relative = f'products/global-uploads/product-{uuid4().hex}.webp'
+    target = media_file_path(relative)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open('xb') as output:
+        output.write(encoded)
+    return {'path': relative, 'url': f'/api/media/{relative}', 'width': width, 'height': height}
+
+
+def validate_global_product_image_path(value: str | None) -> None:
+    if not value:
+        return
+    if not value.startswith('products/') or value.startswith('products/tenant-uploads/'):
+        raise HTTPException(422, 'Upload a global product image stored under BREWBILL_DATA_PATH.')
+    try:
+        target = media_file_path(value)
+    except HTTPException as exc:
+        raise HTTPException(422, 'Invalid global product image path.') from exc
+    if not target.is_file():
+        raise HTTPException(422, 'Global product image was not found under BREWBILL_DATA_PATH.')
 
 
 def product_media_path(tenant_id: str, outlet_id: str, filename: str) -> Path:

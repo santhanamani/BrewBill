@@ -1,0 +1,139 @@
+/* Shared application chrome. Component scoping and explicit shell selectors
+   keep legacy page themes from changing header/footer geometry on navigation. */
+:host { display: block; min-height: 0; }
+.app-shell.app-shell {
+  --shell-u: clamp(.72px, .059773vw, 1.25px);
+  height: 100dvh;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: calc(72 * var(--shell-u)) minmax(0, 1fr) auto !important;
+  overflow: hidden;
+}
+.app-shell.app-shell.super-admin-shell { grid-template-rows: calc(72 * var(--shell-u)) minmax(0, 1fr) !important; }
+.app-shell.app-shell::after { content: none !important; }
+.app-shell.app-shell > .light-topbar {
+  position: relative; inset: auto; z-index: 110;
+  display: flex !important; align-items: center;
+  width: 100% !important; height: calc(72 * var(--shell-u)) !important;
+  min-width: 0; margin: 0 !important; padding: 0 calc(30 * var(--shell-u)) !important;
+  gap: calc(10 * var(--shell-u)) !important;
+  border: 0 !important; border-bottom: 1px solid #e5e2db !important;
+  border-radius: 0 0 20px 20px !important;
+  background: #fffcf7 !important; color: #382416;
+  box-shadow: 0 4px 16px #67431912;
+}
+.app-shell.app-shell .light-topbar::after { content: none !important; }
+.app-shell.app-shell .brand {
+  display: flex; align-items: center; flex: 0 1 calc(222 * var(--shell-u));
+  min-width: 150px !important; max-width: calc(235 * var(--shell-u)) !important;
+  height: calc(52 * var(--shell-u)); gap: calc(12 * var(--shell-u));
+  margin: 0; padding: 0 calc(16 * var(--shell-u)) 0 0;
+  border-right: 1px solid #e9ddcc; background: none;
+}
+.app-shell.app-shell .brand img.brand-mark {
+  flex: 0 0 calc(50 * var(--shell-u)) !important;
+  width: calc(50 * var(--shell-u)) !important; height: calc(50 * var(--shell-u)) !important;
+  object-fit: contain; filter: none;
+}
+.app-shell.app-shell .brand > span { min-width: 0; }
+.app-shell.app-shell .brand b {
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: calc(23 * var(--shell-u)) !important; line-height: 1.2 !important;
+}
+.app-shell.app-shell .brand small { font-size: calc(10 * var(--shell-u)) !important; letter-spacing: .15em; white-space: nowrap; }
+.app-shell.app-shell .top-meta {
+  display: flex; align-items: center; flex: 0 1 auto !important;
+  min-width: 0 !important; width: auto !important; max-width: none !important;
+  gap: 7px !important; padding: 0 calc(10 * var(--shell-u)) 0 0 !important;
+  border-right: 1px solid #e9ddcc; color: #4b382b;
+  font-size: calc(12 * var(--shell-u)) !important; white-space: nowrap;
+}
+.app-shell.app-shell .top-meta > span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.app-shell.app-shell .top-meta b { display: block; overflow: hidden; text-overflow: ellipsis; font-size: inherit; }
+.app-shell.app-shell .top-meta small { font-size: calc(10 * var(--shell-u)); letter-spacing: 0; line-height: 1.6; color: #78695a; }
+.app-shell.app-shell .top-meta > .material-symbols-outlined { flex: 0 0 auto; font-size: calc(23 * var(--shell-u)) !important; }
+.app-shell.app-shell .outlet-context { flex: 0 1 calc(185 * var(--shell-u)) !important; }
+.app-shell.app-shell .outlet-context select { width: 100%; min-width: 0; max-width: 180px; }
+.app-shell.app-shell .profile { max-width: calc(125 * var(--shell-u)) !important; }
+.app-shell.app-shell .tenant-context-badge {
+  display: inline-flex; align-items: center; flex: 0 1 auto; min-width: 0;
+  margin: 0; padding: 7px 10px; gap: 6px;
+  font-size: calc(10 * var(--shell-u)); white-space: nowrap;
+}
+.app-shell.app-shell .top-actions {
+  display: flex; align-items: center; justify-content: flex-end; flex: 0 0 auto;
+  margin-left: auto; gap: calc(7 * var(--shell-u));
+}
+.app-shell.app-shell .top-actions .button,
+.app-shell.app-shell .top-actions .theme-button {
+  display: inline-flex !important; align-items: center; justify-content: center;
+  flex: 0 0 auto; gap: 6px; margin: 0 !important;
+  height: calc(40 * var(--shell-u)) !important; min-height: 34px !important;
+  min-width: 0 !important; padding: 0 calc(11 * var(--shell-u)) !important;
+  font-size: 12px !important; line-height: 1;
+  border-radius: 9px; white-space: nowrap;
+}
+.app-shell.app-shell .top-actions .theme-button { width: calc(40 * var(--shell-u)); padding: 0 !important; }
+.app-shell.app-shell .top-actions .material-symbols-outlined { font-size: calc(22 * var(--shell-u)); }
+.app-shell.app-shell .top-actions .button { background: #fff; box-shadow: none; border-color: #e3ded5; }
+.app-shell.app-shell .top-actions .new-bill-button { background: #654731 !important; color: #fff; border: 1px solid #654731; }
+.app-shell.app-shell > .page-content { min-height: 0; padding-bottom: 18px !important; }
+.app-shell.app-shell > .bottom-nav {
+  position: relative !important; inset: auto !important; align-self: end;
+  display: flex; align-items: stretch; justify-content: center;
+  width: calc(100% - 48px) !important; min-width: 0 !important;
+  height: 68px !important; min-height: 68px;
+  margin: 0 auto 12px !important;
+  padding: 6px !important;
+  border: 1px solid #e8dccb; border-radius: 18px !important;
+  background: #fffdf9f5 !important; box-shadow: 0 8px 24px #39271714;
+  overflow-x: auto; overflow-y: hidden; scrollbar-width: thin;
+}
+.app-shell.app-shell .bottom-nav::after { content: none !important; }
+.app-shell.app-shell:has(app-pos) .new-bill-button { display: none !important; }
+.app-shell.app-shell .bottom-nav button {
+  display: flex; align-items: center; justify-content: center;
+  flex: 1 1 0 !important; width: auto !important; min-width: 0 !important;
+  height: 100% !important; margin: 0; padding: 0 calc(8 * var(--shell-u)) !important;
+  gap: calc(12 * var(--shell-u)); background: transparent; color: #422b19;
+  border: 0; border-radius: 9px;
+  font-size: calc(13 * var(--shell-u)) !important; white-space: nowrap;
+}
+.app-shell.app-shell .bottom-nav button:last-child { border-right: 0; }
+.app-shell.app-shell .bottom-nav button.active {
+  background: linear-gradient(120deg, #663609, #8c5226) !important; color: #fffaf1 !important;
+  border: 1px solid var(--bb-border, #e5ddd4) !important; border-radius: 12px;
+  box-shadow: 0 3px 10px #0002 !important;
+}
+.app-shell.app-shell .bottom-nav button > .material-symbols-outlined { font-size: calc(27 * var(--shell-u)) !important; flex-shrink: 0; }
+.app-shell.app-shell .bottom-nav button.active > .material-symbols-outlined { color: #ffe49c; font-variation-settings: 'FILL' 1; }
+.app-shell.app-shell .bottom-nav button:hover:not(.active) { background: #f2e8da; color: #603811; }
+.app-shell.app-shell .tenant-context-badge { display: inline-flex; }
+.app-shell.app-shell .bottom-nav button small { font-size: 9px !important; margin-top: 4px; color: #a99b89; }
+.app-shell.app-shell .bottom-nav button.active small { color: #fff1d7; }
+.app-shell.app-shell :is(.top-actions a,.top-actions button,.bottom-nav button,.brand):focus-visible { outline: 3px solid #bd873e; outline-offset: 2px; }
+@media (max-width: 1499px) {
+  .app-shell.app-shell .date-meta, .app-shell.app-shell .time-meta { display: none !important; }
+}
+@media (max-width: 1199px) {
+  .app-shell.app-shell .tenant-context-badge { display: none !important; }
+  .app-shell.app-shell .profile { display: none !important; }
+  .app-shell.app-shell > .bottom-nav { width: calc(100% - 24px) !important; }
+  .app-shell.app-shell .bottom-nav button { flex-direction: column; gap: 3px; font-size: 11px !important; }
+  .app-shell.app-shell .bottom-nav button small { font-size: 9px !important; margin-top: 1px; }
+}
+@media (max-width: 850px) {
+  .app-shell.app-shell > .light-topbar { padding-inline: 12px !important; gap: 8px !important; }
+  .app-shell.app-shell .outlet-context { display: none !important; }
+  .app-shell.app-shell .top-actions :is(.message-alert,.marketplace-alert) > span:not(.material-symbols-outlined) { display: none; }
+  .app-shell.app-shell .bottom-nav button { flex: 1 0 78px !important; }
+  .app-shell.app-shell > .bottom-nav { justify-content: flex-start; }
+}
+@media (max-width: 600px) {
+  .app-shell.app-shell .brand { min-width: 48px !important; flex-basis: 48px; padding: 0; border: 0; }
+  .app-shell.app-shell .brand > span, .app-shell.app-shell .theme-button { display: none !important; }
+  .app-shell.app-shell .top-actions { gap: 4px; }
+  .app-shell.app-shell .top-actions .button { padding-inline: 7px !important; }
+  .app-shell.app-shell .top-actions .theme-button { display: none !important; }
+  .app-shell.app-shell .top-actions :is(.held-button, .logout-button) { font-size: 0 !important; gap: 0; width: 36px; }
+}

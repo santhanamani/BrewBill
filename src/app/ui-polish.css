@@ -1,0 +1,525 @@
+/* Shared presentation refinements. Keep data, routes and billing behavior in their components. */
+:root {
+  --canvas: #f7f4ee;
+  --surface: #ffffff;
+  --surface-muted: #f1eee8;
+  --line: #e5e2db;
+  --line-strong: #d6d0c5;
+  --ink-strong: #292822;
+  --ink: #45443d;
+  --ink-muted: #77756b;
+  --brand-primary: #654731;
+  --brand-accent: #936342;
+  --brand-primary-soft: #eee7de;
+}
+:root .app-shell.app-shell {
+  background: radial-gradient(ellipse at 80% 0, #f0e8dc88, transparent 50%), var(--canvas) !important;
+}
+:root .app-shell.app-shell::before,
+:root .app-shell .page-content::after { content: none !important; }
+:root .app-shell :is(h1, h2, h3),
+:root .tenant-login-card .login-heading h1 {
+  font-family: 'DM Sans', Arial, sans-serif !important;
+  letter-spacing: -.035em;
+}
+:root .app-shell :is(.view-head, .page-heading) h1 { font-size: 28px !important; line-height: 1.2; }
+:root .app-shell :is(.panel, .metric, .table-panel, .report-list-panel) {
+  border-color: var(--line) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 2px 5px #28221805 !important;
+}
+:root .app-shell :is(input, select, textarea) { accent-color: #654731; }
+:root .app-shell :is(button, a, input, select, summary):focus-visible {
+  outline: 3px solid #ad794e !important;
+  outline-offset: 3px;
+}
+:root .app-shell :is(th, td) { border-color: #ece9e3; }
+:root .app-shell th { background: #f5f4ef !important; color: #68665d !important; }
+:root .app-shell tbody tr:hover td { background: #faf9f5; }
+:root .app-shell button:disabled { cursor: not-allowed; }
+
+/* Dashboard: give the numbers priority over decoration. */
+:root app-dashboard .dashboard-head { margin-bottom: 22px; }
+:root app-dashboard .dashboard-eyebrow { color: #8b6549; font-size: 10px; letter-spacing: .18em; }
+:root app-dashboard .dashboard-head h1 { margin: 8px 0 !important; font-size: 30px !important; }
+:root app-dashboard .dashboard-head p { color: #77756b; font-size: 14px !important; }
+:root app-dashboard .dashboard-metrics { gap: 14px !important; }
+:root app-dashboard .dashboard-metrics .metric {
+  min-height: 118px !important; padding: 20px !important;
+  background: #fff !important; color: #292822 !important;
+  text-align: left; gap: 16px !important; transform: none !important;
+}
+:root app-dashboard .dashboard-metrics .metric:hover { border-color: #b6a28a !important; background: #fdfcf9 !important; }
+:root app-dashboard .dashboard-metrics .metric:first-child { background: #314c40 !important; border-color: #314c40 !important; }
+:root app-dashboard .dashboard-metrics .metric::after { display: none !important; }
+:root app-dashboard .dashboard-metrics .metric-icon {
+  width: 46px !important; height: 46px !important; min-width: 46px !important;
+  border: 0 !important; border-radius: 12px !important; background: #f2eee7 !important;
+  color: #795b43 !important; box-shadow: none !important;
+}
+:root app-dashboard .dashboard-metrics .metric-icon .material-symbols-outlined { font-size: 25px !important; }
+:root app-dashboard .dashboard-metrics .metric h2 { font-size: 27px !important; color: #292822 !important; line-height: 1.2; }
+:root app-dashboard .dashboard-metrics .metric small { color: #68665e !important; font-size: 12px !important; }
+:root app-dashboard .dashboard-metrics .metric p { color: #89867c !important; font-size: 11px !important; }
+:root app-dashboard .dashboard-metrics .metric:first-child :is(h2, small) { color: #fff !important; }
+:root app-dashboard .dashboard-metrics .metric:first-child p { color: #c6d5ca !important; }
+:root app-dashboard .dashboard-metrics .metric:first-child .metric-icon { background: #ffffff19 !important; color: #e6efe8 !important; }
+:root app-dashboard .dashboard-metrics .metric:last-child h2 { font-size: 18px !important; }
+:root app-dashboard .dashboard-marketplace {
+  background: #eeeae2 !important; border: 1px solid #ded8cd !important;
+  border-radius: 14px !important; box-shadow: none !important; color: #38382f !important;
+}
+:root app-dashboard .dashboard-marketplace :is(h2, b) { color: #38382f !important; }
+:root app-dashboard .dashboard-marketplace :is(p, small) { color: #767165 !important; }
+:root app-dashboard .dashboard-marketplace article { background: #ffffffa8 !important; border-color: #e3ded5 !important; }
+:root app-dashboard .dashboard-marketplace > header > button { background: #654731 !important; border-color: #654731 !important; color: #fff !important; }
+:root app-dashboard .panel { background: #fff !important; }
+:root app-dashboard .panel-title { background: #fff !important; border-bottom: 1px solid #eeeae3 !important; }
+:root app-dashboard .panel-title h2 { font-size: 17px !important; }
+
+/* POS: separate product imagery from names, with stable readable control sizes. */
+:root .app-shell:has(app-pos) { --pos-u: 1px; }
+:root .app-shell.app-shell:has(app-pos) > .page-content { padding: 20px 24px !important; }
+:root .app-shell:has(app-pos) app-pos .pos-layout {
+  grid-template-columns: minmax(0, 1fr) 370px !important; gap: 24px !important;
+}
+:root app-pos .pos-layout .catalog-search,
+:root app-pos .pos-layout .pos-controls { margin-bottom: 14px !important; }
+:root app-pos .pos-layout .catalog-search .search { background: #fff !important; border: 1px solid #ddd8cf !important; box-shadow: none !important; }
+:root app-pos .pos-layout .category-card { border: 1px solid #e0dcd4 !important; box-shadow: none !important; background: #fff !important; }
+:root app-pos .pos-layout .category-card.active,
+:root app-pos .pos-layout .catalog-toolbar .order-mode-bar > button.active {
+  background: #654731 !important; border-color: #654731 !important; box-shadow: none !important; color: #fff !important;
+}
+:root app-pos .pos-layout .catalog-toolbar { margin-bottom: 14px !important; }
+:root app-pos .pos-layout .catalog-toolbar h1 { font-size: 23px !important; }
+:root app-pos .pos-layout .product-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  grid-auto-rows: 238px !important; gap: 18px !important; padding: 2px 8px 12px 2px !important;
+  scrollbar-width: thin; scrollbar-color: #c9c0b3 transparent;
+}
+:root app-pos .pos-layout .product-grid::-webkit-scrollbar { display: block; width: 5px; }
+:root app-pos .pos-layout .pos-product-tile,
+:root app-pos .pos-layout .pos-product-tile .product-card { height: 238px !important; min-height: 238px !important; }
+:root app-pos .pos-layout .pos-product-tile .product-card {
+  background: #fff !important; border-color: #ebe4d9 !important; border-radius: 18px !important;
+  box-shadow: 0 5px 16px #49301807 !important;
+}
+:root app-pos .pos-layout .pos-product-tile .product-card:hover { border-color: #a58a6b !important; background: #fdfbf7 !important; }
+:root app-pos .pos-layout .product-card .product-photo {
+  inset: 12px 10% auto !important; width: 80% !important; height: 140px !important;
+  object-fit: contain !important; padding: 8px !important;
+  filter: drop-shadow(0 9px 6px #50321b15) !important;
+}
+:root app-pos .pos-layout .product-card .product-copy {
+  inset: 159px 0 0 !important; height: auto !important; padding: 0 16px 14px !important;
+  background: #fff !important; gap: 4px !important; border: 0 !important;
+}
+:root app-pos .pos-layout .product-copy b,
+:root app-pos .pos-layout .product-copy b.wrap-name {
+  width: 100% !important; max-width: 100% !important; min-height: 18px !important;
+  font-size: 14px !important; line-height: 20px !important; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; color: #38352e !important;
+}
+:root app-pos .pos-layout .product-copy strong { margin: 0 !important; font-size: 20px !important; line-height: 25px !important; letter-spacing: -.04em; }
+:root app-pos .pos-layout .product-copy small { font-size: 10px !important; line-height: 14px !important; color: #3e7b58; }
+:root app-pos .pos-layout .product-card .product-add {
+  width: 34px !important; height: 34px !important; right: 14px !important; bottom: 17px !important;
+  border: 1px solid #dcccb8 !important; background: #f2e9dc !important; box-shadow: none !important; border-radius: 10px !important;
+}
+:root app-pos .pos-layout .product-favourite { top: 10px !important; right: 10px !important; box-shadow: none !important; }
+:root app-pos .pos-layout .bill-panel { background: #fff !important; border-color: #e4d9c9 !important; border-radius: 22px !important; box-shadow: 0 8px 30px #4930180d; grid-template-rows: 90px 38px minmax(90px,1fr) auto auto auto auto !important; }
+:root app-pos .pos-layout .bill-head { padding-inline: 22px !important; border-bottom: 1px solid #e4d9c9; background: #eee5d6 !important; }
+:root app-pos .pos-layout .bill-head h2 { font-size: 20px !important; }
+:root app-pos .pos-layout .bill-columns { background: #f7f6f2 !important; color: #7a766b; }
+:root app-pos .pos-layout .empty-cart > .material-symbols-outlined { font-size: 56px !important; color: #bab6a9 !important; }
+:root app-pos .pos-layout .empty-cart p { font-size: 13px !important; color: #878276 !important; }
+:root app-pos .pos-layout .totals { border: 0 !important; background: #fff !important; }
+:root app-pos .pos-layout .totals .grand { background: #263e35 !important; color: #fff !important; font-size: 14px !important; border-radius: 12px; height: 62px !important; margin-top: 10px !important; }
+:root app-pos .pos-layout .totals .grand b { font-size: 25px !important; }
+:root app-pos .pos-layout .payment-grid button {
+  height: 62px !important; font-size: 12px !important; border: 1px solid #e4dfd5 !important;
+  background: #f2f0eb !important; color: #625b4f !important; box-shadow: none !important;
+}
+:root app-pos .pos-layout .payment-grid .cash { background: #315542 !important; color: #fff !important; border-color: #315542 !important; }
+:root app-pos .pos-layout .payment-grid .cash.policy-blocked { background: #e8e4dc !important; color: #817b70 !important; border-color: #ded8ce !important; }
+:root app-pos .pos-layout .payment-grid .upi { background: #eeedf5 !important; color: #685783 !important; }
+:root app-pos .pos-layout .payment-grid .card { background: #eaf0f5 !important; color: #4d6981 !important; }
+:root app-pos .pos-layout .payment-grid button:disabled { opacity: .45 !important; }
+:root app-pos .pos-layout .payment-grid .material-symbols-outlined { font-size: 23px !important; }
+:root app-pos .pos-layout .payment-grid small { font-size: 10px !important; }
+:root app-pos .pos-layout .bill-actions button { font-size: 13px !important; height: 42px !important; box-shadow: none !important; }
+:root app-pos .pos-layout .bill-actions .print { background: #654731 !important; }
+
+/* Login and reports follow the same restrained palette. */
+:root .tenant-login-main { background: #f5f4ef !important; }
+:root .tenant-login-card { border: 1px solid #e1dcd2 !important; border-radius: 18px !important; box-shadow: 0 12px 40px #42332209 !important; }
+:root .tenant-login-card .login-heading h1 { font-size: 34px !important; }
+:root .tenant-login-card .login-heading { border: 0 !important; padding-left: 0 !important; }
+:root .tenant-login-card .login-submit { background: #654731 !important; box-shadow: none !important; border-radius: 10px !important; }
+:root app-operations[data-view='reports'] :is(.panel, .report-list-panel, .metric) { background: #fff !important; }
+:root app-operations[data-view='reports'] .report-view-tabs { width: fit-content !important; max-width: 100%; gap: 4px; background: #eae6de !important; padding: 4px !important; border-radius: 10px; }
+:root app-operations[data-view='reports'] .report-view-tabs button { border: 0 !important; background: transparent !important; box-shadow: none !important; }
+:root app-operations[data-view='reports'] .report-view-tabs button.active { background: #fff !important; color: #654731 !important; box-shadow: 0 1px 4px #38291712 !important; }
+
+@media (min-width: 1400px) {
+  :root app-pos .pos-layout .product-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+}
+@media (min-width: 1750px) {
+  :root .app-shell:has(app-pos) app-pos .pos-layout { grid-template-columns: minmax(0, 1fr) 410px !important; }
+}
+@media (max-width: 1100px) {
+  :root .app-shell:has(app-pos) app-pos .pos-layout { grid-template-columns: minmax(0, 1fr) 350px !important; gap: 16px !important; }
+  :root app-pos .pos-layout .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  :root app-pos .pos-layout .catalog-toolbar { height: auto !important; min-height: 42px; flex-wrap: wrap; gap: 10px; }
+}
+@media (max-width: 850px) {
+  :root .app-shell.app-shell:has(app-pos) > .page-content { padding: 16px !important; }
+  :root .app-shell:has(app-pos) app-pos .pos-layout { display: flex !important; height: auto !important; }
+  :root app-pos .pos-layout .product-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; flex-basis: 410px !important; height: 410px !important; }
+  :root app-pos .pos-layout .bill-panel:not(.expanded) { height: 640px !important; order: 0; }
+}
+@media (max-width: 540px) {
+  :root app-pos .pos-layout .catalog-toolbar h1 { flex: 1 0 100%; }
+  :root app-pos .pos-layout .catalog-toolbar .order-mode-bar { width: 100%; }
+  :root app-pos .pos-layout .catalog-toolbar .order-mode-bar > button { flex: 1 1 0; }
+  :root app-pos .pos-layout .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  :root app-pos .pos-layout .catalog-search .search input { width: 100%; min-width: 0; }
+  :root app-pos .pos-layout .catalog-search .search kbd { display: none; }
+  :root app-pos .pos-layout .catalog-search .favourites-filter { min-width: 44px !important; font-size: 11px; }
+  :root app-dashboard .dashboard-metrics .metric { padding: 14px !important; gap: 10px !important; }
+  :root app-dashboard .dashboard-metrics .metric-icon { display: none !important; }
+  :root .app-shell :is(.view-head, .page-heading) h1 { font-size: 24px !important; }
+}
+/* Café studio details: warm materials, editorial hierarchy and tactile controls. */
+:root .studio-eyebrow { display: block; color: #96724f; font: 700 9px/1.5 'DM Sans',sans-serif; letter-spacing: .19em; }
+:root app-pos .catalog-intro { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 2px 22px; }
+:root app-pos .catalog-intro h2 { margin: 5px 0 6px; color: #362b22; font: 400 34px/1.15 Georgia,serif !important; letter-spacing: -.04em; }
+:root app-pos .catalog-intro p { margin: 0; color: #8a8174; font-size: 12px; }
+:root app-pos .menu-count { display: flex; align-items: center; gap: 8px; padding: 10px 13px; border: 1px solid #e4d9c8; border-radius: 30px; color: #7f694e; font-size: 10px; white-space: nowrap; }
+:root app-pos .menu-count > span { font-size: 17px; }
+:root app-pos .pos-layout .catalog-search { height: 46px !important; min-height: 46px; }
+:root app-pos .pos-layout .catalog-search .search { height: 46px !important; border-radius: 13px !important; border-color: #e7dfd2 !important; box-shadow: 0 3px 10px #49301804 !important; }
+:root app-pos .pos-layout .favourites-filter { border-radius: 13px; height: 46px !important; background: #f3e8e1 !important; border-color: #e9d7cb !important; color: #925f4d; }
+:root app-pos .pos-layout .category-row, :root app-pos .pos-layout .category-card, :root app-pos .pos-layout .category-next { height: 66px !important; }
+:root app-pos .pos-layout .category-strip { gap: 8px; }
+:root app-pos .pos-layout .category-card { flex-direction: column; justify-content: center; gap: 4px !important; border: 1px solid #e8dfd1 !important; border-radius: 14px; min-width: 79px; padding: 8px 13px !important; background: #fdfbf7 !important; }
+:root app-pos .pos-layout .category-card em { font-size: 11px !important; }
+:root app-pos .pos-layout .category-card .category-symbol { font-size: 24px; filter: saturate(.68); }
+:root app-pos .pos-layout .category-card.active { background: #3d4a3a !important; color: #fff6e5 !important; border-color: #3d4a3a !important; box-shadow: 0 3px 9px #3d4a3a20 !important; }
+:root app-pos .pos-layout .category-card.active .material-symbols-outlined { color: #e7d4ad !important; }
+:root app-pos .pos-layout .catalog-toolbar { margin-top: 4px; margin-bottom: 14px !important; }
+:root app-pos .pos-layout .catalog-toolbar h1 { font-size: 20px !important; font-weight: 700; letter-spacing: -.04em; }
+:root app-pos .pos-layout .catalog-toolbar h1 small { background: transparent !important; border: 0; padding: 0; color: #9a8c79; font-size: 10px; }
+:root app-pos .pos-layout .catalog-toolbar .order-mode-bar { border: 1px solid #e9dfd1 !important; background: #eee8de !important; padding: 3px !important; border-radius: 10px; gap: 2px; }
+:root app-pos .pos-layout .catalog-toolbar .order-mode-bar > button { height: 32px !important; padding-inline: 9px !important; border: 0 !important; background: transparent !important; border-radius: 7px; color: #8b7966; }
+:root app-pos .pos-layout .catalog-toolbar .order-mode-bar > button b { font-size: 10px; }
+:root app-pos .pos-layout .catalog-toolbar .order-mode-bar > button.active { background: #fff !important; color: #61452e !important; box-shadow: 0 2px 5px #4a342013 !important; }
+:root app-pos .pos-layout .catalog-toolbar .order-mode-bar > button .material-symbols-outlined { display: none !important; }
+:root app-pos .pos-layout .product-card::before { content: '' !important; position: absolute; inset: 0 0 auto; height: 150px; border-radius: 17px 17px 0 0; background: radial-gradient(ellipse at 50% 75%, #efe1c8, #f8f3ea 75%); }
+:root app-pos .pos-product-tile:nth-child(4n+2) .product-card::before { background: radial-gradient(ellipse at 50% 75%, #e6d1bc, #f5ede4 75%); }
+:root app-pos .pos-product-tile:nth-child(4n+3) .product-card::before { background: radial-gradient(ellipse at 50% 75%, #d7e2d0, #eff3e9 75%); }
+:root app-pos .pos-product-tile:nth-child(4n) .product-card::before { background: radial-gradient(ellipse at 50% 75%, #ead8c6, #f5eee6 75%); }
+:root app-pos .pos-layout .product-card .product-photo.isolated-product { filter: drop-shadow(0 8px 5px #60421c20) !important; }
+:root app-pos .pos-layout .product-card:hover .product-photo { transform: translateY(-3px) scale(1.04) !important; transition: transform .2s ease; }
+:root app-pos .pos-layout .product-card:hover .product-add { background: #754d35 !important; color: #fff !important; border-color: #754d35 !important; }
+:root app-pos .pos-layout .product-favourite { z-index: 2; width: 28px !important; height: 28px !important; border-radius: 50%; background: #ffffffb8 !important; color: #b4a18a; }
+:root app-pos .pos-layout .product-favourite.active { color: #ae5d52 !important; }
+:root app-pos .pos-layout .product-copy small { letter-spacing: .02em; color: #5e8267 !important; }
+:root app-pos .pos-layout .product-card.unavailable .product-copy small { color: #b66753 !important; }
+:root app-pos .pos-layout .product-card.unavailable .product-photo { opacity: .6; }
+:root app-pos .order-heading h2 { display: flex; align-items: center; gap: 10px; margin: 5px 0 0 !important; }
+:root app-pos .order-heading h2 small { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 7px; background: #fff9ef; color: #826344; font: 600 11px 'DM Sans',sans-serif; }
+:root app-pos .pos-layout .bill-head .bill-expand { background: #ffffff88; border: 1px solid #d8cab5; color: #8c7154; border-radius: 10px; }
+:root app-pos .pos-layout .bill-columns { background: #faf8f3 !important; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+:root app-pos .pos-layout .empty-cart > .material-symbols-outlined { display: inline-grid; place-items: center; width: 82px; height: 82px; border: 1px solid #e8dfd0; border-radius: 50%; background: #f8f2e7; color: #ad9470 !important; font-size: 36px !important; box-shadow: 0 0 0 12px #faf8f3; }
+:root app-pos .empty-cart h3 { margin: 25px 0 8px; font: 400 24px Georgia,serif !important; color: #6f5841; }
+:root app-pos .pos-layout .empty-cart p { font-size: 12px !important; line-height: 1.8; }
+:root app-pos .pos-layout .totals { border-top: 1px dashed #dfd4c3 !important; padding-top: 12px !important; }
+:root app-pos .pos-layout .totals .grand { align-items: center !important; }
+:root app-pos .bill-panel:not(.expanded) :is(.bill-columns,.cart-line) { grid-template-columns: minmax(0,1fr) 72px 48px 56px 20px !important; gap: 4px !important; }
+:root app-pos .bill-panel:not(.expanded) .cart-product img { display: none; }
+:root app-pos .bill-panel:not(.expanded) .cart-product > span { min-width: 0; }
+:root app-pos .bill-panel:not(.expanded) .cart-product b { display: block; overflow-wrap: normal; word-break: normal; font-size: 12px; line-height: 1.4; }
+:root app-pos .pos-layout .totals .grand b { color: #fff !important; }
+:root app-pos .pos-layout .payment-grid { gap: 6px; }
+:root app-pos .pos-layout .payment-grid button { border-radius: 11px; }
+:root app-pos .pos-layout .payment-grid .cash { background: #eff3ed !important; border-color: #becfbb !important; color: #466b4c !important; }
+:root app-pos .pos-layout .payment-grid .cash.policy-blocked { background: #e8e4dc !important; color: #817b70 !important; border-color: #ded8ce !important; }
+:root app-pos .pos-layout .bill-actions .print { background: #754d35 !important; border-radius: 11px; }
+:root app-pos .pos-layout .bill-actions button:disabled { opacity: .42 !important; }
+:root app-pos .pos-layout .terminal-status { color: #89947e; background: transparent; }
+
+/* Dashboard and reports share the same typography and surface treatment. */
+:root app-dashboard .dashboard-head { padding: 24px 28px; border: 1px solid #e7dbc7; border-radius: 20px; background: radial-gradient(ellipse at 90% 15%, #dbc5a27a, transparent 55%), #eee6d6; }
+:root app-dashboard .dashboard-head h1 { font: 400 35px/1.2 Georgia,serif !important; color: #4b3929; }
+:root app-dashboard .dashboard-head p { font-size: 12px !important; }
+:root app-dashboard .dashboard-metrics .metric { position: relative; min-height: 142px !important; align-items: flex-start !important; border-radius: 18px !important; padding: 21px !important; }
+:root app-dashboard .dashboard-metrics .metric > div { padding: 0; }
+:root app-dashboard .dashboard-metrics .metric h2 { margin: 8px 0 5px; font-size: 29px !important; }
+:root app-dashboard .dashboard-metrics .metric:first-child { background: radial-gradient(ellipse at 100% 100%, #536749, transparent 70%), #263e35 !important; }
+:root app-dashboard .dashboard-metrics .metric:nth-child(2) { background: #f3e9d8 !important; }
+:root app-dashboard .dashboard-metrics .metric:nth-child(6) { background: #fbf0dc !important; }
+:root app-dashboard .dashboard-metrics .metric-icon { width: 36px !important; height: 36px !important; min-width: 36px !important; border-radius: 10px !important; }
+:root app-dashboard .dashboard-metrics .metric:last-child h2 { font-size: 17px !important; }
+:root app-dashboard .dashboard-marketplace { background: #efe9dd !important; border-radius: 18px !important; padding: 22px !important; margin-block: 20px !important; }
+:root app-dashboard .dashboard-grid { gap: 18px; }
+:root app-dashboard .panel { border-radius: 18px !important; }
+:root app-dashboard .panel-title { padding: 20px !important; border-radius: 18px 18px 0 0; }
+:root app-dashboard .panel-title h2 { font-size: 15px !important; }
+:root app-dashboard .panel-title p { font-size: 11px !important; color: #9a8d7c; }
+:root app-operations[data-view='reports'] .report-view-tabs { border-radius: 12px !important; padding: 5px !important; min-height: 44px; }
+:root app-operations[data-view='reports'] .report-view-tabs button { min-height: 34px; border-radius: 8px; font-size: 11px !important; }
+:root app-operations[data-view='reports'] .report-view-tabs button.active { background: #3d4a3a !important; color: #fff !important; }
+:root .app-shell :is(.panel,.table-panel,.report-list-panel) { border-color: #e7dfd1 !important; box-shadow: 0 5px 18px #47321c06 !important; }
+:root .app-shell :is(.view-head,.page-heading) h1 { font: 400 32px/1.2 Georgia,serif !important; color: #443222; }
+:root .app-shell th { background: #f3eee4 !important; color: #8a765f !important; font-size: 11px; }
+:root .tenant-login-main { background: radial-gradient(ellipse at 100% 0, #e9dbc8, transparent 60%), #f7f3eb !important; }
+:root .tenant-login-card { border-radius: 24px !important; box-shadow: 0 20px 60px #5c3e1610 !important; }
+:root .tenant-login-card .login-heading h1 { font: 400 42px/1.2 Georgia,serif !important; color: #443222; }
+:root .tenant-login-card .login-submit { background: #754d35 !important; box-shadow: 0 6px 14px #754d3520 !important; }
+@media (min-width: 1000px) and (max-width: 1199px) {
+  :root .app-shell:has(app-pos) app-pos .pos-layout { grid-template-columns: minmax(0,1fr) 330px !important; gap: 18px !important; }
+  :root app-pos .pos-layout .product-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+  :root app-pos .menu-count { display: none; }
+  :root app-pos .catalog-intro h2 { font-size: 28px !important; }
+  :root app-pos .pos-layout .catalog-toolbar { flex-wrap: wrap; height: auto !important; gap: 10px; }
+  :root app-pos .pos-layout .catalog-toolbar h1 { flex: 1 0 100%; }
+  :root app-dashboard .dashboard-metrics { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }
+}
+@media (max-height: 850px) {
+  :root app-pos .catalog-intro { padding-bottom: 14px; }
+  :root app-pos .catalog-intro h2 { font-size: 26px !important; }
+  :root app-pos .catalog-intro p { display: none; }
+  :root app-pos .pos-layout .bill-panel { grid-template-rows: 76px 34px minmax(60px,1fr) auto auto auto auto !important; }
+  :root app-pos .pos-layout .empty-cart { padding: 16px 10px; }
+  :root app-pos .pos-layout .empty-cart > .material-symbols-outlined { width: 48px; height: 48px; font-size: 26px !important; box-shadow: 0 0 0 6px #faf8f3; }
+  :root app-pos .empty-cart h3 { margin-top: 15px; font-size: 20px !important; }
+}
+@media (max-width: 850px) {
+  :root app-pos .catalog-intro h2 { font-size: 28px !important; }
+  :root app-pos .menu-count { display: none; }
+  :root app-dashboard .dashboard-head { padding: 20px; }
+}
+/* Dense POS workspace: prioritise the menu over decorative header space. */
+:root .app-shell.app-shell:has(app-pos) { background: #f3f4f1 !important; }
+:root .app-shell.app-shell:has(app-pos) > .page-content { padding: 16px 20px !important; }
+:root .app-shell:has(app-pos) app-pos .pos-layout { gap: 20px !important; }
+:root app-pos .pos-layout .catalog-toolbar { order: -1; flex: none; min-height: 58px; height: 58px !important; margin: 0 0 14px !important; flex-wrap: nowrap; align-items: center; }
+:root app-pos .pos-layout .catalog-toolbar h1 { flex: 0 1 auto; font: 600 28px/1.2 'DM Sans',sans-serif !important; color: #202e29; }
+:root app-pos .catalog-toolbar .studio-eyebrow { margin-bottom: 5px; font-size: 8px; color: #78847b; letter-spacing: .15em; }
+:root app-pos .pos-layout .catalog-toolbar h1 small { display: inline-block; margin-left: 9px; padding: 4px 8px; border-radius: 6px; background: #e5eae4 !important; color: #53665a; font: 600 10px/1.4 'DM Sans',sans-serif; vertical-align: middle; }
+:root app-pos .pos-layout .catalog-toolbar .order-mode-bar { width: auto; margin: 0; background: #e6e9e3 !important; border-color: #dfe4dc !important; }
+:root app-pos .pos-layout .catalog-search { margin-bottom: 12px !important; }
+:root app-pos .pos-layout .catalog-search .search { border-radius: 10px !important; border-color: #dce2da !important; }
+:root app-pos .pos-layout .favourites-filter { background: #fff !important; border-color: #dce2da !important; border-radius: 10px; color: #526657; }
+:root app-pos .pos-layout .favourites-filter.active { background: #e5eee5 !important; border-color: #76937c !important; }
+:root app-pos .pos-layout .pos-controls { margin-bottom: 14px !important; }
+:root app-pos .pos-layout :is(.category-row,.category-card,.category-next) { height: 40px !important; }
+:root app-pos .pos-layout .category-card { flex-direction: row; min-width: auto; gap: 7px !important; padding: 7px 12px !important; border-radius: 9px; background: #fff !important; border-color: #e0e5de !important; }
+:root app-pos .pos-layout .category-card.active { background: #243e32 !important; border-color: #243e32 !important; }
+:root app-pos .pos-layout .category-card .category-symbol { font-size: 18px; }
+:root app-pos .pos-layout .category-card .material-symbols-outlined { font-size: 19px; }
+:root app-pos .pos-layout .category-next { width: 32px; border-radius: 9px; }
+:root app-pos .pos-layout .product-grid { grid-template-columns: repeat(4,minmax(0,1fr)) !important; grid-auto-rows: 188px !important; gap: 12px !important; }
+:root app-pos .pos-layout .pos-product-tile,
+:root app-pos .pos-layout .pos-product-tile .product-card { height: 188px !important; min-height: 188px !important; }
+:root app-pos .pos-layout .pos-product-tile .product-card { border: 1px solid #e0e5dd !important; border-radius: 13px !important; box-shadow: 0 3px 9px #20352805 !important; }
+:root app-pos .pos-layout .pos-product-tile .product-card:hover { border-color: #75917b !important; box-shadow: 0 6px 16px #243e3214 !important; }
+:root app-pos .pos-layout .product-card::before { height: 103px; border-radius: 12px 12px 0 0; background: radial-gradient(ellipse at 50% 85%,#e5e9df,#f4f5ef 80%) !important; }
+:root app-pos .pos-layout .product-card .product-photo { inset: 4px 12% auto !important; width: 76% !important; height: 100px !important; padding: 3px !important; }
+:root app-pos .pos-layout .product-card .product-copy { inset: 109px 0 0 !important; padding: 0 11px 9px !important; gap: 2px !important; }
+:root app-pos .pos-layout .product-copy b,
+:root app-pos .pos-layout .product-copy b.wrap-name { font-size: 12px !important; line-height: 15px !important; height: 30px; min-height: 30px !important; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+:root app-pos .pos-layout .product-copy strong { font-size: 17px !important; line-height: 20px !important; }
+:root app-pos .pos-layout .product-copy small { font-size: 9px !important; line-height: 12px !important; }
+:root app-pos .pos-layout .product-card .product-add { width: 28px !important; height: 28px !important; right: 10px !important; bottom: 10px !important; border-radius: 8px !important; color: #fff !important; background: #294b39 !important; border-color: #294b39 !important; }
+:root app-pos .pos-layout .product-favourite { top: 7px !important; right: 7px !important; width: 24px !important; height: 24px !important; }
+:root app-pos .pos-layout .bill-panel { border-color: #dce3d9 !important; border-radius: 16px !important; grid-template-rows: 76px 32px minmax(60px,1fr) auto auto auto auto !important; }
+:root app-pos .pos-layout .bill-head { background: #233b30 !important; border-color: #233b30 !important; padding-inline: 18px !important; }
+:root app-pos .pos-layout .bill-head h2 { color: #fff !important; font-size: 19px !important; }
+:root app-pos .bill-head .studio-eyebrow { color: #b3c6b2; }
+:root app-pos .order-heading h2 small { background: #ffffff1f; color: #eaf1e7; }
+:root app-pos .pos-layout .bill-head .bill-expand { background: #ffffff12; color: #e4edde; border-color: #ffffff2a; }
+:root app-pos .pos-layout .empty-cart { gap: 5px; }
+:root app-pos .pos-layout .empty-cart > .material-symbols-outlined { width: 52px; height: 52px; font-size: 28px !important; background: #edf2e9; border-color: #dfe8d8; box-shadow: 0 0 0 8px #f6f8f3; color: #839778 !important; }
+:root app-pos .empty-cart h3 { margin: 16px 0 6px; font: 500 20px 'DM Sans',sans-serif !important; color: #425646; }
+@media (min-width: 1400px) { :root app-pos .pos-layout .product-grid { grid-template-columns: repeat(5,minmax(0,1fr)) !important; } }
+@media (min-width: 1750px) { :root app-pos .pos-layout .product-grid { grid-template-columns: repeat(6,minmax(0,1fr)) !important; } }
+@media (max-width: 1199px) { :root app-pos .pos-layout .product-grid { grid-template-columns: repeat(3,minmax(0,1fr)) !important; } :root app-pos .pos-layout .catalog-toolbar h1 { font-size: 23px !important; } }
+@media (max-width: 540px) { :root app-pos .pos-layout .product-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; } :root app-pos .pos-layout .catalog-toolbar { height: auto !important; flex-wrap: wrap; gap: 12px; } :root app-pos .pos-layout .catalog-toolbar h1 { flex-basis: 100%; } }
+/* One brand palette across the workspace. Colour never identifies payment types. */
+:root {
+  --bb-brand: #654731;
+  --bb-brand-dark: #392c23;
+  --bb-soft: #f1ebe4;
+  --bb-canvas: #f8f6f3;
+  --bb-border: #e5ddd4;
+  --bb-muted: #81756a;
+  --brand-success: #654731;
+  --brand-success-soft: #f1ebe4;
+}
+:root .app-shell.app-shell { background: var(--bb-canvas) !important; }
+:root .app-shell.app-shell:has(app-pos) { background: var(--bb-canvas) !important; }
+:root app-pos .pos-layout .catalog-toolbar h1 { color: var(--bb-brand-dark); }
+:root app-pos .catalog-toolbar .studio-eyebrow { color: var(--bb-muted); }
+:root app-pos .pos-layout .catalog-toolbar h1 small { color: var(--bb-brand); background: var(--bb-soft) !important; }
+:root app-pos .pos-layout .catalog-toolbar .order-mode-bar { background: var(--bb-soft) !important; border-color: var(--bb-border) !important; }
+:root app-pos .pos-layout :is(.category-card,.catalog-search .search,.favourites-filter,.bill-panel) { border-color: var(--bb-border) !important; }
+:root app-pos .pos-layout .category-card.active { background: var(--bb-brand) !important; border-color: var(--bb-brand) !important; }
+:root app-pos .pos-layout .category-card.active .material-symbols-outlined { color: #fff !important; }
+:root app-pos .pos-layout .category-card .category-symbol { filter: grayscale(1) sepia(.5) !important; }
+:root app-pos .pos-layout .favourites-filter,
+:root app-pos .pos-layout .favourites-filter > span { color: var(--bb-brand) !important; }
+:root app-pos .pos-layout .favourites-filter.active { background: var(--bb-soft) !important; border-color: var(--bb-brand) !important; }
+:root app-pos .pos-layout .pos-product-tile .product-card { border-color: var(--bb-border) !important; box-shadow: 0 3px 9px #392c2305 !important; }
+:root app-pos .pos-layout .pos-product-tile .product-card:hover { border-color: var(--bb-brand) !important; box-shadow: 0 6px 16px #392c2314 !important; }
+:root app-pos .pos-layout .product-card::before { background: var(--bb-soft) !important; }
+:root app-pos .pos-layout .product-card .product-add,
+:root app-pos .pos-layout .product-card:hover .product-add { background: var(--bb-brand) !important; border-color: var(--bb-brand) !important; color: #fff !important; }
+:root app-pos .pos-layout .product-copy small { color: var(--bb-muted) !important; }
+:root app-pos .pos-layout .product-copy small::before { background: currentColor !important; }
+:root app-pos .pos-layout .product-favourite { color: #a99c8f !important; }
+:root app-pos .pos-layout .product-favourite.active { color: var(--bb-brand) !important; }
+:root app-pos .pos-layout .bill-head { background: var(--bb-brand) !important; border-color: var(--bb-brand) !important; }
+:root app-pos .bill-head .studio-eyebrow { color: #e5d9cc; }
+:root app-pos .order-heading h2 small,
+:root app-pos .pos-layout .bill-head .bill-expand { color: #fff !important; }
+:root app-pos .pos-layout .bill-columns { background: var(--bb-canvas) !important; color: var(--bb-muted); }
+:root app-pos .pos-layout .empty-cart > .material-symbols-outlined { background: var(--bb-soft); border-color: var(--bb-border); box-shadow: 0 0 0 8px var(--bb-canvas); color: var(--bb-brand) !important; }
+:root app-pos .empty-cart h3 { color: var(--bb-brand-dark); }
+:root app-pos .pos-layout .totals .grand { background: var(--bb-brand) !important; }
+:root app-pos .pos-layout .payment-grid button,
+:root app-pos .pos-layout .payment-grid .cash,
+:root app-pos .pos-layout .payment-grid .upi,
+:root app-pos .pos-layout .payment-grid .card { background: var(--bb-soft) !important; border-color: var(--bb-border) !important; color: var(--bb-brand) !important; }
+:root app-pos .pos-layout .payment-grid button:not(:disabled):hover { background: #e7dccf !important; border-color: var(--bb-brand) !important; }
+:root app-pos .pos-layout .bill-actions .print { background: var(--bb-brand) !important; }
+:root app-pos .pos-layout .terminal-status { color: var(--bb-muted); }
+:root .app-shell.app-shell > .bottom-nav { background: var(--bb-brand-dark) !important; border-color: var(--bb-brand-dark); }
+:root .app-shell.app-shell .bottom-nav button.active { background: var(--bb-soft) !important; color: var(--bb-brand) !important; border-color: var(--bb-border) !important; }
+:root .app-shell.app-shell .bottom-nav button.active > .material-symbols-outlined { color: var(--bb-brand) !important; }
+:root app-dashboard .dashboard-metrics .metric:nth-child(n) { background: #fff !important; }
+:root app-dashboard .dashboard-metrics .metric:first-child { background: var(--bb-brand) !important; border-color: var(--bb-brand) !important; }
+:root app-dashboard .dashboard-metrics .metric:first-child p { color: #e5d9cc !important; }
+:root app-dashboard .dashboard-metrics .metric:first-child .metric-icon { color: #fff !important; }
+:root app-dashboard :is(.dashboard-head,.dashboard-marketplace) { background: var(--bb-soft) !important; border-color: var(--bb-border) !important; }
+:root app-operations[data-view='reports'] .report-view-tabs button.active { background: var(--bb-brand) !important; }
+:root app-operations[data-view='reports'] .metric-icon.green { background: var(--bb-soft) !important; color: var(--bb-brand) !important; }
+:root app-operations[data-view='reports'] .metric p { color: var(--bb-muted) !important; }
+/* Approved screenshot treatment, scoped to the working POS. */
+:root .app-shell.app-shell:has(app-pos) { background: #f7f4ef !important; grid-template-rows: 86px minmax(0,1fr) auto !important; }
+:root .app-shell.app-shell:has(app-pos) > .light-topbar { height: 86px !important; padding: 12px 28px !important; background: #fcfaf7 !important; box-shadow: 0 5px 18px #44281208; }
+:root .app-shell.app-shell:has(app-pos) .brand { flex: 0 0 282px; gap: 15px; }
+:root .app-shell.app-shell:has(app-pos) .brand-mark { width: 66px !important; height: 66px !important; }
+:root .app-shell.app-shell:has(app-pos) .brand b { font: 700 32px/1 Georgia,serif !important; color: #25180f; }
+:root .app-shell.app-shell:has(app-pos) .brand small { letter-spacing: .26em; font-size: 9px !important; }
+:root .app-shell.app-shell:has(app-pos) .top-meta { padding-inline: 12px !important; font-size: 12px; }
+:root .app-shell.app-shell:has(app-pos) .top-actions { gap: 9px; }
+:root .app-shell.app-shell:has(app-pos) .top-actions .button { height: 44px !important; padding-inline: 13px !important; font-size: 12px !important; border-radius: 11px; box-shadow: 0 3px 9px #40261308; }
+:root .app-shell.app-shell:has(app-pos) .new-bill-button { background: linear-gradient(120deg,#a4783e,#422812) !important; }
+:root .app-shell.app-shell:has(app-pos) > .page-content { padding: 14px 20px 12px 28px !important; }
+:root .app-shell:has(app-pos) app-pos .pos-layout { grid-template-columns: minmax(0,1fr) 420px !important; gap: 24px !important; }
+:root app-pos .pos-layout .catalog-toolbar { height: 80px !important; margin-bottom: 14px !important; }
+:root app-pos .pos-layout .catalog-toolbar h1 { font: 700 44px/1.1 Georgia,serif !important; letter-spacing: -.04em; white-space: nowrap; }
+:root app-pos .catalog-toolbar .studio-eyebrow { font: 600 9px/1.5 'DM Sans',sans-serif; letter-spacing: .25em; margin-bottom: 5px; }
+:root app-pos .pos-layout .catalog-toolbar h1 small { padding: 8px 13px; font-size: 12px; border-radius: 20px; }
+:root app-pos .cafe-signature { flex: 0 0 184px; height: 80px; background: url('../../public/assets/images/pos-design-reference.png') -517px -107px / 1619px 971px no-repeat; }
+:root app-pos .pos-layout .catalog-toolbar .order-mode-bar { height: 54px; border: 1px solid #e3d9ce !important; background: #fcfaf7 !important; border-radius: 13px; padding: 3px !important; box-shadow: 0 4px 12px #412a1510 !important; }
+:root app-pos .pos-layout .catalog-toolbar .order-mode-bar > button { height: 46px !important; padding-inline: 18px !important; }
+:root app-pos .pos-layout .catalog-toolbar .order-mode-bar > button b { font-size: 13px; }
+:root app-pos .pos-layout .catalog-toolbar .order-mode-bar > button.active { background: linear-gradient(120deg,#956b39,#402713) !important; color: #fff !important; }
+:root app-pos .pos-layout .catalog-search,
+:root app-pos .pos-layout .catalog-search .search,
+:root app-pos .pos-layout .favourites-filter { height: 54px !important; min-height: 54px; }
+:root app-pos .pos-layout .catalog-search { margin-bottom: 14px !important; }
+:root app-pos .pos-layout .catalog-search .search { box-shadow: 0 3px 12px #51382208 !important; }
+:root app-pos .pos-layout :is(.category-row,.category-card,.category-next) { height: 46px !important; }
+:root app-pos .pos-layout .category-card { padding-inline: 14px !important; box-shadow: 0 3px 9px #4026130b !important; border-radius: 11px; }
+:root app-pos .pos-layout .category-card .category-symbol { filter: none !important; font-size: 21px; }
+:root app-pos .pos-layout .category-card.active { background: linear-gradient(120deg,#a4783e,#422812) !important; }
+:root app-pos .pos-layout .product-grid { grid-template-columns: repeat(5,minmax(0,1fr)) !important; grid-auto-rows: 222px !important; gap: 12px !important; padding: 2px 0 10px !important; }
+:root app-pos .pos-layout .pos-product-tile,
+:root app-pos .pos-layout .pos-product-tile .product-card { height: 222px !important; min-height: 222px !important; }
+:root app-pos .pos-layout .pos-product-tile .product-card { container-type: inline-size; border-radius: 15px !important; box-shadow: 0 4px 13px #432b1610 !important; border-color: #e6ddd2 !important; }
+:root app-pos .pos-layout .product-card::before { height: 128px; border-radius: 14px 14px 0 0; background: #eee5d9 !important; }
+:root app-pos .pos-layout .product-card .product-photo { inset: 0 8% auto !important; width: 84% !important; height: 128px !important; }
+:root app-pos .pos-layout .product-card .product-copy { inset: 138px 0 0 !important; padding: 0 14px 10px !important; }
+:root app-pos .pos-layout .product-copy b,
+:root app-pos .pos-layout .product-copy b.wrap-name { font-size: 14px !important; line-height: 18px !important; height: 28px; min-height: 28px !important; font-weight: 650; }
+:root app-pos .pos-layout .product-copy strong { font-size: 20px !important; line-height: 25px !important; }
+:root app-pos .pos-layout .product-copy small { color: #24703b !important; font-size: 11px !important; line-height: 16px !important; }
+:root app-pos .pos-layout .product-card.unavailable .product-copy small { color: #c82342 !important; }
+:root app-pos .pos-layout .product-card .product-add { width: 36px !important; height: 36px !important; right: 12px !important; bottom: 12px !important; background: linear-gradient(120deg,#a4783e,#422812) !important; border-color: #a67b47 !important; box-shadow: 0 3px 8px #663e1520 !important; border-radius: 11px !important; }
+:root app-pos .pos-layout .product-favourite { width: 28px !important; height: 28px !important; color: #614631 !important; background: #fff !important; }
+:root app-pos .pos-layout .bill-panel { grid-template-rows: 90px 38px minmax(70px,1fr) auto auto auto auto !important; border-radius: 16px !important; box-shadow: 0 8px 24px #40251114; }
+:root app-pos .pos-layout .bill-head { background: #342213 url('../../public/assets/images/pos-design-reference.png') -1180px -100px / 1619px 971px no-repeat !important; padding-inline: 22px !important; }
+:root app-pos .pos-layout .bill-head .order-heading { background: #342213; padding-right: 8px; }
+:root app-pos .pos-layout .bill-head h2 { font: 700 31px/1.15 Georgia,serif !important; }
+:root app-pos .bill-head .studio-eyebrow { font-size: 10px; letter-spacing: .25em; color: #f1e6d8; }
+:root app-pos .pos-layout .bill-columns { letter-spacing: .1em; font-size: 11px; }
+:root app-pos .pos-layout .empty-cart > .material-symbols-outlined { width: 70px; height: 70px; font-size: 36px !important; }
+:root app-pos .empty-cart h3 { font: 700 25px/1.2 Georgia,serif !important; margin: 25px 0 10px; }
+:root app-pos .pos-layout .empty-cart p { font-size: 14px !important; line-height: 1.6; }
+:root app-pos .pos-layout .totals { margin: 8px 16px 10px !important; }
+:root app-pos .pos-layout .totals > div { min-height: 34px; font-size: 14px; }
+:root app-pos .pos-layout .totals .grand { background: linear-gradient(110deg,#4a2d16,#68451f) !important; font-size: 18px !important; }
+:root app-pos .pos-layout .totals .grand b { font-size: 32px !important; }
+:root app-pos .pos-layout .payment-grid { padding-inline: 16px !important; gap: 8px; }
+:root app-pos .pos-layout .payment-grid button { height: 80px !important; background: #f7f2eb !important; opacity: 1 !important; }
+:root app-pos .pos-layout .payment-grid button:disabled { color: #8b7b6b !important; }
+:root app-pos .pos-layout .bill-actions { padding: 0 16px 15px !important; gap: 12px; }
+:root app-pos .pos-layout .bill-actions button { height: 54px !important; font-size: 15px !important; opacity: 1 !important; }
+:root app-pos .pos-layout .bill-actions .print { background: linear-gradient(110deg,#8e6330,#422812) !important; color: #fff !important; border: 1px solid #a88351; }
+:root .app-shell.app-shell:has(app-pos) > .bottom-nav { height: 84px !important; min-height: 84px; margin-bottom: 22px !important; width: calc(100% - 40px) !important; border-radius: 16px !important; background: #302014 !important; }
+:root .app-shell.app-shell:has(app-pos) .bottom-nav button { font-size: 12px !important; color: #f7f0e8; gap: 14px; }
+:root .app-shell.app-shell:has(app-pos) .bottom-nav button.active { background: #fcf8f1 !important; }
+:root .app-shell.app-shell:has(app-pos) .bottom-nav button small { color: #dbcebf; font-size: 11px !important; }
+:root .app-shell.app-shell:has(app-pos) .bottom-nav button.active small { color: #70533b; }
+.nav-cafe-signature { display: none; }
+:root .app-shell:has(app-pos) .nav-cafe-signature { display: block; flex: 0 0 134px; height: 70px; align-self: center; background: url('../../public/assets/images/pos-design-reference.png') -1445px -875px / 1619px 971px no-repeat; border-left: 1px solid #77614c; }
+@media(min-width:1500px) { :root .app-shell.app-shell:has(app-pos) :is(.date-meta,.time-meta) { display: flex !important; } }
+@media(max-width:1399px) { :root app-pos .cafe-signature { display:none; } :root .app-shell:has(app-pos) app-pos .pos-layout { grid-template-columns:minmax(0,1fr) 370px !important; } :root app-pos .pos-layout .product-grid { grid-template-columns:repeat(4,minmax(0,1fr)) !important; } :root .app-shell.app-shell:has(app-pos) .brand { flex-basis:220px; } :root .app-shell.app-shell:has(app-pos) .brand b { font-size:26px !important; } :root .app-shell:has(app-pos) .nav-cafe-signature { display:none; } }
+@media(max-width:1100px) { :root app-pos .pos-layout .product-grid { grid-template-columns:repeat(3,minmax(0,1fr)) !important; } :root app-pos .pos-layout .catalog-toolbar h1 { font-size:30px !important; } :root app-pos .pos-layout .catalog-toolbar .order-mode-bar > button { padding-inline:8px !important; } }
+@media(max-width:850px) { :root app-pos .pos-layout .product-grid { grid-template-columns:repeat(3,minmax(0,1fr)) !important; } :root app-pos .pos-layout .bill-panel:not(.expanded) { height:760px !important; } }
+@media(max-width:540px) { :root app-pos .pos-layout .product-grid { grid-template-columns:repeat(2,minmax(0,1fr)) !important; } }
+:root app-pos .pos-layout .bill-actions button:disabled { opacity: 1 !important; }
+:root app-pos .pos-layout .payment-grid button:disabled { opacity: 1 !important; }
+:root app-pos .pos-layout .bill-head .bill-expand { background: #47331f !important; width: 42px; height: 42px; }
+:root app-pos .pos-layout .catalog-toolbar .order-mode-bar > button b { font-size: 14px !important; }
+:root app-pos .pos-layout .catalog-search .search input { font-size: 14px !important; }
+:root app-pos .pos-layout .favourites-filter { min-width:154px !important; }
+:root app-pos .pos-layout .product-favourite.active { font-variation-settings: 'FILL' 1; }
+@media(max-height:850px) and (min-width:851px) {
+  :root app-pos .pos-layout .bill-panel { grid-template-rows:70px 28px minmax(50px,1fr) auto auto auto auto !important; }
+  :root app-pos .pos-layout .payment-grid button { height:60px !important; }
+  :root app-pos .pos-layout .bill-actions button { height:42px !important; }
+  :root app-pos .pos-layout .totals > div { min-height:26px; }
+  :root app-pos .pos-layout .empty-cart > .material-symbols-outlined { width:38px; height:38px; font-size:24px !important; }
+  :root app-pos .empty-cart h3 { margin:12px 0 4px; font-size:20px !important; }
+  :root app-pos .pos-layout .empty-cart p { font-size:12px !important; }
+}
+/* Photo windows from the approved visual, while labels and prices stay live. */
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Apple Juice"])::before { background-image: url('../../public/assets/images/pos-design-reference.png') !important; background-size: calc(100cqw * 7.49537) auto !important; background-position: calc(100cqw * -0.12962962962962962) calc(100cqw * -1.5046296296296295) !important; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Apple Juice"]) .product-photo { visibility: hidden; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Black Coffee"])::before { background-image: url('../../public/assets/images/pos-design-reference.png') !important; background-size: calc(100cqw * 7.49537) auto !important; background-position: calc(100cqw * -1.1898148148148149) calc(100cqw * -1.5046296296296295) !important; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Black Coffee"]) .product-photo { visibility: hidden; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Blue Lagoon Mojito"])::before { background-image: url('../../public/assets/images/pos-design-reference.png') !important; background-size: calc(100cqw * 7.49537) auto !important; background-position: calc(100cqw * -2.25) calc(100cqw * -1.5046296296296295) !important; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Blue Lagoon Mojito"]) .product-photo { visibility: hidden; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Boost"])::before { background-image: url('../../public/assets/images/pos-design-reference.png') !important; background-size: calc(100cqw * 7.49537) auto !important; background-position: calc(100cqw * -3.3055555555555554) calc(100cqw * -1.5046296296296295) !important; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Boost"]) .product-photo { visibility: hidden; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Butterscotch Milkshake"])::before { background-image: url('../../public/assets/images/pos-design-reference.png') !important; background-size: calc(100cqw * 7.49537) auto !important; background-position: calc(100cqw * -4.361111111111111) calc(100cqw * -1.5046296296296295) !important; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Butterscotch Milkshake"]) .product-photo { visibility: hidden; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Cheese Burger"])::before { background-image: url('../../public/assets/images/pos-design-reference.png') !important; background-size: calc(100cqw * 7.49537) auto !important; background-position: calc(100cqw * -0.12962962962962962) calc(100cqw * -2.587962962962963) !important; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Cheese Burger"]) .product-photo { visibility: hidden; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Cheese Fries"])::before { background-image: url('../../public/assets/images/pos-design-reference.png') !important; background-size: calc(100cqw * 7.49537) auto !important; background-position: calc(100cqw * -1.1898148148148149) calc(100cqw * -2.587962962962963) !important; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Cheese Fries"]) .product-photo { visibility: hidden; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Chicken Burger"])::before { background-image: url('../../public/assets/images/pos-design-reference.png') !important; background-size: calc(100cqw * 7.49537) auto !important; background-position: calc(100cqw * -2.25) calc(100cqw * -2.587962962962963) !important; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Chicken Burger"]) .product-photo { visibility: hidden; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Chocolate Milkshake"])::before { background-image: url('../../public/assets/images/pos-design-reference.png') !important; background-size: calc(100cqw * 7.49537) auto !important; background-position: calc(100cqw * -3.3055555555555554) calc(100cqw * -2.587962962962963) !important; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Chocolate Milkshake"]) .product-photo { visibility: hidden; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Cold Coffee"])::before { background-image: url('../../public/assets/images/pos-design-reference.png') !important; background-size: calc(100cqw * 7.49537) auto !important; background-position: calc(100cqw * -4.361111111111111) calc(100cqw * -2.587962962962963) !important; }
+:root app-pos .pos-layout .product-card:has(.product-copy b[title="Cold Coffee"]) .product-photo { visibility: hidden; }
+@media (prefers-reduced-motion: reduce) {
+  :root *, :root *::before, :root *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}
